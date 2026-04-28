@@ -284,7 +284,7 @@ threshold
 As regras de diagnóstico estão documentadas em:
 
 ```txt
-PendenciasTecnicas.md
+docs/PendenciasTecnicas.md
 ```
 
 Esse documento contém:
