@@ -1,0 +1,454 @@
+# Documentação Funcional do Sistema — linka SpeedTest PWA
+
+> Descreve as 4 telas do aplicativo, fluxos de navegação, estados de UI e comportamento esperado do ponto de vista do usuário.
+
+---
+
+## Hierarquia de navegação
+
+```
+App (estado global)
+├── StartScreen       ← tela inicial (padrão)
+├── RunningScreen     ← durante o teste
+├── ResultScreen      ← resultado do teste
+└── HistoryScreen     ← histórico de testes
+```
+
+O roteamento é feito por `switch/case` em `App.tsx` via `useState<Screen>`. Não há react-router. Cada tela é um componente que ocupa 100% do viewport.
+
+### Fluxo principal
+
+```
+StartScreen → [Iniciar] → RunningScreen → [Conclusão] → ResultScreen
+   ↑                       [Cancelar] ↓                      ↓ [Testar novamente]
+   │                      StartScreen                        │
+   ├─[Ver histórico]──────────────────────────► HistoryScreen
+   └─[Card último teste]─────────────────────► HistoryScreen (detalhe pré-aberto)
+```
+
+### Navegação por gestos
+
+- **Swipe horizontal** (→ volta · ← avança): App mantém pilha de telas em `App.tsx` (`backStackRef` / `forwardStackRef`). Threshold: 80 px com razão `|Δx| > |Δy| × 1,5` para evitar conflito com scroll vertical. Início de gesto sobre `.lk-sheet`, `.lk-history__list`, botões ou inputs é ignorado.
+- **Swipe vertical no BottomSheet**: arrastar a alça para cima abre; para baixo, fecha.
+- O Header não traz mais o botão "X / Voltar" — a volta é feita por swipe ou pelo botão de cancelar das próprias telas (RunningScreen tem "Cancelar"; HistoryScreen tem "← Voltar" no detalhe interno).
+
+---
+
+## 1. StartScreen
+
+### Finalidade
+
+Ponto de entrada do app. Permite iniciar o teste, visualizar informações do dispositivo e servidor, e ajustar configurações (unidade, escala do gráfico, tipo de conexão, servidor).
+
+### Layout
+
+```
+┌──────────────────────────────────┐
+│  HEADER (logo + toggle tema)     │  ← sem linha inferior, sem botão close
+│                                  │
+│  ┌─────────────────────────────┐ │
+│  │  [⚠ erro + Tentar novamente]│ │  ← só aparece se error != null
+│  └─────────────────────────────┘ │
+│                                  │
+│         ┌──────────────┐         │
+│         │              │         │
+│         │   INICIAR    │         │  ← círculo 200px VAZADO (border accent)
+│         │              │         │     pulsa borda+escala quando pronto
+│         └──────────────┘         │
+│                                  │
+│  Usa ~400 MB no Wi-Fi/cabo ·     │  ← hint dinâmico
+│  ~70 MB em rede móvel            │
+│                                  │
+│  ┌────────────────────────────┐  │
+│  │ Último teste · 28/04 14:32 │  │  ← card só se há histórico
+│  │ ↓ 87,3 ↑ 32,1 Mbps         │  │     tap → HistoryScreen com detalhe aberto
+│  │ Conexão boa                │  │
+│  └────────────────────────────┘  │
+│  Ver histórico                    │  ← btn-text sempre visível
+│                                  │
+├──────────────────────────────────┤
+│  ── handle ──                    │  ← BottomSheet peek (110px fixo)
+│  [PC][WiFi][CF] PathRow          │
+└──────────────────────────────────┘
+```
+
+### Estados do botão Iniciar
+
+| Estado | Condição | Visual |
+|---|---|---|
+| Aguardando | `loading=true` | Desabilitado, label "Aguardando…", sem animação |
+| Pronto | `!loading && server.available && device` | Habilitado, label "Iniciar" em accent, borda pulsando |
+| Erro | `error != null` | Botão desabilitado + mensagem de erro acima |
+
+### BottomSheet — peek (fechado)
+
+Sempre visível na base da tela (110px fixos). Conteúdo:
+- Handle bar (indicador de arrasto)
+- PathRow: ícone de dispositivo → ícone de conexão → ícone de servidor, com labels e linha animada conectando
+
+Tap no handle **ou** arrasto vertical para cima sobre a alça → abre o sheet. Arrasto para baixo → fecha. Threshold de 60 px no eixo vertical.
+
+### BottomSheet — aberto
+
+Desliza de baixo para cima com `cubic-bezier(0.32,0.72,0,1)`, 300ms. Backdrop escuro fecha no tap fora.
+
+**Seção: Informações**
+| Campo | Valor |
+|---|---|
+| Servidor | Nome + localização (`name · colo`) |
+| Localização | `loc` (país/cidade da PoP Cloudflare) |
+| Seu IP | IP público detectado |
+| Operadora | `isp` (asOrganization do Cloudflare) |
+| Dispositivo | Tipo (Celular/Tablet/PC) e tipo de conexão |
+
+**Seção: Configurações**
+
+- **Unidade** — toggle segmentado: `[Mbps] Gbps` (default: Mbps)
+- **Conexão** — toggle segmentado: `[Auto] Wi-Fi Cable Celular`
+- **Servidor** — seletor de servidor (atualmente só Cloudflare)
+
+> A opção "Gráfico" (escala linear/log) foi removida da UI; o campo `scale` permanece em `Settings` por compatibilidade de localStorage e não tem efeito visual atualmente.
+
+Todas as configurações persistem em localStorage via `useSettings`.
+
+### Serviços consumidos
+
+- `useDeviceInfo('cloudflare')` → `device`, `server`, `loading`, `error`, `reload`
+- `useSettings()` → `settings`, `update`
+
+---
+
+## 2. RunningScreen
+
+### Finalidade
+
+Exibe o progresso do teste em tempo real de forma minimalista: número grande de velocidade instantânea e uma frase descrevendo, em pt-BR leigo, o que está sendo medido. Sem aro de progresso, sem gráfico, sem barra.
+
+### Layout — fases normais
+
+```
+┌──────────────────────────────────┐
+│  HEADER (logo)                   │
+│                                  │
+│            87,3                  │  ← número instantâneo (96px)
+│            Mbps                  │  ← unidade (18px)
+│                                  │
+│  Medindo a velocidade de         │  ← frase narrativa
+│  download…                       │
+│                                  │
+│         Cancelar                 │  ← btn-text discreto no rodapé
+└──────────────────────────────────┘
+```
+
+### Layout — falha
+
+```
+┌──────────────────────────────────┐
+│  HEADER (logo)                   │
+│                                  │
+│            ⓘ                     │  ← ícone alerta (vermelho)
+│   Não foi possível completar     │
+│   o teste                        │
+│   Verifique sua conexão e tente  │
+│   novamente.                     │
+│                                  │
+│   [Testar novamente]             │  ← btn-primary
+│         Cancelar                 │  ← btn-text
+└──────────────────────────────────┘
+```
+
+### Fases do teste e frases exibidas
+
+| Phase | Frase exibida |
+|---|---|
+| `latency` | "Verificando a resposta do servidor…" |
+| `download` | "Medindo a velocidade de download…" |
+| `upload` | "Medindo a velocidade de upload…" |
+| `done` | "Quase pronto…" (transição automática para ResultScreen) |
+| `error` | Tela substituída pelo bloco de falha com retry |
+| `idle`/outros | "Preparando o teste…" |
+
+### Gauge
+
+Componente `<Gauge>` simplificado: `display: flex column`, número e unidade centralizados, sem SVG. O número é `instantMbps` suavizado por EMA α=0.25 via `requestAnimationFrame` no `useSpeedTest`.
+
+### Cancelar
+
+- Em estado normal: botão "Cancelar" `btn-text` no rodapé.
+- Em estado de erro: botão "Cancelar" abaixo do "Testar novamente".
+
+Ambos chamam `test.cancel()` + `test.reset()` e voltam para a StartScreen via pilha de navegação.
+
+### Props recebidas de App.tsx
+
+```ts
+theme, onToggleTheme,
+phase, instantMbps,
+onCancel, onRetry,
+unit
+```
+
+---
+
+## 3. ResultScreen
+
+### Finalidade
+
+Exibe os resultados completos do teste, diagnóstico em linguagem leiga, utilidade prática da conexão e opções de ação (refazer, exportar PDF, compartilhar, ver histórico).
+
+### Layout
+
+```
+┌──────────────────────────────────┐
+│  HEADER (logo)                   │  ← volta por swipe →
+│                                  │
+│  ┌────────────────────────────┐  │
+│  │ [✓/!/✗]  Conexão boa       │  ← banner de qualidade (accent border-left)
+│  │          [chip] [chip]      │  ← tags (ex: "Resposta lenta")
+│  └────────────────────────────┘  │
+│                                  │
+│  ↓ Download    |   ↑ Upload      │
+│  87,3 Mbps     |   32,1 Mbps    │  ← métricas primárias (Space Grotesk 700 36px)
+│                                  │
+│  18 ms    3 ms    Muito estável  │  ← secundárias: Resposta · Oscilação · Estabilidade
+│  Resposta Oscilação Estabilidade │
+│                                  │
+│  ── O que isso significa? ──     │
+│  [parágrafos de diagnóstico]     │
+│                                  │
+│  ── Para o que sua internet ──   │
+│  [Games] Bom     [4K] Pode falhar│  ← grid 2×2 de uso prático (ícones SVG)
+│  [HO] Bom       [Video] Bom     │
+│                                  │
+│  ── Detalhes ──                  │
+│  Servidor     Cloudflare · GIG   │
+│  Operadora    Vivo Fibra         │
+│  Seu IP       45.70.55.83        │
+│  Perda        0,0%               │
+│  Data         28/04/2026 14:32   │
+│                                  │
+│  ── Teste anterior ──            │  ← só se houver registro anterior
+│  27/04 · ↓ 71,2 · ↑ 28,4 Mbps  │
+│  Ver histórico →                 │
+│                                  │
+│  [Testar novamente]              │
+│  [↑ Compartilhar]                │
+│                              [PDF]│  ← FAB circular roxo no canto inferior direito
+└──────────────────────────────────┘
+```
+
+### Banner de qualidade
+
+| Quality | Ícone | Cor border | Cor chip |
+|---|---|---|---|
+| excellent | ✓ | `var(--accent)` | green |
+| good | ✓ | `var(--accent)` | green |
+| fair | ! | amarelo | yellow |
+| slow | ✗ | vermelho | red |
+| unavailable | ✗ | vermelho | red |
+
+### Grid de uso prático
+
+4 cartões (Games Online, Streaming 4K, Home Office, Videochamada). Cada um avaliado por thresholds fixos:
+
+| Uso | Critério "Bom" | Critério "Pode falhar" |
+|---|---|---|
+| Games online | DL≥10, lat≤40, jitter≤20, loss≤0.5% | DL≥5, lat≤80 |
+| Streaming 4K | DL≥25 Mbps | DL≥10 Mbps |
+| Home Office | DL≥10, UL≥5, lat≤100 | DL≥5, UL≥2 |
+| Videochamada | DL≥5, UL≥2, lat≤100, jitter≤30 | DL≥2, UL≥1, lat≤150 |
+
+Status abaixo do "Pode falhar" → "Limitado".
+
+### Diagnóstico (buildDiagnosis)
+
+Texto em linguagem leiga, 1-5 parágrafos. Gerado por `buildDiagnosis(result, classification, history)`:
+- Parágrafo base por quality (excellent/good/fair/slow/unavailable)
+- Parágrafos por tag (veryUnstable, packetLoss, unstable, highLatency, lowUpload)
+- Avisos pontuais para latência>80ms, loss>2%, jitter>50ms
+- Análise histórica se há ≥3 registros: latência recorrente, perda recorrente, lentidão recorrente
+
+### FAB PDF
+
+Botão circular 52px, `position:fixed; bottom:20px; right:20px`, fundo `var(--accent)`.  
+Tap → `exportResultPdf(result, server.name, server.isp)` — gera PDF A4 portrait com logo linka, dados do teste, diagnóstico e estabilidade.
+
+### Compartilhar
+
+`navigator.share` (Web Share API) com fallback para `navigator.clipboard`. Texto compartilhado:
+```
+linka SpeedTest — Conexão boa
+↓ 87,3 Mbps · ↑ 32,1 Mbps
+Resposta 18 ms · Oscilação 3 ms
+28/04/2026 14:32
+```
+
+### Serviços consumidos
+
+- Props: `result (SpeedTestResult)`, `server (ServerInfo | null)`, `previous (TestRecord | null)`, `unit`
+- `classify(result)` → classificação
+- `buildDiagnosis(result, classification, history)` → parágrafos
+- `stability(result)` → score numérico
+- `loadHistory()` → passado para buildDiagnosis
+- `exportResultPdf()` → geração de PDF
+
+---
+
+## 4. HistoryScreen
+
+### Finalidade
+
+Lista os últimos 50 testes com gráfico de evolução, resumo de médias e detalhe individual ao clicar. Permite exportar o histórico completo em PDF e limpar o histórico.
+
+### Layout
+
+```
+┌──────────────────────────────────┐
+│  HEADER (logo)                   │  ← volta por swipe →
+│                                  │
+│  Histórico de testes             │
+│                                  │
+│  ┌────────────────────────────┐  │
+│  │ COMO SUA INTERNET ANDA·24h │  │  ← bloco de diagnóstico textual
+│  │ Sua internet está boa…     │  │     baseado em testes das últimas 24h
+│  │ ⚠ Tempo de resposta alto…  │  │     (fallback: últimos 5 se 24h vazio)
+│  └────────────────────────────┘  │
+│                                  │
+│  Evolução recente                │
+│  ┌────────────────────────────┐  │  ← AreaChart 140px (últimos 10 testes)
+│  │  ~~~ Download (azul)       │  │     sem eixos, sem tooltip
+│  │  ~~ Upload (verde)         │  │
+│  └────────────────────────────┘  │
+│  ↓ Download  ↑ Upload            │  ← legenda completa
+│                                  │
+│  Média dos seus testes           │
+│  ↓ 87,3 Mbps  ↑ 32,1 Mbps      │  ← médias DL/UL coloridas
+│  Conexão boa — 8 testes          │  ← qualidade da média + contagem
+│                                  │
+│  ── lista de itens ──            │
+│  28/04 14:32     [Excelente]     │
+│  [PC][WiFi] Cloudflare · Vivo    │
+│  ↓ 123 Mbps  ↑ 45 Mbps  lat 18ms│
+│  ────────────────────────────    │
+│  [mais itens...]                 │
+│                                  │
+│  [Limpar histórico]              │
+│                              [PDF]│  ← FAB
+└──────────────────────────────────┘
+```
+
+### Bloco de diagnóstico (acima do gráfico)
+
+- Filtra registros das últimas 24h. Se vazio, usa os últimos 5 testes.
+- Calcula médias, classifica (`classify`) e gera 1–2 parágrafos via `buildDiagnosis(avg, classification, sample)`.
+- Cabeçalho exibe a janela aplicada: "Como sua internet anda · 24h" ou "· recente".
+- Texto curto, em pt-BR leigo. Evita repetir conteúdo verboso da ResultScreen.
+
+### Gráfico de evolução
+
+- Últimos 10 testes em ordem cronológica
+- `recharts` AreaChart — Download azul `#3AB6FF`, Upload verde `#22C55E`
+- Fill com gradiente de 25% → 0% de opacidade
+- Sem eixos, sem tooltip, sem dots
+- Aparece apenas se `chartData.length >= 2`
+- Legenda usa "Download"/"Upload" por extenso
+
+### Seção de médias
+
+Calculada sobre todos os registros:
+- `avgDl`, `avgUl`, `avgLat`, `avgJit`, `avgLos` = média aritmética
+- `classify({ dl:avgDl, ul:avgUl, latency:avgLat, jitter:avgJit, packetLoss:avgLos })` → quality da média
+
+### Lista de itens
+
+Cada item exibe:
+- Linha 1: data/hora + chip de qualidade (`[Excelente]`, `[Boa]`, etc.)
+- Linha 2: DL · UL · latência (com unidade)
+- Linha 3: ícone de dispositivo + ícone de conexão + servidor · ISP
+
+Tap em item → abre `HistoryDetail` (overlay interno).
+
+### HistoryDetail (detalhe ao clicar)
+
+Overlay `position:fixed; inset:0` com o mesmo visual da ResultScreen:
+- Header: `← Voltar` + data do teste
+- Banner de qualidade (mesmas classes `.lk-banner--*`)
+- Métricas primárias DL/UL
+- Métricas secundárias Resposta/Oscilação/Estabilidade
+- Seção Detalhes: Servidor, Operadora, Dispositivo+Conexão, Perda de pacotes
+
+Não inclui diagnóstico nem use cases (para manter tela leve e focada).
+
+### FAB PDF (histórico completo)
+
+Mesmo estilo do FAB da ResultScreen.  
+Tap → `exportHistoryPdf(items)` — gera PDF A4 landscape com:
+- Logo linka no cabeçalho
+- Resumo de médias (DL/UL/Lat + qualidade)
+- Tabela completa: Data · DL · UL · Resposta · Oscilação · Perda · Qualidade · Operadora
+
+### Limpar histórico
+
+Botão `btn-text` com cor `var(--error)`. Exibe `confirm()` antes de limpar. Limpa `localStorage` e reseta estado local.
+
+### Voltar / abrir direto no detalhe
+
+O retorno à tela anterior é feito por swipe horizontal → (gerenciado em `App.tsx`).
+
+A StartScreen pode abrir o HistoryScreen com um registro pré-selecionado via prop `initialSelectedId` — ao clicar no card "Último teste" da StartScreen, navega-se para o HistoryDetail diretamente. Em "Ver histórico", `initialSelectedId` é `undefined` e a lista é exibida.
+
+---
+
+## 5. Comportamentos globais
+
+### Tema dark/light
+
+- Toggle no Header (ícone sol/lua)
+- Altera `document.documentElement.dataset.theme = 'dark' | 'light'`
+- Persiste em `localStorage` com chave `linka.speedtest.theme`
+- Padrão: dark
+
+### Gravação automática de resultado
+
+Ao concluir o teste (`phase === 'done'`):
+1. `App.tsx` chama `previousRecord()` para capturar o registro anterior
+2. Chama `appendRecord(result, { serverName, isp, deviceType, connectionType })`
+3. Atualiza `lastRecord` (usado pelo card da StartScreen) com o novo registro retornado
+4. Navega para ResultScreen com `previous` preenchido
+
+### Carregamento do último resultado ao abrir o PWA
+
+Na primeira renderização de `App.tsx`, um `useEffect` chama `previousRecord()` e popula `lastRecord`. A StartScreen exibe um card clicável quando `lastRecord != null`, levando ao detalhe correspondente no HistoryScreen. O usuário consegue ver o último resultado sem rodar novo teste.
+
+### Detecção de conexão e operadora
+
+- `useDeviceInfo` lê `navigator.connection.type` quando disponível. Quando ausente (iOS Safari), assume `'mobile'` em dispositivos móveis (em vez de `'wifi'`). O usuário pode sobrescrever em **Configurações → Conexão**.
+- `serverRegistry.getInfo` normaliza o `asOrganization` da API `/meta` Cloudflare para nomes comerciais brasileiros: TELEFONICA → Vivo, AMERICA MOVIL/NET SERVICOS/CLARO → Claro, TIM → TIM, OI/TELEMAR → Oi, ALGAR → Algar.
+
+### Presets de teste por tipo de conexão
+
+`runSpeedTest` aceita `connectionType` (passado via `useSpeedTest.start(connectionType)`):
+- **Default (Wi-Fi/cabo)**: 25 MB warmup + 3 × 100 MB download, 10 MB warmup + 3 × 50 MB upload (~400 MB total).
+- **Móvel**: 5 MB warmup + 2 × 25 MB download, 2 MB warmup + 2 × 10 MB upload (~70 MB total).
+
+Em `App.tsx`, `effectiveConnection` respeita o override manual em `settings.connectionOverride`.
+
+### PWA / Instalação
+
+- Manifest configurado em `vite.config.ts` (VitePWA)
+- Ícones: 192px e 512px (any + maskable)
+- Service worker gerado automaticamente
+- `display: standalone` — sem barra de URL quando instalado
+
+### Responsividade
+
+- Layout mobile-first (base: 375px)
+- Conteúdo principal: `max-width: 480px; margin: 0 auto`
+- Sem breakpoints adicionais necessários — o design funciona de 320px a 1440px
+
+### Acessibilidade
+
+- Botão Iniciar: `aria-label="Iniciar teste de velocidade"`
+- Erro: `role="alert"`
+- FAB PDF: `aria-label="Exportar PDF"` / `aria-label="Exportar histórico em PDF"`
+- Ícones SVG decorativos: `aria-hidden="true"`

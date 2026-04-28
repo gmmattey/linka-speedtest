@@ -1,0 +1,98 @@
+.lk-path {
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr auto;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-lg) var(--space-lg) var(--space-md);
+}
+
+.lk-path__node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-3);
+  transition: color var(--transition-normal);
+}
+
+.lk-path__icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lk-path__label {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-2);
+  text-align: center;
+  max-width: 64px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lk-path__line {
+  height: 2px;
+  background: var(--border);
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.lk-path__line-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--success);
+  transform-origin: left center;
+  transform: scaleX(0);
+  animation: lkLineFill 600ms ease-out forwards;
+}
+
+.lk-path__line--1 .lk-path__line-fill {
+  animation-delay: 300ms;
+}
+.lk-path__line--2 .lk-path__line-fill {
+  animation-delay: 1000ms;
+}
+
+.lk-path__node--lit {
+  color: var(--success);
+}
+.lk-path__node--lit .lk-path__icon {
+  color: var(--success);
+}
+
+.lk-path__node--anim2 {
+  animation: lkNodeLit 1ms forwards;
+  animation-delay: 900ms;
+}
+.lk-path__node--anim3 {
+  animation: lkNodeLit 1ms forwards;
+  animation-delay: 1600ms;
+}
+
+.lk-path__node--error.lk-path__node--anim3 {
+  animation: lkNodeError 1ms forwards;
+  animation-delay: 1600ms;
+}
+
+@keyframes lkLineFill {
+  to { transform: scaleX(1); }
+}
+
+@keyframes lkNodeLit {
+  to {
+    color: var(--success);
+  }
+}
+
+@keyframes lkNodeError {
+  to {
+    color: var(--error);
+  }
+}
+

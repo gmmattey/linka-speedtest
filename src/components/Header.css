@@ -1,0 +1,40 @@
+.lk-header {
+  height: 52px;
+  flex: 0 0 52px;
+  background: var(--bg);
+  padding: 0 var(--space-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.lk-header__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.lk-header__logo {
+  height: 24px;
+  width: auto;
+  display: block;
+}
+
+.lk-header__icon-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+  border-radius: 8px;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.lk-header__icon-btn:hover {
+  background: var(--surface);
+  color: var(--text);
+}

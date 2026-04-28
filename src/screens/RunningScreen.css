@@ -1,0 +1,87 @@
+.lk-running {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.lk-running__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+
+.lk-running__gauge {
+  display: flex;
+  justify-content: center;
+  flex: 1;
+  align-items: center;
+}
+
+.lk-running__phrase {
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--text-2);
+  margin: 0 0 var(--space-xl);
+  min-height: 22px;
+}
+
+.lk-running__footer {
+  display: flex;
+  justify-content: center;
+  padding-bottom: var(--space-xl);
+}
+
+.lk-running__cancel {
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+/* Error state */
+.lk-running__main--error {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.lk-running__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  max-width: 360px;
+  padding: 0 var(--space-lg);
+}
+
+.lk-running__error-icon {
+  color: var(--error);
+}
+
+.lk-running__error-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--text);
+  margin: 0;
+}
+
+.lk-running__error-msg {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-2);
+  margin: 0;
+}
+
+.lk-running__error-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
