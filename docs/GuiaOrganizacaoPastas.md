@@ -12,9 +12,15 @@ Linka SpeedTest/
 │   ├── IndiceDocumentacao.md
 │   ├── GuiaOrganizacaoPastas.md
 │   ├── ManifestoDesenvolvimentoIA.md
+│   ├── GuiaFluxoGit.md           ← Protocolo de sincronização Git para IAs e humanos
 │   ├── GuiaSelecaoModeloIA.md
 │   ├── DocumentacaoFuncionalSistema.md
-│   └── DocumentacaoTecnicaSistema.md
+│   ├── DocumentacaoTecnicaSistema.md
+│   ├── EvolucaoSpeedTest.md      ← Roadmap e features futuras do produto
+│   ├── EvolucaoTelaDesktop.md    ← Design de telas desktop (prototipagem aprovada)
+│   ├── PendenciasLayout.md       ← Backlog de melhorias de layout e UX
+│   ├── PendenciasTecnicas.md     ← Backlog técnico: diagnóstico, classificador, coerência
+│   └── RecomendacaoEquipamentos.md ← Plano de monetização: recomendação de equipamentos
 │
 ├── public/                       ← Assets estáticos (copiados verbatim para dist/)
 │   ├── logo.png                  ← Logo oficial linka (fonte: D:\Projetos\LINKA\...)

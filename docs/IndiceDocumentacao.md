@@ -10,6 +10,7 @@
 |---|---|
 | [`../CLAUDE.md`](../CLAUDE.md) | Instruções para Claude Code nesta sessão — regras, precedências, fluxo de trabalho |
 | [`ManifestoDesenvolvimentoIA.md`](ManifestoDesenvolvimentoIA.md) | Disciplina completa de desenvolvimento assistido por IA: proibições, checklist, padrões |
+| [`GuiaFluxoGit.md`](GuiaFluxoGit.md) | Protocolo de sincronização Git para todas as IAs e humanos — checklist pré-sessão, worktrees, riscos |
 | [`GuiaSelecaoModeloIA.md`](GuiaSelecaoModeloIA.md) | Matriz tarefa → ferramenta + modelo IA; custo/benefício |
 
 ## Documentos de projeto
@@ -19,6 +20,11 @@
 | [`GuiaOrganizacaoPastas.md`](GuiaOrganizacaoPastas.md) | Estrutura oficial de pastas; naming conventions; regras de criação de arquivos |
 | [`DocumentacaoFuncionalSistema.md`](DocumentacaoFuncionalSistema.md) | Descrição das 4 telas, fluxos de navegação, estados, UX |
 | [`DocumentacaoTecnicaSistema.md`](DocumentacaoTecnicaSistema.md) | Arquitetura, tipos, hooks, utils, componentes, deploy |
+| [`EvolucaoSpeedTest.md`](EvolucaoSpeedTest.md) | Roadmap e features futuras: diagnóstico avançado, comparativos, UX evolutiva |
+| [`EvolucaoTelaDesktop.md`](EvolucaoTelaDesktop.md) | Design de telas desktop — prototipagem aprovada (opção 3); layout para telas grandes |
+| [`PendenciasLayout.md`](PendenciasLayout.md) | Backlog de melhorias de layout, UX, fraseologia e consistência visual |
+| [`PendenciasTecnicas.md`](PendenciasTecnicas.md) | Backlog técnico: auditoria do classificador, regras de diagnóstico, coerência |
+| [`RecomendacaoEquipamentos.md`](RecomendacaoEquipamentos.md) | Plano de monetização: recomendações automáticas de equipamentos por diagnóstico |
 
 ---
 

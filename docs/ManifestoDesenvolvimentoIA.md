@@ -140,7 +140,24 @@ A cada novo pedido na sessão, avalie:
 
 ---
 
-## 6. Padrões de commit
+## 6. Fluxo Git
+
+### 6.0 Sincronização pré-sessão (obrigatória)
+
+Antes de qualquer modificação, sincronize com o remoto:
+
+```bash
+git fetch origin
+git log --oneline HEAD..origin/main   # verificar commits novos
+git pull origin main                  # trazer se houver
+git status                            # confirmar estado limpo
+```
+
+**Regra:** se `git log HEAD..origin/main` retornar qualquer commit, **não edite nada** até completar o pull. Trabalhar sobre estado desatualizado = risco de perda de trabalho.
+
+Ver protocolo completo em [`GuiaFluxoGit.md`](GuiaFluxoGit.md).
+
+### 6.1 Padrões de commit
 
 Commit apenas quando o usuário pedir explicitamente. Formato:
 

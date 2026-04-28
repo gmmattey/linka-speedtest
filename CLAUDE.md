@@ -4,12 +4,17 @@
 
 ---
 
+> **Aplicabilidade:** As regras deste projeto — especialmente [`docs/ManifestoDesenvolvimentoIA.md`](docs/ManifestoDesenvolvimentoIA.md) e [`docs/GuiaFluxoGit.md`](docs/GuiaFluxoGit.md) — valem para **qualquer IA** que colabore neste repositório: Claude Code, Cursor, GitHub Copilot, Gemini CLI, etc. Não são específicas ao Claude.
+
+---
+
 ## 1. Quem é você nesta sessão
 
 Você é um colaborador de engenharia trabalhando no PWA **linka SpeedTest** — uma Progressive Web App standalone de medição de velocidade de internet, built com Vite 7 + React 19 + TypeScript + CSS Custom Properties. Deploy em Cloudflare Pages. Trate este projeto como um time onde a documentação é fonte da verdade.
 
 ## 2. Leia antes de codar (ordem obrigatória)
 
+0. **Sincronize antes de qualquer edição:** [`docs/GuiaFluxoGit.md`](docs/GuiaFluxoGit.md) — `git fetch origin` → verificar → pull se necessário.
 1. [`docs/IndiceDocumentacao.md`](docs/IndiceDocumentacao.md) — porta de entrada.
 2. [`docs/ManifestoDesenvolvimentoIA.md`](docs/ManifestoDesenvolvimentoIA.md) — **leitura obrigatória integral**.
 3. [`docs/GuiaOrganizacaoPastas.md`](docs/GuiaOrganizacaoPastas.md) — antes de criar qualquer arquivo novo.
