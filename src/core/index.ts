@@ -13,6 +13,8 @@
 
 export { interpretSpeedTestResult } from './interpret';
 export { resolveCopy } from './copyDictionary';
+export { runHeadlessTest } from './embed';
+export type { HeadlessTestOptions, HeadlessTestResult } from './embed';
 export {
   PROFILES,
   type ProfileRules,
