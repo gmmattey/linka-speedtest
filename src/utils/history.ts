@@ -1,4 +1,4 @@
-import type { SpeedTestResult, TestRecord, DeviceType, ConnectionType } from '../types';
+import type { SpeedTestResult, TestRecord, DeviceType, ConnectionType, SpeedTestMode } from '../types';
 import { classify } from './classifier';
 
 const KEY = 'linka.speedtest.history.v1';
@@ -25,7 +25,7 @@ function persist(items: TestRecord[]) {
 
 export function appendRecord(
   result: SpeedTestResult,
-  meta: { serverName: string; isp?: string; deviceType: DeviceType; connectionType: ConnectionType },
+  meta: { serverName: string; isp?: string; deviceType: DeviceType; connectionType: ConnectionType; testMode?: SpeedTestMode },
 ): TestRecord {
   const c = classify(result);
   const record: TestRecord = {
@@ -42,6 +42,7 @@ export function appendRecord(
     isp: meta.isp,
     deviceType: meta.deviceType,
     connectionType: meta.connectionType,
+    testMode: meta.testMode,
   };
   const items = [record, ...loadHistory()].slice(0, MAX);
   persist(items);

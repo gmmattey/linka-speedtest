@@ -4,10 +4,11 @@ export interface Settings {
   unit: 'mbps' | 'gbps';
   scale: 'linear' | 'log';
   connectionOverride: 'auto' | 'wifi' | 'cable' | 'mobile';
+  hideIpOnShare: boolean;
 }
 
 const KEY = 'linka.speedtest.settings.v1';
-const DEFAULTS: Settings = { unit: 'mbps', scale: 'linear', connectionOverride: 'auto' };
+const DEFAULTS: Settings = { unit: 'mbps', scale: 'linear', connectionOverride: 'auto', hideIpOnShare: true };
 
 function load(): Settings {
   try {

@@ -8,10 +8,11 @@
 
 ```
 App (estado global)
-├── StartScreen       ← tela inicial (padrão)
-├── RunningScreen     ← durante o teste
-├── ResultScreen      ← resultado do teste
-└── HistoryScreen     ← histórico de testes
+├── StartScreen         ← tela inicial (padrão)
+├── RunningScreen       ← durante o teste
+├── ResultScreen        ← resultado do teste
+├── HistoryScreen       ← histórico de testes
+└── ComparisonScreen    ← comparativo perto vs longe do roteador
 ```
 
 O roteamento é feito por `switch/case` em `App.tsx` via `useState<Screen>`. Não há react-router. Cada tela é um componente que ocupa 100% do viewport.
@@ -19,11 +20,15 @@ O roteamento é feito por `switch/case` em `App.tsx` via `useState<Screen>`. Nã
 ### Fluxo principal
 
 ```
-StartScreen → [Iniciar] → RunningScreen → [Conclusão] → ResultScreen
-   ↑                       [Cancelar] ↓                      ↓ [Testar novamente]
-   │                      StartScreen                        │
-   ├─[Ver histórico]──────────────────────────► HistoryScreen
-   └─[Card último teste]─────────────────────► HistoryScreen (detalhe pré-aberto)
+StartScreen → [Teste rápido / completo] → RunningScreen → [Conclusão] → ResultScreen
+   ↑                                        [Cancelar] ↓                ↓ [Testar novamente]
+   │                                       StartScreen                  │
+   ├─[Ver histórico]──────────────────────────────────────► HistoryScreen
+   └─[Card último teste]─────────────────────────────────► HistoryScreen (detalhe pré-aberto)
+
+StartScreen → [Comparar locais] → ComparisonScreen (passo 1/2)
+   ComparisonScreen → [Testar perto] → RunningScreen → ComparisonScreen (passo 2/2)
+   ComparisonScreen → [Testar longe] → RunningScreen → ComparisonScreen (resultado)
 ```
 
 ### Navegação por gestos
@@ -50,14 +55,17 @@ Ponto de entrada do app. Permite iniciar o teste, visualizar informações do di
 │  │  [⚠ erro + Tentar novamente]│ │  ← só aparece se error != null
 │  └─────────────────────────────┘ │
 │                                  │
-│         ┌──────────────┐         │
-│         │              │         │
-│         │   INICIAR    │         │  ← círculo 200px VAZADO (border accent)
-│         │              │         │     pulsa borda+escala quando pronto
-│         └──────────────┘         │
-│                                  │
-│  Usa ~400 MB no Wi-Fi/cabo ·     │  ← hint dinâmico
-│  ~70 MB em rede móvel            │
+│  ┌────────────────────────────┐  │
+│  │  Teste rápido              │  │  ← borda accent pulsando, destaque primário
+│  │  ~80 MB · resultado em ~30s│  │
+│  └────────────────────────────┘  │
+│  ┌────────────────────────────┐  │
+│  │  Teste completo            │  │  ← borda neutra, borda accent no hover
+│  │  ~400 MB · mais preciso    │  │
+│  └────────────────────────────┘  │
+│  ┌────────────────────────────┐  │
+│  │  Comparar locais           │  │  ← botão sutil (compare style)
+│  └────────────────────────────┘  │
 │                                  │
 │  ┌────────────────────────────┐  │
 │  │ Último teste · 28/04 14:32 │  │  ← card só se há histórico
@@ -72,13 +80,15 @@ Ponto de entrada do app. Permite iniciar o teste, visualizar informações do di
 └──────────────────────────────────┘
 ```
 
-### Estados do botão Iniciar
+### Botões de modo
 
-| Estado | Condição | Visual |
-|---|---|---|
-| Aguardando | `loading=true` | Desabilitado, label "Aguardando…", sem animação |
-| Pronto | `!loading && server.available && device` | Habilitado, label "Iniciar" em accent, borda pulsando |
-| Erro | `error != null` | Botão desabilitado + mensagem de erro acima |
+| Botão | Modo | Preset | Visual |
+|---|---|---|---|
+| Teste rápido | `'quick'` | PRESET_QUICK (~80 MB) | Borda accent pulsando (destaque primário) |
+| Teste completo | `'complete'` | PRESET_DEFAULT/MOBILE (~400/70 MB) | Borda neutra, accent no hover |
+| Comparar locais | — | Inicia fluxo ComparisonScreen | Borda sutil |
+
+Todos os botões ficam `disabled` quando `loading=true` ou `error != null`.
 
 ### BottomSheet — peek (fechado)
 
@@ -106,6 +116,11 @@ Desliza de baixo para cima com `cubic-bezier(0.32,0.72,0,1)`, 300ms. Backdrop es
 - **Unidade** — toggle segmentado: `[Mbps] Gbps` (default: Mbps)
 - **Conexão** — toggle segmentado: `[Auto] Wi-Fi Cable Celular`
 - **Servidor** — seletor de servidor (atualmente só Cloudflare)
+
+**Seção: Privacidade**
+
+- **IP ao compartilhar** — toggle segmentado: `[Ocultar] Mostrar` (default: Ocultar). Quando "Ocultar", o campo "Seu IP" na seção Detalhes da ResultScreen exibe "Oculto" em vez do IP real.
+- Nota informativa: "Seus testes ficam salvos neste aparelho. Você decide quando exportar ou compartilhar."
 
 > A opção "Gráfico" (escala linear/log) foi removida da UI; o campo `scale` permanece em `Settings` por compatibilidade de localStorage e não tem efeito visual atualmente.
 
@@ -216,6 +231,13 @@ Exibe os resultados completos do teste, diagnóstico em linguagem leiga, utilida
 │  ── O que isso significa? ──     │
 │  [parágrafos de diagnóstico]     │
 │                                  │
+│  ── O que fazer agora ──         │
+│  ┌────────────────────────────┐  │  ← card de recomendação (alta prioridade)
+│  │ Reiniciar o roteador        │  │     borda esquerda colorida por prioridade
+│  │ Tente desligar e religar…  │  │
+│  └────────────────────────────┘  │
+│  [mais recomendações se houver]  │
+│                                  │
 │  ── Para o que sua internet ──   │
 │  [Games] Bom     [4K] Pode falhar│  ← grid 2×2 de uso prático (ícones SVG)
 │  [HO] Bom       [Video] Bom     │
@@ -223,7 +245,7 @@ Exibe os resultados completos do teste, diagnóstico em linguagem leiga, utilida
 │  ── Detalhes ──                  │
 │  Servidor     Cloudflare · GIG   │
 │  Operadora    Vivo Fibra         │
-│  Seu IP       45.70.55.83        │
+│  Seu IP       Oculto (ou IP)     │  ← "Oculto" quando hideIpOnShare=true
 │  Perda        0,0%               │
 │  Data         28/04/2026 14:32   │
 │                                  │
@@ -283,13 +305,34 @@ Resposta 18 ms · Oscilação 3 ms
 28/04/2026 14:32
 ```
 
+### Card "O que fazer agora"
+
+Seção entre diagnóstico e use cases. Exibe 1–3 `Recommendation` geradas por `buildRecommendations(result, classification, history)`:
+
+| Prioridade | Visual |
+|---|---|
+| `high` | Borda esquerda vermelha (`var(--error)`) |
+| `medium` | Borda esquerda amarela (`var(--warn)`) |
+| `low` | Borda esquerda accent (`var(--accent)`) |
+
+Não aparece quando `quality === 'excellent'` (nenhuma recomendação gerada).
+
+### IP ao compartilhar
+
+O campo "Seu IP" na seção Detalhes exibe:
+- `settings.hideIpOnShare === true` → "Oculto"
+- `settings.hideIpOnShare === false` → IP real de `server.ip`
+
+Configurado no BottomSheet → seção Privacidade.
+
 ### Serviços consumidos
 
-- Props: `result (SpeedTestResult)`, `server (ServerInfo | null)`, `previous (TestRecord | null)`, `unit`
+- Props: `result (SpeedTestResult)`, `server (ServerInfo | null)`, `previous (TestRecord | null)`, `unit`, `hideIpOnShare (boolean)`
 - `classify(result)` → classificação
 - `buildDiagnosis(result, classification, history)` → parágrafos
+- `buildRecommendations(result, classification, history)` → recomendações
 - `stability(result)` → score numérico
-- `loadHistory()` → passado para buildDiagnosis
+- `loadHistory()` → passado para buildDiagnosis e buildRecommendations
 - `exportResultPdf()` → geração de PDF
 
 ---
@@ -314,6 +357,13 @@ Lista os últimos 50 testes com gráfico de evolução, resumo de médias e deta
 │  │ ⚠ Tempo de resposta alto…  │  │     (fallback: últimos 5 se 24h vazio)
 │  └────────────────────────────┘  │
 │                                  │
+│  ┌────────────────────────────┐  │  ← insights (apenas se ≥ 3 testes)
+│  │ ▌ Download em queda        │  │     borda esquerda colorida por severidade
+│  │   O download caiu 35%…     │  │
+│  └────────────────────────────┘  │
+│  [Faça mais X testes para ver    │  ← hint quando 1 ou 2 testes registrados
+│   análise do seu histórico]      │
+│                                  │
 │  Evolução recente                │
 │  ┌────────────────────────────┐  │  ← AreaChart 140px (últimos 10 testes)
 │  │  ~~~ Download (azul)       │  │     sem eixos, sem tooltip
@@ -336,6 +386,20 @@ Lista os últimos 50 testes com gráfico de evolução, resumo de médias e deta
 │                              [PDF]│  ← FAB
 └──────────────────────────────────┘
 ```
+
+### Bloco de diagnóstico (topo da tela)
+
+### Seção de insights
+
+Exibida entre o diagnóstico e o gráfico quando `items.length >= 3`. Gerada por `buildHistoryInsights(items)` retornando até 3 `HistoryInsight`:
+
+| Severidade | Borda esquerda | Exemplos de insight |
+|---|---|---|
+| `critical` | `var(--error)` | Download em queda forte, perda de dados repetida |
+| `warning` | `var(--warn)` | Download em queda moderada, resposta alta recorrente, upload fraco |
+| `info` | `var(--accent)` | Download melhorando, conexão estável |
+
+Quando `items.length < 3 && items.length > 0`: exibe hint "Faça mais X testes para ver análise do seu histórico."
 
 ### Bloco de diagnóstico (acima do gráfico)
 
@@ -399,7 +463,90 @@ A StartScreen pode abrir o HistoryScreen com um registro pré-selecionado via pr
 
 ---
 
-## 5. Comportamentos globais
+## 5. ComparisonScreen
+
+### Finalidade
+
+Guia o usuário por dois testes consecutivos — um perto do roteador e outro longe — para diagnosticar problemas de cobertura Wi-Fi. Exibe um veredicto comparando as métricas dos dois pontos.
+
+### Fluxo de passos
+
+**Passo 1 — Perto do roteador (`step === 'near'`)**
+
+```
+┌──────────────────────────────────┐
+│  HEADER                          │
+│  [← Voltar]                      │
+│                                  │
+│  Passo 1 de 2                    │  ← badge
+│                                  │
+│  Fique perto do roteador         │
+│  [descrição orientando]          │
+│                                  │
+│  [Testar perto do roteador]      │  ← btn-primary
+└──────────────────────────────────┘
+```
+
+**Passo 2 — Longe do roteador (`step === 'far'`)**
+
+```
+┌──────────────────────────────────┐
+│  HEADER                          │
+│  [← Voltar]                      │
+│                                  │
+│  Passo 2 de 2                    │  ← badge
+│                                  │
+│  ┌────────────────────────────┐  │
+│  │ Perto · ↓ 87,3 Mbps …     │  │  ← preview do resultado do passo 1
+│  └────────────────────────────┘  │
+│                                  │
+│  Vá para outro cômodo            │
+│  [Testar longe do roteador]      │
+│  [Refazer teste perto]           │  ← btn-text secundário
+└──────────────────────────────────┘
+```
+
+**Resultado (`step === 'done'`)**
+
+```
+┌──────────────────────────────────┐
+│  HEADER                          │
+│  [← Voltar]                      │
+│                                  │
+│  ┌────────────────────────────┐  │  ← card de veredicto (cor por diagnosis)
+│  │ ⚠ Cobertura fraca          │  │
+│  │ Sua internet perde força…  │  │
+│  └────────────────────────────┘  │
+│                                  │
+│         Perto    Longe           │
+│  DL     87,3     31,2 Mbps      │  ← tabela de comparação
+│  UL     32,1     12,4 Mbps      │
+│  Lat    18 ms    44 ms           │
+│  Queda  -64%     —               │  ← percentual de variação
+│                                  │
+│  [Testar novamente]              │
+└──────────────────────────────────┘
+```
+
+### Diagnósticos de cobertura
+
+| `diagnosis` | Mensagem resumida | Visual |
+|---|---|---|
+| `coverage_issue` (>75% queda) | "Cobertura muito fraca longe do roteador" | Borda vermelha |
+| `coverage_issue` (>50% queda) | "Cobertura moderada — perda significativa" | Borda amarela |
+| `both_bad` | "Problema na conexão em geral — não é cobertura" | Borda vermelha |
+| `both_good` | "Cobertura excelente" | Borda accent |
+| `other` | "Diferença pequena" | Borda neutra |
+
+### Serviços consumidos
+
+- Props: `step`, `nearResult`, `farResult`, `onStartNear`, `onStartFar`, `onBack`, `onRetryNear`, `unit`
+- `calculateComparison(nearResult, farResult)` → `ComparisonResult`
+- Resultados gravados normalmente em `TestRecord` (via fluxo de gravação de `App.tsx`) com `testMode: 'complete'`
+
+---
+
+## 6. Comportamentos globais
 
 ### Tema dark/light
 
@@ -412,9 +559,10 @@ A StartScreen pode abrir o HistoryScreen com um registro pré-selecionado via pr
 
 Ao concluir o teste (`phase === 'done'`):
 1. `App.tsx` chama `previousRecord()` para capturar o registro anterior
-2. Chama `appendRecord(result, { serverName, isp, deviceType, connectionType })`
+2. Chama `appendRecord(result, { serverName, isp, deviceType, connectionType, testMode })`
 3. Atualiza `lastRecord` (usado pelo card da StartScreen) com o novo registro retornado
-4. Navega para ResultScreen com `previous` preenchido
+4. Se `comparisonModeRef.current !== null`: roteia para ComparisonScreen (não para ResultScreen)
+5. Caso contrário: navega para ResultScreen com `previous` preenchido
 
 ### Carregamento do último resultado ao abrir o PWA
 
@@ -425,13 +573,14 @@ Na primeira renderização de `App.tsx`, um `useEffect` chama `previousRecord()`
 - `useDeviceInfo` lê `navigator.connection.type` quando disponível. Quando ausente (iOS Safari), assume `'mobile'` em dispositivos móveis (em vez de `'wifi'`). O usuário pode sobrescrever em **Configurações → Conexão**.
 - `serverRegistry.getInfo` normaliza o `asOrganization` da API `/meta` Cloudflare para nomes comerciais brasileiros: TELEFONICA → Vivo, AMERICA MOVIL/NET SERVICOS/CLARO → Claro, TIM → TIM, OI/TELEMAR → Oi, ALGAR → Algar.
 
-### Presets de teste por tipo de conexão
+### Presets de teste por modo e tipo de conexão
 
-`runSpeedTest` aceita `connectionType` (passado via `useSpeedTest.start(connectionType)`):
-- **Default (Wi-Fi/cabo)**: 25 MB warmup + 3 × 100 MB download, 10 MB warmup + 3 × 50 MB upload (~400 MB total).
-- **Móvel**: 5 MB warmup + 2 × 25 MB download, 2 MB warmup + 2 × 10 MB upload (~70 MB total).
+`runSpeedTest` aceita `connectionType` e `mode` (via `useSpeedTest.start(connectionType, mode)`):
+- **Teste rápido** (`mode = 'quick'`): 8 pings + 5 MB warmup + 1 × 50 MB download + 2 MB warmup + 1 × 20 MB upload (~80 MB total). Válido para Wi-Fi, cabo e mobile.
+- **Teste completo — Wi-Fi/cabo** (`mode = 'complete'`): 20 pings + 25 MB warmup + 3 × 100 MB DL + 10 MB warmup + 3 × 50 MB UL (~400 MB).
+- **Teste completo — Móvel** (`mode = 'complete'` + `connectionType = 'mobile'`): 20 pings + 5 MB warmup + 2 × 25 MB DL + 2 MB warmup + 2 × 10 MB UL (~70 MB).
 
-Em `App.tsx`, `effectiveConnection` respeita o override manual em `settings.connectionOverride`.
+Em `App.tsx`, `effectiveConnection` respeita o override manual em `settings.connectionOverride`. O `testMode` é definido no momento em que o usuário toca um dos botões da StartScreen e é preservado ao repetir o teste (Retry).
 
 ### PWA / Instalação
 

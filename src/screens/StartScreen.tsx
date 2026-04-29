@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { DeviceInfo, ServerInfo, TestRecord } from '../types';
+import type { DeviceInfo, ServerInfo, SpeedTestMode, TestRecord } from '../types';
 import type { Settings } from '../hooks/useSettings';
 import { Header } from '../components/Header';
 import { BottomSheet } from '../components/BottomSheet';
@@ -16,7 +16,8 @@ interface Props {
   error: string | null;
   settings: Settings;
   onUpdateSettings: (patch: Partial<Settings>) => void;
-  onStart: () => void;
+  onStart: (mode: SpeedTestMode) => void;
+  onStartComparison: () => void;
   onRetry: () => void;
   lastRecord: TestRecord | null;
   onShowLastResult: () => void;
@@ -33,6 +34,7 @@ export function StartScreen({
   settings,
   onUpdateSettings,
   onStart,
+  onStartComparison,
   onRetry,
   lastRecord,
   onShowLastResult,
@@ -54,18 +56,39 @@ export function StartScreen({
           </div>
         ) : null}
 
-        <button
-          className={`lk-start__go${canStart ? ' lk-start__go--ready' : ''}`}
-          onClick={onStart}
-          disabled={!canStart}
-          aria-label="Iniciar teste de velocidade"
-        >
-          <span className="lk-start__go-label">
-            {loading ? 'Aguardando…' : 'Iniciar'}
-          </span>
-        </button>
+        <div className="lk-start__modes">
+          <button
+            className={`lk-start__mode-btn lk-start__mode-btn--primary${canStart ? ' lk-start__mode-btn--ready' : ''}`}
+            onClick={() => onStart('quick')}
+            disabled={!canStart}
+            aria-label="Iniciar teste rápido"
+          >
+            <span className="lk-start__mode-title">
+              {loading ? 'Aguardando…' : 'Teste rápido'}
+            </span>
+            <span className="lk-start__mode-desc">Usa menos dados · ~80 MB</span>
+          </button>
 
-        <p className="lk-start__hint">Usa ~400 MB no Wi-Fi/cabo · ~70 MB em rede móvel</p>
+          <button
+            className={`lk-start__mode-btn lk-start__mode-btn--secondary${canStart ? ' lk-start__mode-btn--ready' : ''}`}
+            onClick={() => onStart('complete')}
+            disabled={!canStart}
+            aria-label="Iniciar teste completo"
+          >
+            <span className="lk-start__mode-title">Teste completo</span>
+            <span className="lk-start__mode-desc">Mais preciso · ~400 MB no Wi-Fi</span>
+          </button>
+
+          <button
+            className="lk-start__mode-btn lk-start__mode-btn--compare"
+            onClick={onStartComparison}
+            disabled={!canStart}
+            aria-label="Comparar locais"
+          >
+            <span className="lk-start__mode-title">Comparar locais</span>
+            <span className="lk-start__mode-desc">Descubra se o problema é o Wi-Fi ou a operadora</span>
+          </button>
+        </div>
 
         {lastRecord && (
           <div className="lk-start__last">

@@ -247,3 +247,47 @@
   font-size: 12px;
   color: var(--text-2);
 }
+
+/* Insights --------- */
+
+.lk-history__insights {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.lk-history__insight {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px 14px;
+  border-radius: var(--radius-button);
+  border-left: 3px solid var(--border);
+  background: var(--surface);
+}
+
+.lk-history__insight--critical { border-left-color: var(--error); }
+.lk-history__insight--warning  { border-left-color: var(--warn); }
+.lk-history__insight--info     { border-left-color: var(--accent); }
+
+.lk-history__insight-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.lk-history__insight-desc {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.lk-history__insights-hint {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-3);
+  text-align: center;
+}

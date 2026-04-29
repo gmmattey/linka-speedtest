@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ConnectionType, SpeedTestProgress, SpeedTestResult, TestPhase } from '../types';
+import type { ConnectionType, SpeedTestMode, SpeedTestProgress, SpeedTestResult, TestPhase } from '../types';
 import { runSpeedTest } from '../utils/speedtest';
 
 export interface LivePoint {
@@ -53,7 +53,7 @@ export function useSpeedTest() {
     };
   }, []);
 
-  const start = useCallback(async (connectionType?: ConnectionType) => {
+  const start = useCallback(async (connectionType?: ConnectionType, mode?: SpeedTestMode) => {
     if (ctrlRef.current) ctrlRef.current.abort();
     const ctrl = new AbortController();
     ctrlRef.current = ctrl;
@@ -101,7 +101,7 @@ export function useSpeedTest() {
     };
 
     try {
-      const result = await runSpeedTest(onProgress, ctrl.signal, connectionType);
+      const result = await runSpeedTest(onProgress, ctrl.signal, connectionType, mode);
       setState((s) => ({
         ...s,
         phase: 'done',

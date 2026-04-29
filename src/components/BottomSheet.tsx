@@ -134,6 +134,18 @@ export function BottomSheet({ open, onToggle, onClose, device, server, loading, 
             <SettingRow label="Conexão">
               <Seg options={CONN_OPTS} value={settings.connectionOverride} onChange={(v) => onUpdateSettings({ connectionOverride: v })} />
             </SettingRow>
+            <SettingRow label="IP ao compartilhar">
+              <Seg
+                options={[{ value: 'hide', label: 'Oculto' }, { value: 'show', label: 'Visível' }]}
+                value={settings.hideIpOnShare ? 'hide' : 'show'}
+                onChange={(v) => onUpdateSettings({ hideIpOnShare: v === 'hide' })}
+              />
+            </SettingRow>
+          </div>
+
+          {/* Privacy note */}
+          <div className="lk-sheet__section">
+            <p className="lk-sheet__privacy-note">Seus testes ficam salvos neste aparelho. Você decide quando exportar ou compartilhar.</p>
           </div>
 
           {/* Server picker */}

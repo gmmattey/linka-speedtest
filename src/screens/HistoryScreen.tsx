@@ -5,6 +5,7 @@ import { DeviceIcon, ConnectionIcon, IconPdf } from '../components/icons';
 import type { TestRecord } from '../types';
 import { buildDiagnosis, classify, qualityHeadline, stability, stabilityLabel, tagLabel } from '../utils/classifier';
 import { clearHistory, loadHistory } from '../utils/history';
+import { buildHistoryInsights } from '../utils/historyInsights';
 import { formatDate, formatMbps, formatMs } from '../utils/format';
 import { exportHistoryPdf } from '../utils/pdfExport';
 import './HistoryScreen.css';
@@ -54,6 +55,8 @@ export function HistoryScreen({ theme, onToggleTheme, unit = 'mbps', initialSele
     return { avgDl, avgUl, quality: c.primary, n };
   }, [items]);
 
+  const insights = useMemo(() => buildHistoryInsights(items), [items]);
+
   const diagnosis = useMemo(() => {
     if (items.length === 0) return null;
     const cutoff = Date.now() - 24 * 3600 * 1000;
@@ -100,6 +103,23 @@ export function HistoryScreen({ theme, onToggleTheme, unit = 'mbps', initialSele
                   <p key={i} className="lk-history__diagnosis-text">{line}</p>
                 ))}
               </section>
+            )}
+
+            {insights.length > 0 && (
+              <section className="lk-history__insights">
+                {insights.map((ins) => (
+                  <div key={ins.id} className={`lk-history__insight lk-history__insight--${ins.severity}`}>
+                    <span className="lk-history__insight-title">{ins.title}</span>
+                    <span className="lk-history__insight-desc">{ins.description}</span>
+                  </div>
+                ))}
+              </section>
+            )}
+
+            {items.length < 3 && items.length > 0 && (
+              <p className="lk-history__insights-hint">
+                Faça mais {3 - items.length} teste{3 - items.length > 1 ? 's' : ''} para ver análise do seu histórico.
+              </p>
             )}
 
             {chartData.length >= 2 && (

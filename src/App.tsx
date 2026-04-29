@@ -3,13 +3,14 @@ import { StartScreen } from './screens/StartScreen';
 import { RunningScreen } from './screens/RunningScreen';
 import { ResultScreen } from './screens/ResultScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
+import { ComparisonScreen, type ComparisonStep } from './screens/ComparisonScreen';
 import { useDeviceInfo } from './hooks/useDeviceInfo';
 import { useSpeedTest } from './hooks/useSpeedTest';
 import { useSettings } from './hooks/useSettings';
 import { appendRecord, previousRecord } from './utils/history';
-import type { TestRecord } from './types';
+import type { SpeedTestMode, SpeedTestResult, TestRecord } from './types';
 
-type Screen = 'start' | 'running' | 'result' | 'history';
+type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison';
 
 const THEME_KEY = 'linka.speedtest.theme';
 const SWIPE_THRESHOLD_PX = 80;
@@ -29,6 +30,11 @@ export default function App() {
   const [previous, setPrevious] = useState<TestRecord | null>(null);
   const [lastRecord, setLastRecord] = useState<TestRecord | null>(null);
   const [historyInitialId, setHistoryInitialId] = useState<string | undefined>(undefined);
+  const [testMode, setTestMode] = useState<SpeedTestMode>('complete');
+  const [comparisonStep, setComparisonStep] = useState<ComparisonStep>('near');
+  const [comparisonNear, setComparisonNear] = useState<SpeedTestResult | null>(null);
+  const [comparisonFar, setComparisonFar] = useState<SpeedTestResult | null>(null);
+  const comparisonModeRef = useRef<'near' | 'far' | null>(null);
   const recordedRef = useRef(false);
   const backStackRef = useRef<Screen[]>([]);
   const forwardStackRef = useRef<Screen[]>([]);
@@ -93,9 +99,24 @@ export default function App() {
         isp: deviceInfo.server.isp,
         deviceType: deviceInfo.device.deviceType,
         connectionType: deviceInfo.device.connectionType,
+        testMode,
       });
       setLastRecord(newRecord);
-      goTo('result');
+
+      const cmpMode = comparisonModeRef.current;
+      if (cmpMode === 'near') {
+        setComparisonNear(test.result);
+        setComparisonStep('far');
+        comparisonModeRef.current = null;
+        goTo('comparison');
+      } else if (cmpMode === 'far') {
+        setComparisonFar(test.result);
+        setComparisonStep('done');
+        comparisonModeRef.current = null;
+        goTo('comparison');
+      } else {
+        goTo('result');
+      }
     }
   }, [test.phase, test.result, deviceInfo.device, deviceInfo.server, goTo]);
 
@@ -103,10 +124,11 @@ export default function App() {
     ? settings.connectionOverride
     : deviceInfo.device?.connectionType;
 
-  const handleStart = useCallback(() => {
+  const handleStart = useCallback((mode: SpeedTestMode) => {
+    setTestMode(mode);
     recordedRef.current = false;
     goTo('running');
-    test.start(effectiveConnection);
+    test.start(effectiveConnection, mode);
   }, [test, effectiveConnection, goTo]);
 
   const handleCancel = useCallback(() => {
@@ -119,8 +141,35 @@ export default function App() {
     test.reset();
     recordedRef.current = false;
     goTo('running');
-    test.start(effectiveConnection);
+    test.start(effectiveConnection, testMode);
+  }, [test, effectiveConnection, testMode, goTo]);
+
+  const handleStartComparison = useCallback(() => {
+    setComparisonStep('near');
+    setComparisonNear(null);
+    setComparisonFar(null);
+    goTo('comparison');
+  }, [goTo]);
+
+  const handleComparisonStartNear = useCallback(() => {
+    comparisonModeRef.current = 'near';
+    recordedRef.current = false;
+    goTo('running');
+    test.start(effectiveConnection, 'complete');
   }, [test, effectiveConnection, goTo]);
+
+  const handleComparisonStartFar = useCallback(() => {
+    comparisonModeRef.current = 'far';
+    recordedRef.current = false;
+    goTo('running');
+    test.start(effectiveConnection, 'complete');
+  }, [test, effectiveConnection, goTo]);
+
+  const handleComparisonRetryNear = useCallback(() => {
+    setComparisonStep('near');
+    setComparisonNear(null);
+    setComparisonFar(null);
+  }, []);
 
   const handleShowHistory = useCallback(() => {
     setHistoryInitialId(undefined);
@@ -186,8 +235,24 @@ export default function App() {
             onRetry={handleRetry}
             onShowHistory={handleShowHistory}
             unit={settings.unit}
+            hideIpOnShare={settings.hideIpOnShare}
           />
         ) : null;
+      case 'comparison':
+        return (
+          <ComparisonScreen
+            theme={theme}
+            onToggleTheme={onToggleTheme}
+            step={comparisonStep}
+            nearResult={comparisonNear}
+            farResult={comparisonFar}
+            onStartNear={handleComparisonStartNear}
+            onStartFar={handleComparisonStartFar}
+            onBack={() => goTo('start')}
+            onRetryNear={handleComparisonRetryNear}
+            unit={settings.unit}
+          />
+        );
       case 'history':
         return (
           <HistoryScreen
@@ -210,6 +275,7 @@ export default function App() {
             settings={settings}
             onUpdateSettings={updateSettings}
             onStart={handleStart}
+            onStartComparison={handleStartComparison}
             onRetry={deviceInfo.reload}
             lastRecord={lastRecord}
             onShowLastResult={handleShowLastResult}
@@ -222,8 +288,10 @@ export default function App() {
     test.phase, test.instantMbps, test.result,
     deviceInfo.device, deviceInfo.server, deviceInfo.loading, deviceInfo.error, deviceInfo.reload,
     previous, lastRecord, historyInitialId,
-    handleStart, handleCancel, handleRetry, handleShowHistory, handleShowLastResult,
-    settings, updateSettings,
+    handleStart, handleStartComparison, handleCancel, handleRetry, handleShowHistory, handleShowLastResult,
+    handleComparisonStartNear, handleComparisonStartFar, handleComparisonRetryNear,
+    settings, updateSettings, testMode,
+    comparisonStep, comparisonNear, comparisonFar,
   ]);
 
   return (

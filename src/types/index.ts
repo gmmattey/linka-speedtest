@@ -2,6 +2,7 @@ export type Quality = 'excellent' | 'good' | 'fair' | 'slow' | 'unavailable';
 export type Tag = 'highLatency' | 'lowUpload' | 'unstable' | 'packetLoss' | 'veryUnstable';
 export type DeviceType = 'mobile' | 'tablet' | 'desktop';
 export type ConnectionType = 'wifi' | 'mobile' | 'cable';
+export type SpeedTestMode = 'quick' | 'complete';
 export type TestPhase = 'idle' | 'latency' | 'download' | 'upload' | 'done' | 'error';
 
 export interface SpeedTestResult {
@@ -49,9 +50,37 @@ export interface TestRecord {
   isp?: string;
   deviceType: DeviceType;
   connectionType: ConnectionType;
+  testMode?: SpeedTestMode;
 }
 
 export interface Classification {
   primary: Quality;
   tags: Set<Tag>;
+}
+
+export interface ComparisonResult {
+  downloadDropPercent: number;
+  uploadDropPercent: number;
+  latencyIncreasePercent: number;
+  diagnosis: 'coverage_issue' | 'both_bad' | 'both_good' | 'other';
+  message: string;
+}
+
+export type RecommendationAction =
+  | 'repeat_test'
+  | 'move_closer_router'
+  | 'restart_router'
+  | 'try_cable'
+  | 'compare_location'
+  | 'contact_operator'
+  | 'run_proof_mode'
+  | 'run_gamer_mode'
+  | 'none';
+
+export interface Recommendation {
+  id: string;
+  title: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high';
+  actionType: RecommendationAction;
 }

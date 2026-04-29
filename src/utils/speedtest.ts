@@ -1,9 +1,8 @@
-import type { ConnectionType, SpeedTestProgress, SpeedTestResult, TestPhase } from '../types';
+import type { ConnectionType, SpeedTestMode, SpeedTestProgress, SpeedTestResult, TestPhase } from '../types';
 import { getDefaultServer } from './serverRegistry';
 
-const LATENCY_SAMPLES = 20;
-
 interface Preset {
+  latencySamples: number;
   dlWarmup: number;
   dlRound: number;
   dlRounds: number;
@@ -15,6 +14,7 @@ interface Preset {
 }
 
 const PRESET_DEFAULT: Preset = {
+  latencySamples: 20,
   dlWarmup: 25_000_000,  dlRound: 100_000_000, dlRounds: 3, dlTimeoutMs: 25_000,
   ulWarmup: 10_000_000,  ulRound:  50_000_000, ulRounds: 3, ulTimeoutMs: 30_000,
 };
@@ -22,11 +22,20 @@ const PRESET_DEFAULT: Preset = {
 // Em rede móvel reduzimos volume (~70 MB total vs ~400 MB) para preservar
 // franquia e tempo do usuário, mantendo precisão até ~200 Mbps.
 const PRESET_MOBILE: Preset = {
+  latencySamples: 20,
   dlWarmup:  5_000_000,  dlRound:  25_000_000, dlRounds: 2, dlTimeoutMs: 20_000,
   ulWarmup:  2_000_000,  ulRound:  10_000_000, ulRounds: 2, ulTimeoutMs: 20_000,
 };
 
-function presetFor(connectionType?: ConnectionType): Preset {
+// Modo rápido: ~80 MB total, 8 amostras de latência, 1 round de cada.
+const PRESET_QUICK: Preset = {
+  latencySamples: 8,
+  dlWarmup:  5_000_000,  dlRound:  50_000_000, dlRounds: 1, dlTimeoutMs: 20_000,
+  ulWarmup:  2_000_000,  ulRound:  20_000_000, ulRounds: 1, ulTimeoutMs: 20_000,
+};
+
+function presetFor(connectionType?: ConnectionType, mode?: SpeedTestMode): Preset {
+  if (mode === 'quick') return PRESET_QUICK;
   return connectionType === 'mobile' ? PRESET_MOBILE : PRESET_DEFAULT;
 }
 
@@ -75,14 +84,15 @@ function mapProgress(phase: Exclude<TestPhase, 'idle' | 'error'>, local: number)
 }
 
 async function measureLatency(
+  samples: number,
   signal: AbortSignal,
   onProgress: (p: SpeedTestProgress) => void,
 ): Promise<{ latency: number; jitter: number; loss: number }> {
   const server = getDefaultServer();
-  const samples: number[] = [];
+  const timings: number[] = [];
   let failures = 0;
 
-  for (let i = 0; i < LATENCY_SAMPLES; i++) {
+  for (let i = 0; i < samples; i++) {
     if (signal.aborted) throw new DOMException('aborted', 'AbortError');
     const t0 = performance.now();
     try {
@@ -97,21 +107,21 @@ async function measureLatency(
       await resp.arrayBuffer();
       clearTimeout(tid);
       signal.removeEventListener('abort', onAbort);
-      samples.push(performance.now() - t0);
+      timings.push(performance.now() - t0);
     } catch {
       failures += 1;
     }
     onProgress({
       phase: 'latency',
       instantMbps: null,
-      overallProgress: mapProgress('latency', (i + 1) / LATENCY_SAMPLES),
+      overallProgress: mapProgress('latency', (i + 1) / samples),
     });
   }
 
-  const usable = samples.slice(1);
+  const usable = timings.slice(1);
   const lat = median(usable);
   const jit = jitterOf(usable);
-  const loss = (failures / LATENCY_SAMPLES) * 100;
+  const loss = (failures / samples) * 100;
   return { latency: lat, jitter: jit, loss };
 }
 
@@ -207,11 +217,12 @@ export async function runSpeedTest(
   onProgress: (p: SpeedTestProgress) => void,
   signal: AbortSignal,
   connectionType?: ConnectionType,
+  mode?: SpeedTestMode,
 ): Promise<SpeedTestResult> {
-  const preset = presetFor(connectionType);
+  const preset = presetFor(connectionType, mode);
 
   onProgress({ phase: 'latency', instantMbps: null, overallProgress: 0 });
-  const lat = await measureLatency(signal, onProgress);
+  const lat = await measureLatency(preset.latencySamples, signal, onProgress);
 
   let warmupRx = 0;
   const tWarm = performance.now();

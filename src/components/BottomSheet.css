@@ -172,3 +172,11 @@
   height: env(safe-area-inset-bottom, 16px);
   min-height: 16px;
 }
+
+.lk-sheet__privacy-note {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.5;
+}

@@ -33,6 +33,11 @@ type Tag = 'highLatency' | 'lowUpload' | 'unstable' | 'packetLoss' | 'veryUnstab
 type DeviceType = 'mobile' | 'tablet' | 'desktop'
 type ConnectionType = 'wifi' | 'mobile' | 'cable'
 type TestPhase = 'idle' | 'latency' | 'download' | 'upload' | 'done' | 'error'
+type SpeedTestMode = 'quick' | 'complete'
+type RecommendationAction =
+  | 'repeat_test' | 'move_closer_router' | 'restart_router'
+  | 'try_cable' | 'compare_location' | 'contact_operator'
+  | 'run_proof_mode' | 'run_gamer_mode' | 'none'
 ```
 
 ### Interfaces principais
@@ -79,11 +84,28 @@ interface TestRecord {
   isp?: string            // opcional para compatibilidade com registros antigos
   deviceType: DeviceType
   connectionType: ConnectionType
+  testMode?: SpeedTestMode  // opcional — ausente em registros gravados antes desta versão
 }
 
 interface Classification {
   primary: Quality
   tags: Set<Tag>
+}
+
+interface ComparisonResult {
+  downloadDropPercent: number       // % de queda de DL (near → far)
+  uploadDropPercent: number         // % de queda de UL
+  latencyIncreasePercent: number    // % de aumento de latência
+  diagnosis: 'coverage_issue' | 'both_bad' | 'both_good' | 'other'
+  message: string                   // texto explicativo em pt-BR
+}
+
+interface Recommendation {
+  id: string
+  title: string
+  description: string
+  priority: 'low' | 'medium' | 'high'
+  actionType: RecommendationAction
 }
 ```
 
@@ -93,19 +115,22 @@ interface Classification {
 
 ### 3.1 `speedtest.ts` — Algoritmo de medição
 
-Função principal: `runSpeedTest(onProgress, signal, connectionType?): Promise<SpeedTestResult>`
+Função principal: `runSpeedTest(onProgress, signal, connectionType?, mode?): Promise<SpeedTestResult>`
 
-O parâmetro `connectionType?: ConnectionType` seleciona um preset de payload via `presetFor()`. Atualmente:
+Os parâmetros `connectionType?: ConnectionType` e `mode?: SpeedTestMode` selecionam um preset de payload via `presetFor(connectionType?, mode?)`. Atualmente:
 
-| Preset | Trigger | DL warmup | DL round × n | UL warmup | UL round × n | Total |
-|---|---|---|---|---|---|---|
-| `PRESET_DEFAULT` | `'wifi'` ou `'cable'` ou `undefined` | 25 MB | 100 MB × 3 | 10 MB | 50 MB × 3 | ~400 MB |
-| `PRESET_MOBILE`  | `'mobile'` | 5 MB  | 25 MB × 2  | 2 MB  | 10 MB × 2 | ~70 MB |
+| Preset | Trigger | Pings | DL warmup | DL round × n | UL warmup | UL round × n | Total |
+|---|---|---|---|---|---|---|---|
+| `PRESET_DEFAULT` | `'wifi'`/`'cable'`/`undefined` + `'complete'` | 20 | 25 MB | 100 MB × 3 | 10 MB | 50 MB × 3 | ~400 MB |
+| `PRESET_MOBILE`  | `'mobile'` + `'complete'` | 20 | 5 MB | 25 MB × 2 | 2 MB | 10 MB × 2 | ~70 MB |
+| `PRESET_QUICK`   | qualquer `connectionType` + `'quick'` | 8 | 5 MB | 50 MB × 1 | 2 MB | 20 MB × 1 | ~80 MB |
 
-Em rede móvel reduzimos volume e número de rounds para preservar franquia/tempo, mantendo precisão até ~200 Mbps.
+`PRESET_QUICK` é priorizado: se `mode === 'quick'`, ignora o `connectionType` e usa esse preset em todos os tipos de rede. Em rede móvel + `'complete'`, usa `PRESET_MOBILE` para preservar franquia.
+
+A interface `Preset` inclui o campo `latencySamples: number` (era constante; agora configurável por preset).
 
 **Latência:**
-- 20 pings (HEAD requests para `/__down?_cb=<ts>`)
+- `preset.latencySamples` pings (HEAD requests para `/__down?_cb=<ts>`) — 20 no default/mobile, 8 no quick
 - Descarta a primeira amostra (warm-up)
 - Mediana das amostras restantes = `latency`
 - `jitter = mean(|amostra_i - mediana|)`
@@ -210,7 +235,7 @@ previousRecord(): TestRecord | null  // retorna o registro mais recente antes do
 clearHistory(): void
 ```
 
-`appendRecord` constrói `TestRecord` a partir de `SpeedTestResult + { serverName, isp, deviceType, connectionType }`.
+`appendRecord` constrói `TestRecord` a partir de `SpeedTestResult + { serverName, isp?, deviceType, connectionType, testMode? }`. O campo `testMode` é opcional — registros gravados antes da versão com modos não o possuem e continuam compatíveis.
 
 ### 3.5 `pdfExport.ts` — Exportação de PDF
 
@@ -229,7 +254,71 @@ clearHistory(): void
 **`loadLogoBase64(): Promise<string | null>`**
 - Fetch `/logo.png` → `FileReader.readAsDataURL` → base64 para `jsPDF.addImage`
 
-### 3.6 `format.ts` — Formatação
+### 3.6 `recommendations.ts` — Recomendações contextuais
+
+**`buildRecommendations(result, classification, recentHistory?): Recommendation[]`**
+
+Gera até 3 recomendações priorizadas com base no resultado e histórico recente:
+
+| Condição | Recomendação | Prioridade |
+|---|---|---|
+| `unavailable` | Repetir o teste | high |
+| `packetLoss` tag — recorrente em histórico | Acionar modo Prova Real | high |
+| `packetLoss` tag — pontual | Repetir o teste | high |
+| `unstable` tag — recorrente | Reiniciar roteador | medium |
+| `unstable` tag — pontual | Comparar localização | medium |
+| `highLatency` tag | Aproximar-se do roteador | high |
+| DL baixo (slow/fair) — recorrente | Contatar operadora | high |
+| DL baixo (slow/fair) — pontual | Fechar apps em segundo plano | medium |
+| UL < 5 Mbps | Tentar cabo + sugestão de UL fraco | medium |
+
+Ordenado por priority (`high → medium → low`). Máximo de 3 itens retornados. "Recorrente" = ≥ 2 registros recentes com mesma condição.
+
+### 3.7 `comparison.ts` — Análise de cobertura Wi-Fi
+
+**`calculateComparison(near, far): ComparisonResult`**
+
+Calcula a degradação entre perto e longe do roteador:
+
+| `diagnosis` | Condição |
+|---|---|
+| `coverage_issue` (forte) | DL queda > 75% E near era bom (DL≥25 Mbps) |
+| `coverage_issue` (moderado) | DL queda > 50% E near era bom |
+| `both_bad` | Neither near nem far bons (DL<10 Mbps) |
+| `both_good` | Ambos bons (queda < 20% ou far DL≥50 Mbps) |
+| `other` | Qualquer outra combinação |
+
+Retorna percentuais de variação de DL, UL e latência, mais mensagem interpretativa em pt-BR.
+
+### 3.8 `historyInsights.ts` — Insights de tendência histórica
+
+**`buildHistoryInsights(records: TestRecord[]): HistoryInsight[]`**
+
+Requer ≥ 3 registros. Retorna até 3 `HistoryInsight` em ordem de severidade:
+
+```ts
+interface HistoryInsight {
+  id: string
+  type: 'trend' | 'drop' | 'improvement' | 'recurring_issue' | 'stable_period' | 'info'
+  title: string
+  description: string
+  severity: 'info' | 'warning' | 'critical'
+}
+```
+
+Análises realizadas (em ordem de avaliação):
+
+| Id | Condição | Severidade |
+|---|---|---|
+| `dl_drop_trend` | DL nova metade < DL metade antiga em > 20% (com ≥ 6 registros) | warning (>40% → critical) |
+| `dl_improvement` | DL nova metade > DL metade antiga em > 20% (com ≥ 6 registros) | info |
+| `recurring_latency` | ≥ 3 dos últimos 5 com latência > 80 ms | warning (≥4 → critical) |
+| `recurring_loss` | ≥ 3 dos últimos 5 com packetLoss > 2% | critical |
+| `low_upload` | Média de UL dos últimos 5 < 5 Mbps | warning |
+| `stable_period` | ≥ 4 dos últimos 5 com jitter ≤ 15 ms E loss ≤ 1% (apenas se nenhum outro insight gerado) | info |
+| `ul_drop` | UL recente < 70% da média histórica (com ≥ 6 registros, sem `low_upload`) | warning |
+
+### 3.9 `format.ts` — Formatação
 
 ```ts
 formatMbps(v: number, unit?: 'mbps'|'gbps'): string  // divide por 1000 se gbps
@@ -269,7 +358,7 @@ formatDateIsoLike(ts: number): string // YYYY-MM-DD para nome de arquivo
 
 **Retorno:** `{ phase, instantMbps, overallProgress, result, error, live, start, cancel, reset }`
 
-**Assinatura de `start`**: `start(connectionType?: ConnectionType)`. O hook repassa para `runSpeedTest`, que escolhe o preset (default ou mobile). Ver §3.1.
+**Assinatura de `start`**: `start(connectionType?: ConnectionType, mode?: SpeedTestMode)`. O hook repassa ambos os parâmetros para `runSpeedTest`, que escolhe o preset adequado (default, mobile ou quick). Ver §3.1.
 
 **`live: LivePoint[]`** — buffer dos últimos 60 pontos `{ t: number, speed: number, phase: 'download'|'upload' }`. Mantido por compatibilidade interna; **não é mais consumido** pela RunningScreen (gauge passou a ser apenas número + unidade). O `LiveChart` permanece no codebase mas não está renderizado em nenhuma tela.
 
@@ -290,6 +379,7 @@ interface Settings {
   unit: 'mbps' | 'gbps'            // padrão: 'mbps'
   scale: 'linear' | 'log'          // padrão: 'linear' — sem UI, mantido por compat de localStorage
   connectionOverride: 'auto' | 'wifi' | 'cable' | 'mobile'  // padrão: 'auto'
+  hideIpOnShare: boolean            // padrão: true — oculta IP ao compartilhar resultado
 }
 ```
 
@@ -297,6 +387,8 @@ Chave localStorage: `linka.speedtest.settings.v1`
 `update` faz merge com settings atual e persiste imediatamente.
 
 > O campo `scale` foi removido da UI do BottomSheet. Mantemos no tipo para evitar migração e potencial perda de chave localStorage existente em usuários atuais.
+
+> `hideIpOnShare: true` é o padrão — ao compartilhar via texto ou PDF, o IP público é substituído por "Oculto" na seção Detalhes da ResultScreen.
 
 ---
 
@@ -333,6 +425,7 @@ Props: `open, onToggle, onClose, device, server, loading, settings, onUpdateSett
 - O click em `.lk-sheet__handle-area` segue funcionando como fallback para taps rápidos
 - A SettingRow "Gráfico" foi removida; o array `SCALE_OPTS` foi removido do componente
 - Subcomponente interno `Seg<T>` para controles segmentados
+- **Seção de privacidade:** toggle "IP ao compartilhar" (`['hide','show']`) que altera `settings.hideIpOnShare`. Nota informativa abaixo: "Seus testes ficam salvos neste aparelho. Você decide quando exportar ou compartilhar."
 
 ### 5.4 `Gauge`
 
@@ -384,10 +477,15 @@ Estado gerenciado em `App.tsx`:
 | State | Tipo | Descrição |
 |---|---|---|
 | `theme` | `'dark'\|'light'` | Tema atual, persiste em localStorage |
-| `screen` | `Screen` | Tela ativa: `'start'\|'running'\|'result'\|'history'` |
+| `screen` | `Screen` | Tela ativa: `'start'\|'running'\|'result'\|'history'\|'comparison'` |
 | `previous` | `TestRecord\|null` | Registro do teste anterior à sessão atual (para comparação na ResultScreen) |
 | `lastRecord` | `TestRecord\|null` | Último registro do histórico, exibido como card na StartScreen |
 | `historyInitialId` | `string\|undefined` | Id pré-selecionado quando se abre o HistoryScreen direto no detalhe |
+| `testMode` | `SpeedTestMode` | Modo selecionado na StartScreen: `'quick'` ou `'complete'` |
+| `comparisonStep` | `ComparisonStep` | Passo da ComparisonScreen: `'near'\|'far'\|'done'` |
+| `comparisonNear` | `SpeedTestResult\|null` | Resultado do teste perto do roteador |
+| `comparisonFar` | `SpeedTestResult\|null` | Resultado do teste longe do roteador |
+| `comparisonModeRef` | `RefObject<'near'\|'far'\|null>` | Ref (não state) que intercepta o efeito `phase === 'done'` para rotear para ComparisonScreen em vez de ResultScreen |
 | `recordedRef` | `RefObject<boolean>` | Evita gravação duplicada no histórico |
 | `backStackRef` | `RefObject<Screen[]>` | Pilha de telas anteriores para swipe → |
 | `forwardStackRef` | `RefObject<Screen[]>` | Pilha de telas avançáveis para swipe ← |
@@ -416,10 +514,29 @@ Todas as transições internas (`handleStart`, `handleCancel`, `handleRetry`, `h
 ```
 test.phase === 'done' && test.result && !recordedRef.current
   → previousRecord() → setPrevious(prev)
-  → appendRecord(test.result, { serverName: server.name, isp: server.isp, ... })
+  → appendRecord(test.result, { serverName, isp, deviceType, connectionType, testMode })
   → setLastRecord(novoRegistro)
-  → goTo('result')
+  → comparisonModeRef.current === 'near' → setComparisonNear(result) → goTo('comparison')
+  → comparisonModeRef.current === 'far'  → setComparisonFar(result)  → goTo('comparison')
+  → else                                 → goTo('result')
 ```
+
+**Fluxo de comparação (ComparisonScreen):**
+
+```
+handleStartComparison() → setStep('near') → goTo('comparison')
+  [ComparisonScreen: Passo 1] → handleComparisonStartNear()
+    → comparisonModeRef.current = 'near'
+    → goTo('running') → test.start(effectiveConnection, 'complete')
+    → [phase 'done'] → setComparisonNear(result) → setStep('far') → goTo('comparison')
+  [ComparisonScreen: Passo 2] → handleComparisonStartFar()
+    → comparisonModeRef.current = 'far'
+    → goTo('running') → test.start(effectiveConnection, 'complete')
+    → [phase 'done'] → setComparisonFar(result) → setStep('done') → goTo('comparison')
+  [ComparisonScreen: Resultado] → exibe ComparisonResult calculado por calculateComparison()
+```
+
+`comparisonModeRef` é uma ref (não state) para não disparar re-render nem causar stale closure no efeito `phase === 'done'`.
 
 **Carregamento inicial do último resultado:**
 
@@ -518,7 +635,7 @@ npx wrangler pages deploy dist --project-name linka-speedtest --branch main
 ## 10. Testes (`src/__tests__/`)
 
 **Framework:** Vitest com `environment: 'node'`  
-**Arquivo:** `classifier.test.ts` — 24 testes cobrindo:
+**Arquivo:** `classifier.test.ts` — 28 testes cobrindo:
 
 - `classify()`: todos os 5 níveis de quality + todas as 5 tags
 - `stability()`: casos extremos (score=100, score=0) e valores intermediários
@@ -527,4 +644,4 @@ npx wrangler pages deploy dist --project-name linka-speedtest --branch main
 
 **Comando:** `npm test`
 
-**Regra:** os 24 testes existentes **nunca podem ser quebrados** sem justificativa documentada e plano de substituição. Qualquer mudança em `classifier.ts` exige atualização dos testes correspondentes.
+**Regra:** os 28 testes existentes **nunca podem ser quebrados** sem justificativa documentada e plano de substituição. Qualquer mudança em `classifier.ts` exige atualização dos testes correspondentes.

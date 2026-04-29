@@ -11,6 +11,7 @@ import {
   tagLabel,
 } from '../utils/classifier';
 import { loadHistory } from '../utils/history';
+import { buildRecommendations } from '../utils/recommendations';
 import { formatDate, formatMbps, formatMs } from '../utils/format';
 import { exportResultPdf } from '../utils/pdfExport';
 import './ResultScreen.css';
@@ -24,6 +25,7 @@ interface Props {
   onRetry: () => void;
   onShowHistory: () => void;
   unit?: 'mbps' | 'gbps';
+  hideIpOnShare?: boolean;
 }
 
 type UseCaseStatus = 'good' | 'maybe' | 'limited';
@@ -109,7 +111,7 @@ export async function shareResultText(text: string): Promise<'shared' | 'copied'
 
 export function ResultScreen({
   theme, onToggleTheme, result, server, previous,
-  onRetry, onShowHistory, unit = 'mbps',
+  onRetry, onShowHistory, unit = 'mbps', hideIpOnShare = true,
 }: Props) {
   const classification = useMemo(() => classify(result), [result]);
   const history = useMemo(() => loadHistory(), []);
@@ -118,6 +120,10 @@ export function ResultScreen({
     [result, classification, history],
   );
   const stab = useMemo(() => stability(result), [result]);
+  const recommendations = useMemo(
+    () => buildRecommendations(result, classification, history),
+    [result, classification, history], // eslint-disable-line react-hooks/exhaustive-deps
+  );
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
   const [shareStatus, setShareStatus] = useState<ShareStatus>('idle');
   const shareResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -207,6 +213,20 @@ export function ResultScreen({
           {diagnosis.map((p, i) => <p key={i} className="lk-section__paragraph">{p}</p>)}
         </section>
 
+        {recommendations.length > 0 && (
+          <section className="lk-section lk-whatnow">
+            <h3 className="lk-section__title">O que fazer agora</h3>
+            <ul className="lk-rec-list">
+              {recommendations.map((r) => (
+                <li key={r.id} className={`lk-rec lk-rec--${r.priority}`}>
+                  <span className="lk-rec__title">{r.title}</span>
+                  <span className="lk-rec__desc">{r.description}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         <section className="lk-section">
           <h3 className="lk-section__title">Para o que sua internet serve?</h3>
           <div className="lk-usegrid">
@@ -228,7 +248,7 @@ export function ResultScreen({
           <dl className="lk-details">
             <div><dt>Servidor</dt><dd>{server?.name ?? 'Cloudflare'}{server?.colo && server.colo !== '—' ? ` · ${server.colo}` : ''}</dd></div>
             <div><dt>Operadora</dt><dd>{server?.isp && server.isp !== '—' ? server.isp : '—'}</dd></div>
-            <div><dt>Seu IP</dt><dd>{server?.ip ?? '—'}</dd></div>
+            <div><dt>Seu IP</dt><dd>{hideIpOnShare ? 'Oculto' : (server?.ip ?? '—')}</dd></div>
             <div><dt>Perda de pacotes</dt><dd>{result.packetLoss.toFixed(1)}%</dd></div>
             <div><dt>Data</dt><dd>{formatDate(result.timestamp)}</dd></div>
           </dl>
