@@ -344,6 +344,8 @@ Camada introduzida na Fase 1 do plano de unificação (PWA + linka Flutter). Pur
 
 **Dispersão histórica no resumo:** O card "Média dos seus testes" da HistoryScreen usa `syntheticLoss` (% de testes slow/unavailable nos últimos 5) como proxy de instabilidade temporal — evita que históricos alternando excelente/péssimo apareçam como "bons". Quando `stability.level === 'unstable' | 'oscillating'`, exibe o rótulo de estabilidade em vez do headline de quality.
 
+**Copy (Fase 5):** `<dt>Perda de pacotes</dt>` substituído por `<dt>Perda de sinal</dt>` em ResultScreen e HistoryScreen — alinhado com o chip tag `flag.packetLoss`. PDF mantém terminologia técnica (decisão explícita). Grep por "Perda de pacotes", "Jitter", "pacotes" em `src/screens/` retorna zero.
+
 ### 3.10.1 Contrato — `interpretSpeedTestResult(input)`
 
 ```ts

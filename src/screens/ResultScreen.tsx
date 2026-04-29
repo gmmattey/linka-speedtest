@@ -191,7 +191,7 @@ export function ResultScreen({
             <div><dt>Servidor</dt><dd>{server?.name ?? 'Cloudflare'}{server?.colo && server.colo !== '—' ? ` · ${server.colo}` : ''}</dd></div>
             <div><dt>Operadora</dt><dd>{server?.isp && server.isp !== '—' ? server.isp : '—'}</dd></div>
             <div><dt>Seu IP</dt><dd>{hideIpOnShare ? 'Oculto' : (server?.ip ?? '—')}</dd></div>
-            <div><dt>Perda de pacotes</dt><dd>{result.packetLoss.toFixed(1)}%</dd></div>
+            <div><dt>Perda de sinal</dt><dd>{result.packetLoss.toFixed(1)}%</dd></div>
             <div><dt>Data</dt><dd>{formatDate(result.timestamp)}</dd></div>
           </dl>
         </section>

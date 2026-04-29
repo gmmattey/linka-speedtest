@@ -298,7 +298,7 @@ function HistoryDetail({ record, onBack, unit }: { record: TestRecord; onBack: (
             <div><dt>Servidor</dt><dd>{record.serverName}</dd></div>
             <div><dt>Operadora</dt><dd>{record.isp && record.isp !== '—' ? record.isp : '—'}</dd></div>
             <div><dt>Dispositivo</dt><dd>{record.deviceType === 'mobile' ? 'Celular' : record.deviceType === 'tablet' ? 'Tablet' : 'PC'} · {record.connectionType === 'wifi' ? 'Wi-Fi' : record.connectionType === 'mobile' ? 'Celular' : 'Cabo'}</dd></div>
-            <div><dt>Perda de pacotes</dt><dd>{record.packetLoss.toFixed(1)}%</dd></div>
+            <div><dt>Perda de sinal</dt><dd>{record.packetLoss.toFixed(1)}%</dd></div>
           </dl>
         </section>
       </main>
