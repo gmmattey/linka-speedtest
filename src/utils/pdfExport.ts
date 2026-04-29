@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import type { SpeedTestResult, TestRecord } from '../types';
-import { classify, qualityHeadline, buildDiagnosis, stability, stabilityLabel } from './classifier';
+import { interpretSpeedTestResult, resolveCopy } from '../core';
 import { formatMbps, formatMs, formatDate, formatDateIsoLike } from './format';
 
 async function loadLogoBase64(): Promise<string | null> {
@@ -31,9 +31,7 @@ const COLORS = {
 };
 
 export async function exportResultPdf(result: SpeedTestResult, serverName: string, isp?: string) {
-  const c = classify(result);
-  const diag = buildDiagnosis(result, c);
-  const stab = stability(result);
+  const interpreted = interpretSpeedTestResult({ metrics: result, profile: 'fixed_broadband' });
   const logoB64 = await loadLogoBase64();
 
   const node = document.createElement('div');
@@ -49,7 +47,7 @@ export async function exportResultPdf(result: SpeedTestResult, serverName: strin
       <div style="color:${COLORS.muted};font-size:12px;">${formatDate(result.timestamp)}</div>
     </div>
     <div style="background:${COLORS.bg};border-left:4px solid ${COLORS.accent};padding:16px 20px;border-radius:8px;margin-bottom:24px;">
-      <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;">${qualityHeadline(c.primary)}</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;">${resolveCopy(interpreted.copyKeys.headlineKey)}</div>
       <div style="color:${COLORS.muted};font-size:12px;margin-top:4px;">Servidor: ${serverName}${isp && isp !== '—' ? ' · ' + isp : ''}</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
@@ -65,11 +63,11 @@ export async function exportResultPdf(result: SpeedTestResult, serverName: strin
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;padding-top:16px;border-top:1px solid ${COLORS.border};">
       <div><div style="color:${COLORS.muted};font-size:11px;">Resposta</div><div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:18px;">${formatMs(result.latency)} ms</div></div>
       <div><div style="color:${COLORS.muted};font-size:11px;">Oscilação</div><div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:18px;">${formatMs(result.jitter)} ms</div></div>
-      <div><div style="color:${COLORS.muted};font-size:11px;">Estabilidade</div><div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:18px;">${stabilityLabel(stab)}</div></div>
+      <div><div style="color:${COLORS.muted};font-size:11px;">Estabilidade</div><div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:18px;">${resolveCopy(interpreted.copyKeys.stabilityLabelKey)}</div></div>
     </div>
     <div style="margin-bottom:24px;">
       <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;margin-bottom:8px;">O que isso significa?</div>
-      ${diag.map((p) => `<p style="margin:0 0 8px 0;line-height:1.5;">${p}</p>`).join('')}
+      ${interpreted.copyKeys.diagnosisKeys.map((k) => resolveCopy(k)).map((p) => `<p style="margin:0 0 8px 0;line-height:1.5;">${p}</p>`).join('')}
     </div>
     <div style="margin-top:32px;color:#9CA3AF;font-size:11px;">Gerado por linka SpeedTest · linka.app · ${formatDate(result.timestamp)}</div>
   `;
@@ -101,8 +99,7 @@ export async function exportHistoryPdf(items: TestRecord[]) {
   const avgLat = items.reduce((s, r) => s + r.latency, 0)    / n;
   const avgJit = items.reduce((s, r) => s + r.jitter, 0)     / n;
   const avgLos = items.reduce((s, r) => s + r.packetLoss, 0) / n;
-  const { classify: _c, qualityHeadline: _q } = await import('./classifier');
-  const avgClass = _c({ dl: avgDl, ul: avgUl, latency: avgLat, jitter: avgJit, packetLoss: avgLos, timestamp: 0 });
+  const avgInterpreted = interpretSpeedTestResult({ metrics: { dl: avgDl, ul: avgUl, latency: avgLat, jitter: avgJit, packetLoss: avgLos, timestamp: 0 }, profile: 'fixed_broadband' });
 
   const rows = items.map((r) => `
     <tr>
@@ -112,7 +109,7 @@ export async function exportHistoryPdf(items: TestRecord[]) {
       <td>${formatMs(r.latency)}</td>
       <td>${formatMs(r.jitter)}</td>
       <td>${r.packetLoss.toFixed(1)}%</td>
-      <td>${_q(r.quality)}</td>
+      <td>${resolveCopy(`quality.${r.quality}`)}</td>
       <td>${r.isp && r.isp !== '—' ? r.isp : '—'}</td>
     </tr>`).join('');
 
@@ -128,7 +125,7 @@ export async function exportHistoryPdf(items: TestRecord[]) {
       <div style="color:${COLORS.muted};font-size:12px;">Histórico de testes · ${n} registro${n > 1 ? 's' : ''}</div>
     </div>
     <div style="background:${COLORS.bg};border-left:4px solid ${COLORS.accent};padding:14px 18px;border-radius:8px;margin-bottom:24px;">
-      <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:16px;">${_q(avgClass.primary)} — média</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:16px;">${resolveCopy(avgInterpreted.copyKeys.headlineKey)} — média</div>
       <div style="color:${COLORS.muted};font-size:12px;margin-top:4px;">
         ↓ ${formatMbps(avgDl)} Mbps · ↑ ${formatMbps(avgUl)} Mbps · Resposta ${formatMs(avgLat)} ms
       </div>

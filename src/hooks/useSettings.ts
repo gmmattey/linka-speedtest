@@ -5,14 +5,6 @@ export interface Settings {
   scale: 'linear' | 'log';
   connectionOverride: 'auto' | 'wifi' | 'cable' | 'mobile';
   hideIpOnShare: boolean;
-  /**
-   * Feature flag de dev (Fase 1) — quando `true`, telas que forem migradas
-   * passarão a consumir o motor unificado em `src/core/` em vez do
-   * `classifier.ts` legado. Default `false`. Sem UI exposta nesta fase;
-   * ativação via DevTools/localStorage para QA. Ativada por nenhum chamador
-   * ainda — Fase 2 fará a primeira migração (ResultScreen).
-   */
-  useUnifiedEngine: boolean;
 }
 
 const KEY = 'linka.speedtest.settings.v1';
@@ -21,7 +13,6 @@ const DEFAULTS: Settings = {
   scale: 'linear',
   connectionOverride: 'auto',
   hideIpOnShare: true,
-  useUnifiedEngine: false,
 };
 
 function load(): Settings {
