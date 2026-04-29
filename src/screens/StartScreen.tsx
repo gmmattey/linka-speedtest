@@ -3,8 +3,7 @@ import type { DeviceInfo, ServerInfo, SpeedTestMode, TestRecord } from '../types
 import type { Settings } from '../hooks/useSettings';
 import { Header } from '../components/Header';
 import { BottomSheet } from '../components/BottomSheet';
-import { qualityHeadline } from '../utils/classifier';
-import { formatDate, formatMbps } from '../utils/format';
+import { formatMbps } from '../utils/format';
 import './StartScreen.css';
 
 interface Props {
@@ -57,67 +56,63 @@ export function StartScreen({
           </div>
         ) : null}
 
-        <button
-          className={`lk-start__cta${canStart ? ' lk-start__cta--ready' : ''}`}
-          onClick={() => onStart(mode)}
-          disabled={!canStart}
-          aria-label={mode === 'quick' ? 'Iniciar teste rápido' : 'Iniciar teste completo'}
-        >
-          <span className="lk-start__cta-label">
-            {loading ? 'Aguardando…' : 'Iniciar'}
-          </span>
-        </button>
-
-        <div className="lk-start__mode-toggle" role="group" aria-label="Modo do teste">
+        {/* Círculo centralizado */}
+        <div className="lk-start__hero">
           <button
-            className={`lk-start__mode-opt${mode === 'quick' ? ' lk-start__mode-opt--active' : ''}`}
-            onClick={() => setMode('quick')}
-            type="button"
+            className={`lk-start__cta${canStart ? ' lk-start__cta--ready' : ''}`}
+            onClick={() => onStart(mode)}
+            disabled={!canStart}
+            aria-label={mode === 'quick' ? 'Iniciar teste rápido' : 'Iniciar teste completo'}
           >
-            Teste rápido
-          </button>
-          <button
-            className={`lk-start__mode-opt${mode === 'complete' ? ' lk-start__mode-opt--active' : ''}`}
-            onClick={() => setMode('complete')}
-            type="button"
-          >
-            Teste completo
+            <span className="lk-start__cta-label">
+              {loading ? 'Aguardando…' : 'Iniciar'}
+            </span>
           </button>
         </div>
 
-        <button
-          className="btn-text lk-start__compare-link"
-          onClick={onStartComparison}
-          disabled={!canStart}
-        >
-          Comparar locais
-        </button>
-
-        {lastRecord && (
-          <div className="lk-start__last">
-            <button
-              className="lk-start__last-card"
-              onClick={onShowLastResult}
-              aria-label="Ver último resultado"
+        {/* Controles inferiores */}
+        <div className="lk-start__controls">
+          {/* Toggle estilo iOS: label — switch — label */}
+          <div className="lk-start__toggle-row">
+            <span
+              className={`lk-start__toggle-label${mode === 'quick' ? ' lk-start__toggle-label--active' : ''}`}
+              onClick={() => setMode('quick')}
             >
-              <span className="lk-start__last-label">Último teste · {formatDate(lastRecord.timestamp)}</span>
-              <span className="lk-start__last-metrics">
-                <span className="lk-start__last-dl">↓ {formatMbps(lastRecord.dl, settings.unit)}</span>
-                <span className="lk-start__last-ul">↑ {formatMbps(lastRecord.ul, settings.unit)} {unitLabel}</span>
-              </span>
-              <span className="lk-start__last-quality">{qualityHeadline(lastRecord.quality)}</span>
-            </button>
-            <button className="btn-text lk-start__history-link" onClick={onShowHistory}>
-              Ver histórico
-            </button>
+              Teste rápido
+            </span>
+            <button
+              className={`lk-start__toggle-switch${mode === 'complete' ? ' lk-start__toggle-switch--on' : ''}`}
+              onClick={() => setMode(mode === 'quick' ? 'complete' : 'quick')}
+              role="switch"
+              aria-checked={mode === 'complete'}
+              aria-label="Alternar entre teste rápido e completo"
+            />
+            <span
+              className={`lk-start__toggle-label${mode === 'complete' ? ' lk-start__toggle-label--active' : ''}`}
+              onClick={() => setMode('complete')}
+            >
+              Teste completo
+            </span>
           </div>
-        )}
 
-        {!lastRecord && (
+          <button
+            className="btn-text lk-start__compare-link"
+            onClick={onStartComparison}
+            disabled={!canStart}
+          >
+            Comparar locais
+          </button>
+
+          {lastRecord && (
+            <button className="btn-text lk-start__last-link" onClick={onShowLastResult}>
+              ↓ {formatMbps(lastRecord.dl, settings.unit)} ↑ {formatMbps(lastRecord.ul, settings.unit)} {unitLabel} · Ver último teste
+            </button>
+          )}
+
           <button className="btn-text lk-start__history-link" onClick={onShowHistory}>
             Ver histórico
           </button>
-        )}
+        </div>
       </main>
 
       <BottomSheet
