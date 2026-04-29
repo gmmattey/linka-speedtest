@@ -11,17 +11,25 @@ export function calculateComparison(
     : 0;
 
   const nearGood = near.dl >= 10 && near.latency <= 100;
+  const nearUploadGood = near.ul >= 3;
   const farGood = far.dl >= 10 && far.latency <= 150;
-  const hasStrongDrop = downloadDropPercent > 50;
-  const hasVeryStrongDrop = downloadDropPercent > 75;
+
+  const hasVeryStrongDlDrop = downloadDropPercent > 75;
+  const hasStrongDlDrop     = downloadDropPercent > 50;
+  const hasVeryStrongUlDrop = uploadDropPercent > 75;
+  const hasStrongUlDrop     = uploadDropPercent > 50;
 
   let diagnosis: ComparisonResult['diagnosis'];
   let message: string;
 
-  if (hasVeryStrongDrop && nearGood) {
+  if (hasVeryStrongDlDrop && nearGood) {
     diagnosis = 'coverage_issue';
     message = 'A velocidade caiu muito longe do roteador. O problema parece estar na cobertura Wi‑Fi.';
-  } else if (hasStrongDrop && nearGood) {
+  } else if (hasVeryStrongUlDrop && nearUploadGood) {
+    // Upload despenca mesmo com download estável — sinal forte de cobertura Wi-Fi
+    diagnosis = 'coverage_issue';
+    message = 'O envio de dados caiu muito longe do roteador. A cobertura Wi‑Fi pode ser o problema.';
+  } else if ((hasStrongDlDrop || (hasStrongUlDrop && nearUploadGood)) && nearGood) {
     diagnosis = 'coverage_issue';
     message = 'A internet parece boa perto do roteador, mas perde desempenho neste local. O problema pode estar na cobertura Wi‑Fi.';
   } else if (!nearGood && !farGood) {

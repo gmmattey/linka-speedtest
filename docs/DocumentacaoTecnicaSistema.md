@@ -282,17 +282,20 @@ Ordenado por priority (`high → medium → low`). Máximo de 3 itens retornados
 
 **`calculateComparison(near, far): ComparisonResult`**
 
-Calcula a degradação entre perto e longe do roteador:
+Calcula a degradação entre perto e longe do roteador. Avalia download **e** upload como sinais independentes de problema de cobertura:
 
 | `diagnosis` | Condição |
 |---|---|
-| `coverage_issue` (forte) | DL queda > 75% E near era bom (DL≥25 Mbps) |
-| `coverage_issue` (moderado) | DL queda > 50% E near era bom |
-| `both_bad` | Neither near nem far bons (DL<10 Mbps) |
-| `both_good` | Ambos bons (queda < 20% ou far DL≥50 Mbps) |
+| `coverage_issue` (DL forte) | DL cai > 75% E near.dl ≥ 10 Mbps |
+| `coverage_issue` (UL forte) | UL cai > 75% E near.ul ≥ 3 Mbps (independente de DL) |
+| `coverage_issue` (moderado) | DL > 50% OU (UL > 50% E near.ul ≥ 3 Mbps) E near.dl ≥ 10 Mbps |
+| `both_bad` | near e far com DL < 10 Mbps |
+| `both_good` | near e far com DL ≥ 10 Mbps e latência aceitável |
 | `other` | Qualquer outra combinação |
 
-Retorna percentuais de variação de DL, UL e latência, mais mensagem interpretativa em pt-BR.
+`nearGood = near.dl >= 10 && near.latency <= 100`; `nearUploadGood = near.ul >= 3`.
+
+Retorna percentuais de variação de DL, UL e latência, mais mensagem interpretativa em pt-BR. Testado em `src/__tests__/compare.test.ts` (12 cenários).
 
 ### 3.8 `historyInsights.ts` — Insights de tendência histórica
 
