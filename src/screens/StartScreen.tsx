@@ -56,19 +56,20 @@ export function StartScreen({
           </div>
         ) : null}
 
-        <div className="lk-start__modes">
-          <button
-            className={`lk-start__mode-btn lk-start__mode-btn--primary${canStart ? ' lk-start__mode-btn--ready' : ''}`}
-            onClick={() => onStart('quick')}
-            disabled={!canStart}
-            aria-label="Iniciar teste rápido"
-          >
-            <span className="lk-start__mode-title">
-              {loading ? 'Aguardando…' : 'Teste rápido'}
-            </span>
-            <span className="lk-start__mode-desc">Usa menos dados · ~80 MB</span>
-          </button>
+        <button
+          className={`lk-start__cta${canStart ? ' lk-start__cta--ready' : ''}`}
+          onClick={() => onStart('quick')}
+          disabled={!canStart}
+          aria-label="Iniciar teste rápido"
+        >
+          <span className="lk-start__cta-label">
+            {loading ? 'Aguardando…' : 'Iniciar'}
+          </span>
+        </button>
 
+        <p className="lk-start__cta-hint">Usa ~80 MB · Resultado em ~30 s</p>
+
+        <div className="lk-start__modes">
           <button
             className={`lk-start__mode-btn lk-start__mode-btn--secondary${canStart ? ' lk-start__mode-btn--ready' : ''}`}
             onClick={() => onStart('complete')}
