@@ -1,4 +1,6 @@
-import type { Classification, Quality, SpeedTestResult, Tag, TestRecord } from '../types';
+import type { Classification, Quality, RuleSetVersion, SpeedTestResult, Tag, TestRecord } from '../types';
+
+export const RULE_SET_VERSION: RuleSetVersion = 'v1';
 
 export function classify(r: SpeedTestResult): Classification {
   const tags = new Set<Tag>();
@@ -74,7 +76,7 @@ export function stabilityLabel(score: number): string {
 }
 
 export function buildDiagnosis(
-  r: SpeedTestResult,
+  _r: SpeedTestResult,
   c: Classification,
   recentHistory: TestRecord[] = [],
 ): string[] {
@@ -114,16 +116,6 @@ export function buildDiagnosis(
     parts.push('Seu envio de dados está fraco — subir arquivos grandes ou fazer transmissões ao vivo pode ser lento.');
   }
 
-  if (r.latency > 80) {
-    parts.push('⚠ Tempo de resposta alto — pode afetar jogos online e chamadas de voz.');
-  }
-  if (r.packetLoss > 2) {
-    parts.push('⚠ Perda de dados detectada — verifique o cabo ou o roteador.');
-  }
-  if (r.jitter > 50) {
-    parts.push('⚠ Oscilação alta — a velocidade pode variar muito durante o uso.');
-  }
-
   if (recentHistory.length >= 3) {
     const last5 = recentHistory.slice(0, 5);
     const latCount  = last5.filter((h) => h.latency > 80).length;
@@ -141,4 +133,45 @@ export function buildDiagnosis(
   }
 
   return parts;
+}
+
+export function buildShortPhrase(
+  r: SpeedTestResult,
+  quality: Quality,
+  scenarios: { gamesAlerted: boolean; gamesBad: boolean; otherAlerted: boolean },
+): string {
+  if (quality === 'unavailable') {
+    return 'Sem conexão detectada — verifique se está conectado à internet.';
+  }
+  if (quality === 'slow') {
+    const isActuallyFast = r.dl > 30 || r.ul > 10;
+    const hasStabilityIssue = r.packetLoss > 2 || r.jitter > 50 || r.latency > 80;
+    if (isActuallyFast && hasStabilityIssue) {
+      return 'Conexão instável — verifique o roteador ou o cabo.';
+    }
+    return 'Internet lenta — velocidade insuficiente para a maioria dos usos.';
+  }
+  if (quality === 'fair') {
+    return 'Conexão funcional — pode ter dificuldades com streaming ou múltiplos dispositivos.';
+  }
+  // excellent or good
+  const { gamesAlerted, gamesBad, otherAlerted } = scenarios;
+  if (!gamesAlerted && !otherAlerted) {
+    return quality === 'excellent'
+      ? 'Internet excelente — todos os usos funcionam perfeitamente.'
+      : 'Boa conexão — streaming, trabalho e jogos funcionam bem.';
+  }
+  if (gamesAlerted && !otherAlerted) {
+    if (gamesBad) {
+      return 'Boa para navegação e streaming — pode não ser ideal para jogos online.';
+    }
+    if (r.packetLoss > 1) {
+      return 'Boa para o dia a dia — jogos online podem ter impacto por perda de pacotes.';
+    }
+    if (r.jitter > 20) {
+      return 'Boa para o dia a dia — jogos online podem ter impacto por oscilação.';
+    }
+    return 'Boa para o dia a dia — jogos online podem ter impacto por latência.';
+  }
+  return 'Boa para uso geral — alguns cenários podem ser afetados.';
 }

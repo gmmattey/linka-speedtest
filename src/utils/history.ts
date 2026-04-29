@@ -1,5 +1,14 @@
-import type { SpeedTestResult, TestRecord, DeviceType, ConnectionType, SpeedTestMode } from '../types';
-import { classify } from './classifier';
+import type {
+  SpeedTestResult,
+  TestRecord,
+  DeviceType,
+  ConnectionType,
+  SpeedTestMode,
+  ConnectionProfile,
+  RuleSetVersion,
+} from '../types';
+import { classify, RULE_SET_VERSION } from './classifier';
+import { toConnectionProfile } from './connectionProfile';
 
 const KEY = 'linka.speedtest.history.v1';
 const MAX = 50;
@@ -25,7 +34,15 @@ function persist(items: TestRecord[]) {
 
 export function appendRecord(
   result: SpeedTestResult,
-  meta: { serverName: string; isp?: string; deviceType: DeviceType; connectionType: ConnectionType; testMode?: SpeedTestMode },
+  meta: {
+    serverName: string;
+    isp?: string;
+    deviceType: DeviceType;
+    connectionType: ConnectionType;
+    testMode?: SpeedTestMode;
+    connectionProfile?: ConnectionProfile;
+    ruleSetVersion?: RuleSetVersion;
+  },
 ): TestRecord {
   const c = classify(result);
   const record: TestRecord = {
@@ -43,6 +60,8 @@ export function appendRecord(
     deviceType: meta.deviceType,
     connectionType: meta.connectionType,
     testMode: meta.testMode,
+    connectionProfile: meta.connectionProfile ?? toConnectionProfile(meta.connectionType),
+    ruleSetVersion: meta.ruleSetVersion ?? RULE_SET_VERSION,
   };
   const items = [record, ...loadHistory()].slice(0, MAX);
   persist(items);

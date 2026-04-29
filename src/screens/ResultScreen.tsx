@@ -3,12 +3,11 @@ import { Header } from '../components/Header';
 import { IconGames, IconStream, IconWork, IconVideoCall, IconPdf, IconShare } from '../components/icons';
 import type { ServerInfo, SpeedTestResult, TestRecord } from '../types';
 import {
-  buildDiagnosis,
+  buildShortPhrase,
   classify,
   qualityHeadline,
   stability,
   stabilityLabel,
-  tagLabel,
 } from '../utils/classifier';
 import { loadHistory } from '../utils/history';
 import { buildRecommendations } from '../utils/recommendations';
@@ -36,14 +35,16 @@ interface UseCase {
   Icon: React.ComponentType<{ size?: number }>;
   label: string;
   evaluate: (r: SpeedTestResult) => UseCaseStatus;
+  labelMap?: Partial<Record<UseCaseStatus, string>>;
 }
 
 const USE_CASES: UseCase[] = [
   {
     key: 'games', Icon: IconGames, label: 'Games online',
+    labelMap: { limited: 'Pode falhar' },
     evaluate(r) {
       if (r.dl >= 10 && r.latency <= 40 && r.jitter <= 20 && r.packetLoss <= 0.5) return 'good';
-      if (r.dl >= 5 && r.latency <= 80) return 'maybe';
+      if (r.dl >= 5 && r.latency <= 80 && r.jitter <= 40 && r.packetLoss <= 2) return 'maybe';
       return 'limited';
     },
   },
@@ -74,7 +75,7 @@ const USE_CASES: UseCase[] = [
 ];
 
 const STATUS_LABEL: Record<UseCaseStatus, string> = {
-  good: 'Bom', maybe: 'Pode falhar', limited: 'Limitado',
+  good: 'Bom', maybe: 'Atenção', limited: 'Ruim',
 };
 
 export function buildShareText(result: SpeedTestResult, primary: ReturnType<typeof classify>['primary'], unit: 'mbps' | 'gbps' = 'mbps'): string {
@@ -115,14 +116,26 @@ export function ResultScreen({
 }: Props) {
   const classification = useMemo(() => classify(result), [result]);
   const history = useMemo(() => loadHistory(), []);
-  const diagnosis = useMemo(
-    () => buildDiagnosis(result, classification, history),
-    [result, classification, history],
-  );
   const stab = useMemo(() => stability(result), [result]);
   const recommendations = useMemo(
     () => buildRecommendations(result, classification, history),
     [result, classification, history], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const useCaseResults = useMemo(
+    () => USE_CASES.map(uc => ({ key: uc.key, status: uc.evaluate(result) })),
+    [result],
+  );
+  const scenarioContext = useMemo(() => {
+    const gamesStatus = useCaseResults.find(u => u.key === 'games')?.status ?? 'good';
+    return {
+      gamesAlerted: gamesStatus !== 'good',
+      gamesBad:     gamesStatus === 'limited',
+      otherAlerted: useCaseResults.some(u => u.key !== 'games' && u.status !== 'good'),
+    };
+  }, [useCaseResults]);
+  const shortPhrase = useMemo(
+    () => buildShortPhrase(result, classification.primary, scenarioContext),
+    [result, classification.primary, scenarioContext],
   );
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
   const [shareStatus, setShareStatus] = useState<ShareStatus>('idle');
@@ -160,23 +173,6 @@ export function ResultScreen({
       <Header theme={theme} onToggleTheme={onToggleTheme} />
       <main className="lk-result__main fade-in">
 
-        <section className={`lk-banner lk-banner--${classification.primary}`}>
-          <div className="lk-banner__icon" aria-hidden="true">
-            {classification.primary === 'slow' || classification.primary === 'unavailable' ? '✗'
-              : classification.primary === 'fair' ? '!' : '✓'}
-          </div>
-          <div className="lk-banner__body">
-            <div className="lk-banner__title">{qualityHeadline(classification.primary)}</div>
-            {classification.tags.size > 0 && (
-              <div className="lk-banner__tags">
-                {Array.from(classification.tags).map((t) => (
-                  <span key={t} className="lk-chip">{tagLabel(t)}</span>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-
         <section className="lk-primary">
           <div className="lk-primary__col">
             <div className="lk-primary__label">↓ Download</div>
@@ -208,10 +204,7 @@ export function ResultScreen({
           </div>
         </section>
 
-        <section className="lk-section">
-          <h3 className="lk-section__title">O que isso significa?</h3>
-          {diagnosis.map((p, i) => <p key={i} className="lk-section__paragraph">{p}</p>)}
-        </section>
+        <p className="lk-diagnosis">{shortPhrase}</p>
 
         {recommendations.length > 0 && (
           <section className="lk-section lk-whatnow">
@@ -227,21 +220,19 @@ export function ResultScreen({
           </section>
         )}
 
-        <section className="lk-section">
-          <h3 className="lk-section__title">Para o que sua internet serve?</h3>
-          <div className="lk-usegrid">
-            {USE_CASES.map((uc) => {
-              const status = uc.evaluate(result);
-              return (
-                <div key={uc.key} className="lk-usecase">
-                  <div className="lk-usecase__icon"><uc.Icon size={20} /></div>
-                  <div className="lk-usecase__label">{uc.label}</div>
-                  <span className={`lk-chip lk-chip--${status}`}>{STATUS_LABEL[status]}</span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+        <div className="lk-usegrid">
+          {useCaseResults.map(({ key, status }) => {
+            const uc = USE_CASES.find(u => u.key === key)!;
+            const label = uc.labelMap?.[status] ?? STATUS_LABEL[status];
+            return (
+              <div key={key} className="lk-usecase">
+                <div className="lk-usecase__icon"><uc.Icon size={24} /></div>
+                <div className="lk-usecase__label">{uc.label}</div>
+                <span className={`lk-chip lk-chip--${status}`}>{label}</span>
+              </div>
+            );
+          })}
+        </div>
 
         <section className="lk-section">
           <h3 className="lk-section__title">Detalhes</h3>

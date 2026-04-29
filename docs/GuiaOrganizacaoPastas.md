@@ -51,16 +51,27 @@ Linka SpeedTest/
 │   │   ├── ResultScreen.tsx / .css
 │   │   └── HistoryScreen.tsx / .css
 │   │
-│   └── utils/                    ← Funções puras / lógica de domínio (sem React)
-│       ├── classifier.ts         ← Classificação de qualidade + diagnóstico
-│       ├── format.ts             ← formatMbps, formatMs, formatDate, formatDateIsoLike
-│       ├── history.ts            ← CRUD do histórico em localStorage
-│       ├── pdfExport.ts          ← Geração de PDF (resultado + histórico)
-│       ├── serverRegistry.ts     ← ServerProvider interface + CloudflareProvider
-│       └── speedtest.ts          ← Algoritmo de medição DL/UL/lat/jitter/packetLoss
+│   ├── utils/                    ← Funções puras / lógica de domínio (sem React) — específicas do PWA
+│   │   ├── classifier.ts         ← Classificação de qualidade + diagnóstico (legado, em coexistência com src/core)
+│   │   ├── connectionProfile.ts  ← Mapeamento ConnectionType → ConnectionProfile (Anatel)
+│   │   ├── format.ts             ← formatMbps, formatMs, formatDate, formatDateIsoLike
+│   │   ├── history.ts            ← CRUD do histórico em localStorage
+│   │   ├── pdfExport.ts          ← Geração de PDF (resultado + histórico)
+│   │   ├── serverRegistry.ts     ← ServerProvider interface + CloudflareProvider
+│   │   └── speedtest.ts          ← Algoritmo de medição DL/UL/lat/jitter/packetLoss
+│   │
+│   └── core/                     ← Motor de decisão único (puro, sem React/DOM/localStorage)
+│       ├── types.ts              ← Tipos do contrato do motor (UseCaseId, InterpretedResult, etc.)
+│       ├── profiles.ts           ← Thresholds Anatel-aware por ConnectionProfile (fixa/móvel)
+│       ├── copyDictionary.ts     ← Mapeamento copyKeys → string pt-BR + resolveCopy()
+│       ├── interpret.ts          ← interpretSpeedTestResult() — entrada única do motor
+│       └── index.ts              ← Reexporta o contrato público (usado pela Fase 7 / embed Flutter)
 │
 ├── __tests__/                    ← Testes Vitest (ficam dentro de src/)
-│   └── classifier.test.ts
+│   ├── classifier.test.ts
+│   ├── connectionProfile.test.ts
+│   ├── interpret.test.ts
+│   └── share.test.ts
 │
 ├── CLAUDE.md                     ← Instruções para Claude Code
 ├── index.html                    ← HTML raiz; links Google Fonts; favicons
@@ -82,10 +93,17 @@ Linka SpeedTest/
 | Componente React reutilizável | `src/components/NomeComponente.tsx` + `.css` |
 | Hook React | `src/hooks/useNomeHook.ts` |
 | Tela completa | `src/screens/NomeTela.tsx` + `NomeTela.css` |
-| Função pura / lógica | `src/utils/nomeUtil.ts` |
+| Função pura / lógica do PWA (consumo de hooks/screens, depende de DOM/localStorage) | `src/utils/nomeUtil.ts` |
+| Motor de decisão portável (sem React/DOM/localStorage, candidato a reuso no Flutter) | `src/core/nomeArquivo.ts` |
 | Asset público (imagens, ícones) | `public/` |
 | Documentação | `docs/NomeDocumento.md` |
 | Teste unitário | `src/__tests__/nomeUtil.test.ts` |
+
+### `src/core/` vs `src/utils/`
+
+- **`src/utils/`** continua sendo a casa de funções puras específicas do PWA — podem importar de `../types`, `../utils/*`, ou consumir APIs do navegador (localStorage em `history.ts`, Blob em `pdfExport.ts`, fetch em `serverRegistry.ts`).
+- **`src/core/`** é a camada de decisão única. **Não importa de `react`, `react-dom`, `../components`, `../screens`, `../hooks`, e não usa `localStorage`, `document`, `window`.** Só importa de `../types` e de si mesmo. Isso garante que possa ser reusado sem mudanças no app linka Flutter (Fase 7 do plano de unificação).
+- O motor (`interpret.ts`) coexiste com `classifier.ts` legado durante a migração. A Fase 1 introduz o motor; fases seguintes migram chamadores e, eventualmente, removem código duplicado.
 
 ### Proibições
 

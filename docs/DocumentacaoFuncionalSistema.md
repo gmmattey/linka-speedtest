@@ -241,19 +241,15 @@ Exibe os resultados completos do teste, diagnóstico em linguagem leiga, utilida
 ┌──────────────────────────────────┐
 │  HEADER (logo)                   │  ← volta por swipe →
 │                                  │
-│  ┌────────────────────────────┐  │
-│  │ [✓/!/✗]  Conexão boa       │  ← banner de qualidade (accent border-left)
-│  │          [chip] [chip]      │  ← tags (ex: "Resposta lenta")
-│  └────────────────────────────┘  │
-│                                  │
 │  ↓ Download    |   ↑ Upload      │
 │  87,3 Mbps     |   32,1 Mbps    │  ← métricas primárias (Space Grotesk 700 36px)
 │                                  │
 │  18 ms    3 ms    Muito estável  │  ← secundárias: Resposta · Oscilação · Estabilidade
 │  Resposta Oscilação Estabilidade │
 │                                  │
-│  ── O que isso significa? ──     │
-│  [parágrafos de diagnóstico]     │
+│  Boa para o dia a dia —          │  ← frase de diagnóstico única (lk-diagnosis, 17px)
+│  jogos online podem ter impacto  │
+│  por latência.                   │
 │                                  │
 │  ── O que fazer agora ──         │
 │  ┌────────────────────────────┐  │  ← card de recomendação (alta prioridade)
@@ -262,9 +258,7 @@ Exibe os resultados completos do teste, diagnóstico em linguagem leiga, utilida
 │  └────────────────────────────┘  │
 │  [mais recomendações se houver]  │
 │                                  │
-│  ── Para o que sua internet ──   │
-│  [Games] Bom     [4K] Pode falhar│  ← grid 2×2 de uso prático (ícones SVG)
-│  [HO] Bom       [Video] Bom     │
+│  [🎮 Atenção] [📺 Bom] [💼 Bom] [📹 Bom]  ← linha horizontal, sem título
 │                                  │
 │  ── Detalhes ──                  │
 │  Servidor     Cloudflare · GIG   │
@@ -283,36 +277,43 @@ Exibe os resultados completos do teste, diagnóstico em linguagem leiga, utilida
 └──────────────────────────────────┘
 ```
 
-### Banner de qualidade
+### Frase de diagnóstico (`lk-diagnosis`)
 
-| Quality | Ícone | Cor border | Cor chip |
-|---|---|---|---|
-| excellent | ✓ | `var(--accent)` | green |
-| good | ✓ | `var(--accent)` | green |
-| fair | ! | amarelo | yellow |
-| slow | ✗ | vermelho | red |
-| unavailable | ✗ | vermelho | red |
+Substituiu o banner de qualidade e a seção "O que isso significa?". Uma frase única, curta e direta gerada por `buildShortPhrase(result, quality, scenarioContext)`. Formato: **"[status] — [causa/ação]."**
 
-### Grid de uso prático
+Exemplos por cenário:
+| Situação | Frase exibida |
+|---|---|
+| Excelente, tudo OK | "Internet excelente — todos os usos funcionam perfeitamente." |
+| Boa, tudo OK | "Boa conexão — streaming, trabalho e jogos funcionam bem." |
+| Boa, games com latência | "Boa para o dia a dia — jogos online podem ter impacto por latência." |
+| Boa, games com jitter | "Boa para o dia a dia — jogos online podem ter impacto por oscilação." |
+| Boa, games ruim | "Boa para navegação e streaming — pode não ser ideal para jogos online." |
+| Rápida mas instável | "Conexão instável — verifique o roteador ou o cabo." |
+| Lenta | "Internet lenta — velocidade insuficiente para a maioria dos usos." |
+| Sem conexão | "Sem conexão detectada — verifique se está conectado à internet." |
 
-4 cartões (Games Online, Streaming 4K, Home Office, Videochamada). Cada um avaliado por thresholds fixos:
+### Linha de cenários (`lk-usegrid`)
 
-| Uso | Critério "Bom" | Critério "Pode falhar" |
+4 ícones SVG em flex horizontal (`justify-content: space-between`), sem título. Cada item: ícone (24px) + label pequeno + chip de status.
+
+Labels de status:
+| Status interno | Label padrão | Games (override) |
 |---|---|---|
-| Games online | DL≥10, lat≤40, jitter≤20, loss≤0.5% | DL≥5, lat≤80 |
+| `good` | "Bom" | "Bom" |
+| `maybe` | "Atenção" | "Atenção" |
+| `limited` | "Ruim" | "Pode falhar" |
+
+Thresholds de avaliação:
+
+| Uso | Critério "Bom" | Critério "Atenção" |
+|---|---|---|
+| Games online | DL≥10, lat≤40, jitter≤20, loss≤0.5% | DL≥5, lat≤80, jitter≤40, loss≤2% |
 | Streaming 4K | DL≥25 Mbps | DL≥10 Mbps |
 | Home Office | DL≥10, UL≥5, lat≤100 | DL≥5, UL≥2 |
 | Videochamada | DL≥5, UL≥2, lat≤100, jitter≤30 | DL≥2, UL≥1, lat≤150 |
 
-Status abaixo do "Pode falhar" → "Limitado".
-
-### Diagnóstico (buildDiagnosis)
-
-Texto em linguagem leiga, 1-5 parágrafos. Gerado por `buildDiagnosis(result, classification, history)`:
-- Parágrafo base por quality (excellent/good/fair/slow/unavailable)
-- Parágrafos por tag (veryUnstable, packetLoss, unstable, highLatency, lowUpload)
-- Avisos pontuais para latência>80ms, loss>2%, jitter>50ms
-- Análise histórica se há ≥3 registros: latência recorrente, perda recorrente, lentidão recorrente
+Abaixo de "Atenção" → "Ruim" (games: "Pode falhar").
 
 ### FAB PDF
 
@@ -353,10 +354,10 @@ Configurado no BottomSheet → seção Privacidade.
 
 - Props: `result (SpeedTestResult)`, `server (ServerInfo | null)`, `previous (TestRecord | null)`, `unit`, `hideIpOnShare (boolean)`
 - `classify(result)` → classificação
-- `buildDiagnosis(result, classification, history)` → parágrafos
+- `buildShortPhrase(result, quality, scenarioContext)` → frase de diagnóstico única
 - `buildRecommendations(result, classification, history)` → recomendações
 - `stability(result)` → score numérico
-- `loadHistory()` → passado para buildDiagnosis e buildRecommendations
+- `loadHistory()` → passado para buildRecommendations
 - `exportResultPdf()` → geração de PDF
 
 ---

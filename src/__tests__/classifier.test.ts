@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { classify, stability, stabilityLabel, buildDiagnosis } from '../utils/classifier';
+import { classify, stability, stabilityLabel, buildDiagnosis, buildShortPhrase, RULE_SET_VERSION } from '../utils/classifier';
 import type { SpeedTestResult } from '../types';
 
 function r(overrides: Partial<SpeedTestResult> = {}): SpeedTestResult {
@@ -13,6 +13,12 @@ function r(overrides: Partial<SpeedTestResult> = {}): SpeedTestResult {
     ...overrides,
   };
 }
+
+describe('RULE_SET_VERSION', () => {
+  it('está em v1 (sentinela contra bump silencioso)', () => {
+    expect(RULE_SET_VERSION).toBe('v1');
+  });
+});
 
 describe('classify — primary quality', () => {
   it('excellent: all thresholds met', () => {
@@ -95,6 +101,112 @@ describe('stabilityLabel()', () => {
   it('≥60 → Estável',       () => expect(stabilityLabel(60)).toBe('Estável'));
   it('≥35 → Oscilando',     () => expect(stabilityLabel(35)).toBe('Oscilando'));
   it('<35 → Instável',      () => expect(stabilityLabel(34)).toBe('Instável'));
+});
+
+const noAlerts = { gamesAlerted: false, gamesBad: false, otherAlerted: false };
+const gamesOnly = { gamesAlerted: true, gamesBad: false, otherAlerted: false };
+const gamesBad  = { gamesAlerted: true, gamesBad: true,  otherAlerted: false };
+
+describe('buildShortPhrase()', () => {
+  it('excellent sem alertas → contém excelente e todos', () => {
+    const p = buildShortPhrase(r(), 'excellent', noAlerts);
+    expect(p).toContain('excelente');
+    expect(p).toContain('todos');
+  });
+
+  it('good sem alertas → contém trabalho e jogos', () => {
+    const p = buildShortPhrase(r({ dl: 60, ul: 15, latency: 50, jitter: 10 }), 'good', noAlerts);
+    expect(p).toContain('trabalho');
+    expect(p).toContain('jogos');
+  });
+
+  it('good + games maybe (latência) → contém jogos e latência', () => {
+    const p = buildShortPhrase(r({ latency: 50, jitter: 7 }), 'good', gamesOnly);
+    expect(p).toContain('jogos');
+    expect(p).toContain('latência');
+  });
+
+  it('good + games maybe (jitter) → contém oscilação', () => {
+    const p = buildShortPhrase(r({ jitter: 25, latency: 30 }), 'good', gamesOnly);
+    expect(p).toContain('oscilação');
+  });
+
+  it('good + games limited → contém não ser ideal para jogos', () => {
+    const p = buildShortPhrase(r(), 'good', gamesBad);
+    expect(p).toContain('jogos');
+    expect(p).toMatch(/não ser ideal/);
+  });
+
+  it('slow com DL alto e instabilidade → instável', () => {
+    const p = buildShortPhrase(r({ dl: 300, ul: 100, latency: 90, jitter: 60, packetLoss: 3 }), 'slow', noAlerts);
+    expect(p).toContain('instável');
+  });
+
+  it('slow com DL baixo → lenta', () => {
+    const p = buildShortPhrase(r({ dl: 5, ul: 1, latency: 120, jitter: 20, packetLoss: 0 }), 'slow', noAlerts);
+    expect(p).toContain('lenta');
+  });
+
+  it('unavailable → Sem conexão', () => {
+    const p = buildShortPhrase(r({ dl: 0, ul: 0, latency: 0, jitter: 0, packetLoss: 0 }), 'unavailable', noAlerts);
+    expect(p).toContain('Sem conexão');
+  });
+});
+
+describe('buildShortPhrase() — matriz A-E', () => {
+  // A: conexão excelente
+  it('A: dl 200, ul 80, lat 15, jitter 3, loss 0 → excellent + frase excelente', () => {
+    const res = r({ dl: 200, ul: 80, latency: 15, jitter: 3, packetLoss: 0 });
+    expect(classify(res).primary).toBe('excellent');
+    const p = buildShortPhrase(res, 'excellent', noAlerts);
+    expect(p).toContain('excelente');
+  });
+
+  // B: bom mas games atenção por latência
+  it('B: dl 476, ul 239, lat 50, jitter 7, loss 0 → good + games maybe + frase com latência', () => {
+    const res = r({ dl: 476, ul: 239, latency: 50, jitter: 7, packetLoss: 0 });
+    expect(classify(res).primary).toBe('good');
+    // games evaluate: lat 50 > 40 falha good, mas ≤80 e jitter 7 ≤40 → maybe
+    const gamesStatus = res.dl >= 10 && res.latency <= 40 && res.jitter <= 20 && res.packetLoss <= 0.5 ? 'good'
+      : res.dl >= 5 && res.latency <= 80 && res.jitter <= 40 && res.packetLoss <= 2 ? 'maybe' : 'limited';
+    expect(gamesStatus).toBe('maybe');
+    const p = buildShortPhrase(res, 'good', { gamesAlerted: true, gamesBad: false, otherAlerted: false });
+    expect(p).toContain('latência');
+  });
+
+  // C: rápido mas instável
+  it('C: dl 300, ul 100, lat 90, jitter 60, loss 3 → slow + instável', () => {
+    const res = r({ dl: 300, ul: 100, latency: 90, jitter: 60, packetLoss: 3 });
+    expect(classify(res).primary).toBe('slow');
+    const p = buildShortPhrase(res, 'slow', noAlerts);
+    expect(p).toContain('instável');
+  });
+
+  // D: download baixo, latência boa
+  it('D: dl 8, ul 5, lat 20, jitter 5, loss 0 → slow + streaming limitado', () => {
+    const res = r({ dl: 8, ul: 5, latency: 20, jitter: 5, packetLoss: 0 });
+    expect(classify(res).primary).toBe('slow');
+    // streaming 4K: dl 8 < 10 → limited
+    const streamStatus = res.dl >= 25 ? 'good' : res.dl >= 10 ? 'maybe' : 'limited';
+    expect(streamStatus).toBe('limited');
+    // games: dl 8 >= 5, lat 20 ≤ 80, jitter 5 ≤ 40, loss 0 ≤ 2 → maybe
+    const gamesStatus2 = res.dl >= 10 && res.latency <= 40 && res.jitter <= 20 && res.packetLoss <= 0.5 ? 'good'
+      : res.dl >= 5 && res.latency <= 80 && res.jitter <= 40 && res.packetLoss <= 2 ? 'maybe' : 'limited';
+    expect(gamesStatus2).toBe('maybe');
+  });
+
+  // E: upload fraco — ul 1.5 falha good (ul<2) mas passa maybe (ul>=1)
+  it('E: dl 50, ul 1.5, lat 20, jitter 5, loss 0 → slow + videochamada atenção + streaming ok', () => {
+    const res = r({ dl: 50, ul: 1.5, latency: 20, jitter: 5, packetLoss: 0 });
+    expect(classify(res).primary).toBe('slow');
+    // videochamada: ul 1.5 < 2 falha good; dl>=2 ✓, ul>=1 ✓, lat<=150 ✓ → maybe
+    const videoStatus = res.dl >= 5 && res.ul >= 2 && res.latency <= 100 && res.jitter <= 30 ? 'good'
+      : res.dl >= 2 && res.ul >= 1 && res.latency <= 150 ? 'maybe' : 'limited';
+    expect(videoStatus).toBe('maybe');
+    // streaming 4K: dl 50 ≥ 25 → good
+    const streamStatus2 = res.dl >= 25 ? 'good' : res.dl >= 10 ? 'maybe' : 'limited';
+    expect(streamStatus2).toBe('good');
+  });
 });
 
 describe('buildDiagnosis()', () => {

@@ -194,13 +194,17 @@ result      = round(0.6 * jitterScore + 0.4 * lossScore)
 - ≥35 → "Oscilando"
 - <35 → "Instável"
 
-**`buildDiagnosis(r, c, recentHistory?): string[]`**
+**`buildShortPhrase(r, quality, scenarios): string`**
 
-Retorna array de parágrafos em pt-BR:
-1. Parágrafo base por quality
-2. Parágrafos por tags (veryUnstable > packetLoss > unstable > highLatency > lowUpload)
-3. Avisos pontuais (latência>80ms, loss>2%, jitter>50ms)
-4. Análise histórica (se ≥3 registros recentes): padrão de latência/loss/lentidão
+Retorna frase única em pt-BR usada pela ResultScreen. Formato `"[status] — [causa/ação]."`.  
+`scenarios: { gamesAlerted, gamesBad, otherAlerted }` — contexto dos cenários de uso calculado no componente.  
+Lógica: unavailable → lenta/instável (slow) → funcional (fair) → excellent/good com e sem alertas de cenários.  
+`slow` com DL>30 e instabilidade → "Conexão instável" em vez de "Internet lenta".
+
+**`buildDiagnosis(_r, c, recentHistory?): string[]`**
+
+Mantido para compatibilidade com testes. Não usado pelo componente ResultScreen.  
+Retorna array de parágrafos por quality + tags + análise histórica (se ≥3 registros).
 
 ### 3.3 `serverRegistry.ts` — Registro de servidores
 
@@ -329,6 +333,75 @@ formatDateIsoLike(ts: number): string // YYYY-MM-DD para nome de arquivo
 
 ---
 
+## 3.10 Motor unificado (`src/core/`)
+
+Camada introduzida na Fase 1 do plano de unificação (PWA + linka Flutter). Pura, sem dependência de React, DOM, navegador ou localStorage. Coexiste com `classifier.ts` legado durante a migração — nesta fase, **nenhum chamador foi migrado**; o motor existe mas só é exercitado por testes.
+
+### 3.10.1 Contrato — `interpretSpeedTestResult(input)`
+
+```ts
+function interpretSpeedTestResult(input: InterpretInput): InterpretedResult
+
+interface InterpretInput {
+  metrics: SpeedTestResult
+  profile: ConnectionProfile
+  history?: TestRecord[]
+}
+
+interface InterpretedResult {
+  ruleSetVersion: RuleSetVersion        // versão das regras aplicadas (atualmente 'v1')
+  profile: ConnectionProfile             // ecoado da entrada
+  quality: Quality                       // excellent | good | fair | slow | unavailable
+  flags: InterpretFlags                  // 5 booleanos (highLatency, lowUpload, unstable, packetLoss, veryUnstable)
+  stability: { score: number; level: StabilityLevel }
+  useCases: UseCaseVerdict[]             // 4 cenários: gaming, streaming_4k, home_office, video_call
+  recommendations: Array<{               // disparos rastreáveis para a fase de UX
+    id: string
+    priority: 'low' | 'medium' | 'high'
+    triggeredBy: Array<keyof InterpretFlags | 'history' | 'useCase'>
+  }>
+  copyKeys: {                            // chaves para resolveCopy() — não strings
+    headlineKey: string
+    shortPhraseKey: string
+    diagnosisKeys: string[]
+    stabilityLabelKey: string
+  }
+}
+```
+
+**Princípios de design:**
+
+- O motor retorna **chaves de copy**, não strings. O dicionário pt-BR vive em `copyDictionary.ts`. Isso permite que o app Flutter use o mesmo motor com seu próprio dicionário.
+- Os **UseCases** olham todas as métricas relevantes (download, upload, latência, jitter, perda) — não só uma fração. Streaming 4K com perda alta cai de "good"; Games com latência boa não cai para "limited" só por jitter levemente alto.
+- O ajuste de **stability** rebaixa um nível quando `latency > rules.flags.highLatency × 1.5`. Resolve o caso "Muito estável" exibido junto com "Resposta alta" (achado da auditoria).
+
+### 3.10.2 `ConnectionProfile` — fixa vs. móvel
+
+`ConnectionProfile` (em `src/types/index.ts`) é o eixo regulatório Anatel:
+
+- `fixed_broadband` — Wi-Fi, cabo, ethernet. Thresholds em paridade com o `classifier.ts` legado nesta fase.
+- `mobile_broadband` — rede celular. Thresholds deflacionados: download/upload exigem ~50% do que a fixa exige; latência tolera +30 ms; jitter e perda são iguais (não há razão regulatória para afrouxar).
+
+A função `toConnectionProfile(connectionType)` em `src/utils/connectionProfile.ts` faz o mapeamento `wifi/cable → fixed_broadband`, `mobile → mobile_broadband`, `undefined → fixed_broadband` (default conservador).
+
+### 3.10.3 `RULE_SET_VERSION`
+
+Exportado por `src/utils/classifier.ts` e reusado pelo motor. Versiona o conjunto de regras gravado em cada `TestRecord` (`record.ruleSetVersion`). Bump quando os thresholds mudarem materialmente — assim, registros antigos podem ser reinterpretados (ou marcados como sob regra antiga) ao recarregar o histórico.
+
+Atualmente: `'v1'`. Fase 1 mantém `'v1'` porque os thresholds de `fixed_broadband` têm paridade com o legado. O bump deve acontecer quando o motor passar a divergir do classifier antigo (provavelmente Fase 2, ao migrar o primeiro chamador).
+
+### 3.10.4 Arquivos
+
+| Arquivo | Conteúdo |
+|---|---|
+| `src/core/types.ts` | `UseCaseId`, `UseCaseStatus`, `BlockingFactor`, `StabilityLevel`, `UseCaseVerdict`, `InterpretFlags`, `InterpretedResult`, `InterpretInput` |
+| `src/core/profiles.ts` | `QualityThresholds`, `FlagThresholds`, `UseCaseThresholds`, `ProfileRules`, `PROFILES: Record<ConnectionProfile, ProfileRules>` |
+| `src/core/copyDictionary.ts` | Map `chave → string pt-BR` + `resolveCopy(key, params?)` com interpolação `{name}` |
+| `src/core/interpret.ts` | `interpretSpeedTestResult(input)` — função principal |
+| `src/core/index.ts` | Reexporta o contrato público para uso externo (Fase 7 / Flutter embed) |
+
+---
+
 ## 4. Hooks (`src/hooks/`)
 
 ### 4.1 `useDeviceInfo(serverId = 'cloudflare')`
@@ -380,6 +453,7 @@ interface Settings {
   scale: 'linear' | 'log'          // padrão: 'linear' — sem UI, mantido por compat de localStorage
   connectionOverride: 'auto' | 'wifi' | 'cable' | 'mobile'  // padrão: 'auto'
   hideIpOnShare: boolean            // padrão: true — oculta IP ao compartilhar resultado
+  useUnifiedEngine: boolean         // padrão: false — feature flag de dev (Fase 1); ativará o motor src/core na Fase 2
 }
 ```
 

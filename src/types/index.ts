@@ -2,6 +2,8 @@ export type Quality = 'excellent' | 'good' | 'fair' | 'slow' | 'unavailable';
 export type Tag = 'highLatency' | 'lowUpload' | 'unstable' | 'packetLoss' | 'veryUnstable';
 export type DeviceType = 'mobile' | 'tablet' | 'desktop';
 export type ConnectionType = 'wifi' | 'mobile' | 'cable';
+export type ConnectionProfile = 'fixed_broadband' | 'mobile_broadband';
+export type RuleSetVersion = string; // semântica: 'v1', 'v2', etc.
 export type SpeedTestMode = 'quick' | 'complete';
 export type TestPhase = 'idle' | 'latency' | 'download' | 'upload' | 'done' | 'error';
 
@@ -51,6 +53,8 @@ export interface TestRecord {
   deviceType: DeviceType;
   connectionType: ConnectionType;
   testMode?: SpeedTestMode;
+  connectionProfile?: ConnectionProfile;
+  ruleSetVersion?: RuleSetVersion;
 }
 
 export interface Classification {
