@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Header } from '../components/Header';
 import { IconGames, IconStream, IconWork, IconVideoCall, IconPdf, IconShare } from '../components/icons';
 import type { ServerInfo, SpeedTestResult, TestRecord } from '../types';
@@ -27,6 +27,7 @@ interface Props {
 }
 
 type UseCaseStatus = 'good' | 'maybe' | 'limited';
+type ShareStatus = 'idle' | 'copied';
 
 interface UseCase {
   key: string;
@@ -74,6 +75,38 @@ const STATUS_LABEL: Record<UseCaseStatus, string> = {
   good: 'Bom', maybe: 'Pode falhar', limited: 'Limitado',
 };
 
+export function buildShareText(result: SpeedTestResult, primary: ReturnType<typeof classify>['primary'], unit: 'mbps' | 'gbps' = 'mbps'): string {
+  const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
+  return [
+    `linka SpeedTest — ${qualityHeadline(primary)}`,
+    `↓ ${formatMbps(result.dl, unit)} ${unitLabel} · ↑ ${formatMbps(result.ul, unit)} ${unitLabel}`,
+    `Resposta ${formatMs(result.latency)} ms · Oscilação ${formatMs(result.jitter)} ms`,
+    formatDate(result.timestamp),
+  ].join('\n');
+}
+
+export async function shareResultText(text: string): Promise<'shared' | 'copied' | 'none'> {
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'linka SpeedTest', text });
+      return 'shared';
+    } catch {
+      return 'none';
+    }
+  }
+
+  if (navigator.clipboard) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return 'copied';
+    } catch {
+      return 'none';
+    }
+  }
+
+  return 'none';
+}
+
 export function ResultScreen({
   theme, onToggleTheme, result, server, previous,
   onRetry, onShowHistory, unit = 'mbps',
@@ -86,18 +119,28 @@ export function ResultScreen({
   );
   const stab = useMemo(() => stability(result), [result]);
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
+  const [shareStatus, setShareStatus] = useState<ShareStatus>('idle');
+  const shareResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (shareResetTimeoutRef.current) {
+      clearTimeout(shareResetTimeoutRef.current);
+    }
+  }, []);
 
   const handleShare = async () => {
-    const text = [
-      `linka SpeedTest — ${qualityHeadline(classification.primary)}`,
-      `↓ ${formatMbps(result.dl, unit)} ${unitLabel} · ↑ ${formatMbps(result.ul, unit)} ${unitLabel}`,
-      `Resposta ${formatMs(result.latency)} ms · Oscilação ${formatMs(result.jitter)} ms`,
-      formatDate(result.timestamp),
-    ].join('\n');
-    if (navigator.share) {
-      try { await navigator.share({ title: 'linka SpeedTest', text }); } catch { /* cancelled */ }
-    } else if (navigator.clipboard) {
-      try { await navigator.clipboard.writeText(text); } catch { /* ignore */ }
+    const text = buildShareText(result, classification.primary, unit);
+    const outcome = await shareResultText(text);
+
+    if (outcome === 'copied') {
+      setShareStatus('copied');
+      if (shareResetTimeoutRef.current) {
+        clearTimeout(shareResetTimeoutRef.current);
+      }
+      shareResetTimeoutRef.current = setTimeout(() => {
+        setShareStatus('idle');
+        shareResetTimeoutRef.current = null;
+      }, 2000);
     }
   };
 
@@ -205,7 +248,7 @@ export function ResultScreen({
         <section className="lk-actions">
           <button className="btn-primary lk-actions__btn" onClick={onRetry}>Testar novamente</button>
           <button className="btn-text" onClick={handleShare}>
-            <IconShare size={16} /> Compartilhar
+            <IconShare size={16} /> {shareStatus === 'copied' ? 'Copiado!' : 'Compartilhar'}
           </button>
         </section>
       </main>
