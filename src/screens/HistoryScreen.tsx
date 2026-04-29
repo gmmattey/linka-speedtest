@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, ResponsiveContainer, YAxis } from 'recharts';
 import { Header } from '../components/Header';
 import { DeviceIcon, ConnectionIcon, IconPdf } from '../components/icons';
-import type { TestRecord } from '../types';
-import { buildDiagnosis, classify, qualityHeadline, stability, stabilityLabel, tagLabel } from '../utils/classifier';
+import type { SpeedTestResult, TestRecord } from '../types';
+import { interpretSpeedTestResult, resolveCopy } from '../core';
 import { clearHistory, loadHistory } from '../utils/history';
 import { buildHistoryInsights } from '../utils/historyInsights';
 import { formatDate, formatMbps, formatMs } from '../utils/format';
@@ -51,8 +51,25 @@ export function HistoryScreen({ theme, onToggleTheme, unit = 'mbps', initialSele
     const avgLat = items.reduce((s, r) => s + r.latency, 0)    / n;
     const avgJit = items.reduce((s, r) => s + r.jitter, 0)     / n;
     const avgLos = items.reduce((s, r) => s + r.packetLoss, 0) / n;
-    const c = classify({ dl: avgDl, ul: avgUl, latency: avgLat, jitter: avgJit, packetLoss: avgLos, timestamp: 0 });
-    return { avgDl, avgUl, quality: c.primary, n };
+
+    // Dispersão: % dos últimos 5 testes com qualidade ruim → proxy de instabilidade temporal.
+    // Evita falsa boa notícia quando a conexão alterna entre excelente e péssima.
+    const last5 = items.slice(0, 5);
+    const syntheticLoss = (last5.filter((r) => r.quality === 'slow' || r.quality === 'unavailable').length / last5.length) * 100;
+
+    const avgMetrics: SpeedTestResult = {
+      dl: avgDl, ul: avgUl, latency: avgLat, jitter: avgJit,
+      packetLoss: Math.max(avgLos, syntheticLoss),
+      timestamp: 0,
+    };
+    const interpreted = interpretSpeedTestResult({ metrics: avgMetrics, profile: 'fixed_broadband', history: items });
+    const unstable = interpreted.stability.level === 'unstable' || interpreted.stability.level === 'oscillating';
+    return {
+      avgDl, avgUl, n,
+      headline: unstable
+        ? resolveCopy(interpreted.copyKeys.stabilityLabelKey)
+        : resolveCopy(interpreted.copyKeys.headlineKey),
+    };
   }, [items]);
 
   const insights = useMemo(() => buildHistoryInsights(items), [items]);
@@ -63,16 +80,16 @@ export function HistoryScreen({ theme, onToggleTheme, unit = 'mbps', initialSele
     const recent = items.filter((r) => r.timestamp >= cutoff);
     const sample = recent.length > 0 ? recent : items.slice(0, 5);
     const n = sample.length;
-    const avg = {
-      dl:         sample.reduce((s, r) => s + r.dl, 0)         / n,
-      ul:         sample.reduce((s, r) => s + r.ul, 0)         / n,
-      latency:    sample.reduce((s, r) => s + r.latency, 0)    / n,
-      jitter:     sample.reduce((s, r) => s + r.jitter, 0)     / n,
+    const avg: SpeedTestResult = {
+      dl:         sample.reduce((s, r) => s + r.dl, 0) / n,
+      ul:         sample.reduce((s, r) => s + r.ul, 0) / n,
+      latency:    sample.reduce((s, r) => s + r.latency, 0) / n,
+      jitter:     sample.reduce((s, r) => s + r.jitter, 0) / n,
       packetLoss: sample.reduce((s, r) => s + r.packetLoss, 0) / n,
       timestamp:  Date.now(),
     };
-    const c = classify(avg);
-    const lines = buildDiagnosis(avg, c, sample);
+    const interpreted = interpretSpeedTestResult({ metrics: avg, profile: 'fixed_broadband', history: sample });
+    const lines = interpreted.copyKeys.diagnosisKeys.map((k) => resolveCopy(k));
     return { lines: lines.slice(0, 2), windowLabel: recent.length > 0 ? '24h' : 'recente' };
   }, [items]);
 
@@ -158,7 +175,7 @@ export function HistoryScreen({ theme, onToggleTheme, unit = 'mbps', initialSele
                   <span className="lk-history__summary-dl">↓ {formatMbps(summary.avgDl, unit)} {unitLabel}</span>
                   <span className="lk-history__summary-ul">↑ {formatMbps(summary.avgUl, unit)} {unitLabel}</span>
                 </div>
-                <p className="lk-history__summary-quality">{qualityHeadline(summary.quality)} — {summary.n} teste{summary.n > 1 ? 's' : ''}</p>
+                <p className="lk-history__summary-quality">{summary.headline} — {summary.n} teste{summary.n > 1 ? 's' : ''}</p>
               </section>
             )}
 
@@ -168,7 +185,7 @@ export function HistoryScreen({ theme, onToggleTheme, unit = 'mbps', initialSele
                   <div className="lk-history__row1">
                     <span className="lk-history__date">{formatDate(r.timestamp)}</span>
                     <span className={`lk-chip lk-chip--${r.quality === 'slow' || r.quality === 'unavailable' ? 'limited' : r.quality === 'fair' ? 'maybe' : 'good'}`}>
-                      {qualityHeadline(r.quality)}
+                      {resolveCopy(`quality.${r.quality}`)}
                     </span>
                   </div>
                   <div className="lk-history__row2">
@@ -206,15 +223,17 @@ export function HistoryScreen({ theme, onToggleTheme, unit = 'mbps', initialSele
 }
 
 function HistoryDetail({ record, onBack, unit }: { record: TestRecord; onBack: () => void; unit: 'mbps' | 'gbps' }) {
-  const c = useMemo(() => classify({
-    dl: record.dl, ul: record.ul, latency: record.latency,
-    jitter: record.jitter, packetLoss: record.packetLoss, timestamp: record.timestamp,
+  const interpreted = useMemo(() => interpretSpeedTestResult({
+    metrics: {
+      dl: record.dl, ul: record.ul, latency: record.latency,
+      jitter: record.jitter, packetLoss: record.packetLoss, timestamp: record.timestamp,
+    },
+    profile: record.connectionProfile ?? 'fixed_broadband',
   }), [record]);
-  const stab = useMemo(() => stability({
-    dl: record.dl, ul: record.ul, latency: record.latency,
-    jitter: record.jitter, packetLoss: record.packetLoss, timestamp: record.timestamp,
-  }), [record]);
+
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
+  const flagKeys = (Object.keys(interpreted.flags) as Array<keyof typeof interpreted.flags>)
+    .filter((k) => interpreted.flags[k]);
 
   return (
     <div className="lk-history lk-history--detail fade-in">
@@ -224,13 +243,17 @@ function HistoryDetail({ record, onBack, unit }: { record: TestRecord; onBack: (
       </div>
 
       <main className="lk-result__main">
-        <section className={`lk-banner lk-banner--${c.primary}`}>
-          <div className="lk-banner__icon">{c.primary === 'slow' || c.primary === 'unavailable' ? '✗' : c.primary === 'fair' ? '!' : '✓'}</div>
+        <section className={`lk-banner lk-banner--${interpreted.quality}`}>
+          <div className="lk-banner__icon">
+            {interpreted.quality === 'slow' || interpreted.quality === 'unavailable' ? '✗' : interpreted.quality === 'fair' ? '!' : '✓'}
+          </div>
           <div className="lk-banner__body">
-            <div className="lk-banner__title">{qualityHeadline(c.primary)}</div>
-            {c.tags.size > 0 && (
+            <div className="lk-banner__title">{resolveCopy(interpreted.copyKeys.headlineKey)}</div>
+            {flagKeys.length > 0 && (
               <div className="lk-banner__tags">
-                {Array.from(c.tags).map((t) => <span key={t} className="lk-chip">{tagLabel(t)}</span>)}
+                {flagKeys.map((k) => (
+                  <span key={k} className="lk-chip">{resolveCopy(`flag.${k}`)}</span>
+                ))}
               </div>
             )}
           </div>
@@ -262,7 +285,9 @@ function HistoryDetail({ record, onBack, unit }: { record: TestRecord; onBack: (
             <div className="lk-secondary__label">Oscilação</div>
           </div>
           <div className="lk-secondary__col">
-            <div className="lk-secondary__value lk-secondary__value--stab">{stabilityLabel(stab)}</div>
+            <div className="lk-secondary__value lk-secondary__value--stab">
+              {resolveCopy(interpreted.copyKeys.stabilityLabelKey)}
+            </div>
             <div className="lk-secondary__label">Estabilidade</div>
           </div>
         </section>

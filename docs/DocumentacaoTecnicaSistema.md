@@ -337,7 +337,9 @@ formatDateIsoLike(ts: number): string // YYYY-MM-DD para nome de arquivo
 
 Camada introduzida na Fase 1 do plano de unificação (PWA + linka Flutter). Pura, sem dependência de React, DOM, navegador ou localStorage. Coexiste com `classifier.ts` legado durante a migração.
 
-**Estado atual (Fase 2 concluída):** `ResultScreen` migrada para consumir `interpretSpeedTestResult()` + `resolveCopy()`. O motor é agora a fonte de verdade para quality, flags, stability, use cases e short phrase da tela de resultado. Recomendações continuam com texto de `utils/recommendations.ts` (bridged via `Classification` sintética derivada das flags do motor). `HistoryScreen` e demais chamadores ainda usam o legado (Fases 3+).
+**Estado atual (Fase 3 concluída):** `ResultScreen` e `HistoryScreen` migradas para `interpretSpeedTestResult()` + `resolveCopy()`. O motor é a fonte de verdade para quality, flags, stability, use cases e frases de diagnóstico em ambas as telas. Recomendações da ResultScreen continuam com texto de `utils/recommendations.ts` (bridged via `Classification` sintética derivada das flags do motor). Demais chamadores ainda usam o legado (Fases 4+).
+
+**Dispersão histórica no resumo:** O card "Média dos seus testes" da HistoryScreen usa `syntheticLoss` (% de testes slow/unavailable nos últimos 5) como proxy de instabilidade temporal — evita que históricos alternando excelente/péssimo apareçam como "bons". Quando `stability.level === 'unstable' | 'oscillating'`, exibe o rótulo de estabilidade em vez do headline de quality.
 
 ### 3.10.1 Contrato — `interpretSpeedTestResult(input)`
 
