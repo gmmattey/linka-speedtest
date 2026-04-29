@@ -93,74 +93,50 @@
   letter-spacing: -0.3px;
 }
 
-.lk-start__cta-hint {
-  margin: 0;
-  font-family: var(--font-body);
-  font-size: 13px;
-  color: var(--text-3);
-  text-align: center;
-}
+/* ── Mode toggle ───────────────────────────────────── */
 
-/* ── Mode selection buttons ────────────────────────── */
-
-.lk-start__modes {
+.lk-start__mode-toggle {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  width: 100%;
-  max-width: 320px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
 }
 
-.lk-start__mode-btn {
+.lk-start__mode-opt {
   all: unset;
   box-sizing: border-box;
-  width: 100%;
-  padding: 16px 20px;
-  border-radius: var(--radius-button);
-  border: 2px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  cursor: pointer;
-  transition: border-color 150ms, opacity 150ms, transform 100ms;
-  touch-action: manipulation;
-  text-align: left;
-}
-
-.lk-start__mode-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.lk-start__mode-btn--ready:active {
-  transform: scale(0.98);
-}
-
-.lk-start__mode-btn--secondary.lk-start__mode-btn--ready:hover {
-  border-color: var(--accent);
-}
-
-.lk-start__mode-title {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 18px;
-  color: var(--text);
-  letter-spacing: -0.2px;
-}
-
-.lk-start__mode-desc {
+  padding: 8px 20px;
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+
+.lk-start__mode-opt--active {
+  background: var(--accent);
+  color: #ffffff;
+  border-radius: var(--radius-pill);
+}
+
+/* ── Compare link ──────────────────────────────────── */
+
+.lk-start__compare-link {
+  font-size: 13px;
   color: var(--text-3);
 }
 
-.lk-start__mode-btn--compare .lk-start__mode-title {
-  font-size: 15px;
-  color: var(--text-2);
+.lk-start__compare-link:not(:disabled):hover {
+  color: var(--accent);
 }
 
-.lk-start__mode-btn--compare.lk-start__mode-btn--ready:hover {
-  border-color: var(--text-3);
+.lk-start__compare-link:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* ── Last result card + history shortcut ──────────── */

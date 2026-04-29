@@ -41,6 +41,7 @@ export function StartScreen({
   onShowHistory,
 }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [mode, setMode] = useState<SpeedTestMode>('quick');
   const canStart = !loading && !!server?.available && !!device;
   const unitLabel = settings.unit === 'gbps' ? 'Gbps' : 'Mbps';
 
@@ -58,38 +59,39 @@ export function StartScreen({
 
         <button
           className={`lk-start__cta${canStart ? ' lk-start__cta--ready' : ''}`}
-          onClick={() => onStart('quick')}
+          onClick={() => onStart(mode)}
           disabled={!canStart}
-          aria-label="Iniciar teste rápido"
+          aria-label={mode === 'quick' ? 'Iniciar teste rápido' : 'Iniciar teste completo'}
         >
           <span className="lk-start__cta-label">
             {loading ? 'Aguardando…' : 'Iniciar'}
           </span>
         </button>
 
-        <p className="lk-start__cta-hint">Usa ~80 MB · Resultado em ~30 s</p>
-
-        <div className="lk-start__modes">
+        <div className="lk-start__mode-toggle" role="group" aria-label="Modo do teste">
           <button
-            className={`lk-start__mode-btn lk-start__mode-btn--secondary${canStart ? ' lk-start__mode-btn--ready' : ''}`}
-            onClick={() => onStart('complete')}
-            disabled={!canStart}
-            aria-label="Iniciar teste completo"
+            className={`lk-start__mode-opt${mode === 'quick' ? ' lk-start__mode-opt--active' : ''}`}
+            onClick={() => setMode('quick')}
+            type="button"
           >
-            <span className="lk-start__mode-title">Teste completo</span>
-            <span className="lk-start__mode-desc">Mais preciso · ~400 MB no Wi-Fi</span>
+            Teste rápido
           </button>
-
           <button
-            className="lk-start__mode-btn lk-start__mode-btn--compare"
-            onClick={onStartComparison}
-            disabled={!canStart}
-            aria-label="Comparar locais"
+            className={`lk-start__mode-opt${mode === 'complete' ? ' lk-start__mode-opt--active' : ''}`}
+            onClick={() => setMode('complete')}
+            type="button"
           >
-            <span className="lk-start__mode-title">Comparar locais</span>
-            <span className="lk-start__mode-desc">Descubra se o problema é o Wi-Fi ou a operadora</span>
+            Teste completo
           </button>
         </div>
+
+        <button
+          className="btn-text lk-start__compare-link"
+          onClick={onStartComparison}
+          disabled={!canStart}
+        >
+          Comparar locais
+        </button>
 
         {lastRecord && (
           <div className="lk-start__last">
