@@ -12,7 +12,7 @@
 | React | ^19 | Framework UI |
 | TypeScript | ^6 | Tipagem estática |
 | vite-plugin-pwa | ^1.2 | Manifest + service worker |
-| Recharts | latest | Gráficos (LiveChart, HistoryScreen) |
+| Recharts | latest | Gráficos (HistoryScreen) |
 | jsPDF | latest | Geração de PDF |
 | html2canvas | latest | Captura de DOM para PDF |
 | Vitest | latest | Testes unitários |
@@ -160,6 +160,8 @@ A interface `Preset` inclui o campo `latencySamples: number` (era constante; ago
 
 ### 3.2 `classifier.ts` — Classificador de qualidade
 
+> **Fase 6 (legado removido):** Arquivo podado para < 50 linhas — contém apenas `RULE_SET_VERSION` e `classify()`. Todas as demais funções (`qualityHeadline`, `tagLabel`, `stability`, `stabilityLabel`, `buildShortPhrase`, `buildDiagnosis`, `clamp`) foram deletadas. Chamadores migrados para `interpretSpeedTestResult()` + `resolveCopy()`.
+
 **`classify(r: SpeedTestResult): Classification`**
 
 Tags avaliadas primeiro (independentes):
@@ -180,31 +182,6 @@ Quality (avaliado em ordem, primeira correspondência vence):
 | `fair` | DL≥10, UL≥3, lat≤100, loss≤2% |
 | `slow` | `dl > 0 OR ul > 0` |
 | `unavailable` | fallback |
-
-**`stability(r): number`** (0–100)
-```
-jitterScore = 100 - clamp((jitter/50)*100, 0, 100)
-lossScore   = 100 - clamp((loss/2)*100,  0, 100)
-result      = round(0.6 * jitterScore + 0.4 * lossScore)
-```
-
-**`stabilityLabel(score): string`**
-- ≥85 → "Muito estável"
-- ≥60 → "Estável"
-- ≥35 → "Oscilando"
-- <35 → "Instável"
-
-**`buildShortPhrase(r, quality, scenarios): string`**
-
-Retorna frase única em pt-BR usada pela ResultScreen. Formato `"[status] — [causa/ação]."`.  
-`scenarios: { gamesAlerted, gamesBad, otherAlerted }` — contexto dos cenários de uso calculado no componente.  
-Lógica: unavailable → lenta/instável (slow) → funcional (fair) → excellent/good com e sem alertas de cenários.  
-`slow` com DL>30 e instabilidade → "Conexão instável" em vez de "Internet lenta".
-
-**`buildDiagnosis(_r, c, recentHistory?): string[]`**
-
-Mantido para compatibilidade com testes. Não usado pelo componente ResultScreen.  
-Retorna array de parágrafos por quality + tags + análise histórica (se ≥3 registros).
 
 ### 3.3 `serverRegistry.ts` — Registro de servidores
 
@@ -338,13 +315,15 @@ formatDateIsoLike(ts: number): string // YYYY-MM-DD para nome de arquivo
 
 ## 3.10 Motor unificado (`src/core/`)
 
-Camada introduzida na Fase 1 do plano de unificação (PWA + linka Flutter). Pura, sem dependência de React, DOM, navegador ou localStorage. Coexiste com `classifier.ts` legado durante a migração.
+Camada introduzida na Fase 1 do plano de unificação (PWA + linka Flutter). Pura, sem dependência de React, DOM, navegador ou localStorage.
 
-**Estado atual (Fase 3 concluída):** `ResultScreen` e `HistoryScreen` migradas para `interpretSpeedTestResult()` + `resolveCopy()`. O motor é a fonte de verdade para quality, flags, stability, use cases e frases de diagnóstico em ambas as telas. Recomendações da ResultScreen continuam com texto de `utils/recommendations.ts` (bridged via `Classification` sintética derivada das flags do motor). Demais chamadores ainda usam o legado (Fases 4+).
+**Estado atual (Fase 6 concluída — migração completa):** `ResultScreen`, `HistoryScreen` e `pdfExport.ts` usam exclusivamente `interpretSpeedTestResult()` + `resolveCopy()`. O `classifier.ts` legado foi podado — mantém só `RULE_SET_VERSION` e `classify()` (ainda necessário para `TestRecord.quality` e bridge de recomendações). Recomendações da ResultScreen continuam com texto de `utils/recommendations.ts` (bridged via `Classification` sintética derivada das flags do motor).
 
 **Dispersão histórica no resumo:** O card "Média dos seus testes" da HistoryScreen usa `syntheticLoss` (% de testes slow/unavailable nos últimos 5) como proxy de instabilidade temporal — evita que históricos alternando excelente/péssimo apareçam como "bons". Quando `stability.level === 'unstable' | 'oscillating'`, exibe o rótulo de estabilidade em vez do headline de quality.
 
-**Copy (Fase 5):** `<dt>Perda de pacotes</dt>` substituído por `<dt>Perda de sinal</dt>` em ResultScreen e HistoryScreen — alinhado com o chip tag `flag.packetLoss`. PDF mantém terminologia técnica (decisão explícita). Grep por "Perda de pacotes", "Jitter", "pacotes" em `src/screens/` retorna zero.
+**Copy (Fase 5):** `<dt>Perda de pacotes</dt>` substituído por `<dt>Perda de sinal</dt>` em ResultScreen e HistoryScreen — alinhado com o chip tag `flag.packetLoss`. Grep por "Perda de pacotes", "Jitter", "pacotes" em `src/screens/` retorna zero.
+
+**Fase 6 (legado removido):** `pdfExport.ts` migrado para `interpretSpeedTestResult()` + `resolveCopy()` — sem mais imports de `classifier.ts`. `useUnifiedEngine` removido de `useSettings`. `LiveChart.tsx` deletado.
 
 ### 3.10.1 Contrato — `interpretSpeedTestResult(input)`
 
@@ -442,7 +421,7 @@ Atualmente: `'v1'`. Os thresholds de `fixed_broadband` têm paridade com o legad
 
 **Assinatura de `start`**: `start(connectionType?: ConnectionType, mode?: SpeedTestMode)`. O hook repassa ambos os parâmetros para `runSpeedTest`, que escolhe o preset adequado (default, mobile ou quick). Ver §3.1.
 
-**`live: LivePoint[]`** — buffer dos últimos 60 pontos `{ t: number, speed: number, phase: 'download'|'upload' }`. Mantido por compatibilidade interna; **não é mais consumido** pela RunningScreen (gauge passou a ser apenas número + unidade). O `LiveChart` permanece no codebase mas não está renderizado em nenhuma tela.
+**`live: LivePoint[]`** — buffer dos últimos 60 pontos `{ t: number, speed: number, phase: 'download'|'upload' }`. Mantido por compatibilidade interna; **não é mais consumido** pela RunningScreen (gauge passou a ser apenas número + unidade). O componente `LiveChart.tsx` foi deletado na Fase 6 — não havia callers.
 
 **Suavização do `instantMbps`:**
 - `targetMbpsRef` recebe o valor bruto do callback `onProgress`
@@ -462,7 +441,6 @@ interface Settings {
   scale: 'linear' | 'log'          // padrão: 'linear' — sem UI, mantido por compat de localStorage
   connectionOverride: 'auto' | 'wifi' | 'cable' | 'mobile'  // padrão: 'auto'
   hideIpOnShare: boolean            // padrão: true — oculta IP ao compartilhar resultado
-  useUnifiedEngine: boolean         // padrão: false — flag legado (Fase 1); não mais usado; ResultScreen usa o motor diretamente desde a Fase 2
 }
 ```
 
@@ -721,13 +699,14 @@ npx wrangler pages deploy dist --project-name linka-speedtest --branch main
 
 | Arquivo | Testes | Cobertura |
 |---|---|---|
-| `classifier.test.ts` | 28 | `classify()` (5 quality + 5 tags), `stability()`, `stabilityLabel()`, `buildDiagnosis()` |
+| `classifier.test.ts` | 12 | `RULE_SET_VERSION`, `classify()` — 5 quality + 7 tags |
 | `connectionProfile.test.ts` | — | `toConnectionProfile()` — mapeamento ConnectionType → ConnectionProfile |
 | `interpret.test.ts` | — | `interpretSpeedTestResult()` — motor unificado |
 | `share.test.ts` | — | `buildShareText()`, `shareResultText()` |
+| `compare.test.ts` | 12 | `calculateComparison()` — coverage_issue, both_bad, both_good, percentuais, edge cases |
 
-**Total:** 90 testes passando.
+**Total:** 79 testes passando (−23 da Fase 6: funções legadas removidas do classifier).
 
 **Comando:** `npm test`
 
-**Regra:** os 90 testes **nunca podem ser quebrados** sem justificativa documentada e plano de substituição. Mudanças em `classifier.ts` ou `src/core/` exigem atualização dos testes correspondentes.
+**Regra:** os testes **nunca podem ser quebrados** sem justificativa documentada e plano de substituição. Mudanças em `classifier.ts` ou `src/core/` exigem atualização dos testes correspondentes.
