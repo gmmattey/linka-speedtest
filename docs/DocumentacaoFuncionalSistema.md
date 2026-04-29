@@ -24,7 +24,7 @@ StartScreen → [Teste rápido / completo] → RunningScreen → [Conclusão] �
    ↑                                        [Cancelar] ↓                ↓ [Testar novamente]
    │                                       StartScreen                  │
    ├─[Ver histórico]──────────────────────────────────────► HistoryScreen
-   └─[Card último teste]─────────────────────────────────► HistoryScreen (detalhe pré-aberto)
+   └─[Link último teste]─────────────────────────────────► HistoryScreen (detalhe pré-aberto)
 
 StartScreen → [Comparar locais] → ComparisonScreen (passo 1/2)
    ComparisonScreen → [Testar perto] → RunningScreen → ComparisonScreen (passo 2/2)
@@ -43,79 +43,81 @@ StartScreen → [Comparar locais] → ComparisonScreen (passo 1/2)
 
 ### Finalidade
 
-Ponto de entrada do app. Comunica a proposta do produto, permite iniciar o teste, visualizar informações do dispositivo e servidor, e ajustar configurações (unidade, tipo de conexão, servidor).
+Ponto de entrada do app. Permite iniciar o teste no modo escolhido, comparar locais e acessar o histórico.
 
 ### Layout
 
 ```
 ┌──────────────────────────────────┐
-│  HEADER (logo + toggle tema)     │  ← sem linha inferior, sem botão close
+│  HEADER (logo + toggle tema)     │  ← logo: linka_lovo_v2.png
 │                                  │
 │  [⚠ erro + Tentar novamente]     │  ← só aparece se error != null
 │                                  │
-│  "Descubra se sua internet está  │  ← tagline (proposta de valor)
-│   pronta para o que você precisa."│
+│         ╭─────────────╮          │  ← hero: flex:1, centralizado
+│         │             │          │
+│         │   Iniciar   │          │  ← círculo 196px, outlined accent
+│         │             │          │     animação de borda + anel pulsante
+│         ╰─────────────╯          │
 │                                  │
-│  ┌────────────────────────────┐  │
-│  │     Iniciar teste      ▶   │  │  ← botão preenchido accent, 64px, destaque único
-│  └────────────────────────────┘  │
-│  Teste rápido · ~80 MB · ~30 s   │  ← descrição abaixo do CTA
+│   Teste rápido [switch] Teste    │  ← toggle iOS: label · switch · label
+│               completo           │     switch 48×28px, knob deslizante
 │                                  │
-│  ┌────────────────────────────┐  │
-│  │  Teste completo            │  │  ← outline, accent no hover
-│  │  (mais preciso)            │  │
-│  │  ~400 MB · recomendado     │  │
-│  │  no Wi-Fi ou cabo          │  │
-│  └────────────────────────────┘  │
+│         Comparar locais          │  ← link de texto (btn-text, text-3)
 │                                  │
-│  ┌────────────────────────────┐  │
-│  │  Wi-Fi ou operadora?       │  │  ← card surface, separado visualmente
-│  │  Compare perto e longe do  │  │    (margin-top xl)
-│  │  roteador…                 │  │
-│  └────────────────────────────┘  │
+│  ↓ 87,3 ↑ 32,1 Mbps · Ver       │  ← link inline, só se há histórico
+│  último teste                    │     sem card, sem borda
 │                                  │
-│  ● Conectado · Cloudflare        │  ← status da conexão (11px, dot colorido)
-│                                  │
-│  ┌────────────────────────────┐  │
-│  │ Último teste · 28/04 14:32 │  │  ← card só se há histórico
-│  │ ↓ 87,3 ↑ 32,1 Mbps         │  │     tap → HistoryScreen com detalhe aberto
-│  │ Conexão boa                │  │
-│  └────────────────────────────┘  │
-│  Ver histórico                    │  ← btn-text sempre visível
-│  Seus resultados ficam salvos    │  ← privacy note (11px, text-3)
-│  só neste aparelho.              │
+│         Ver histórico            │  ← btn-text sempre visível
 │                                  │
 ├──────────────────────────────────┤
 │  ── handle ──                    │  ← BottomSheet peek (110px fixo)
-│  Detalhes da conexão             │  ← legenda (visível só no estado fechado)
 │  [PC][WiFi][CF] PathRow          │
 └──────────────────────────────────┘
 ```
 
-### Botões de modo
+### CTA circular
 
-| Botão | Modo | Preset | Visual |
-|---|---|---|---|
-| Iniciar teste | `'quick'` | PRESET_QUICK (~80 MB) | Botão preenchido accent (#6C2BFF), 64px, CTA único |
-| Teste completo (mais preciso) | `'complete'` | PRESET_DEFAULT/MOBILE (~400/70 MB) | Outline accent, menor que o primário |
-| Wi-Fi ou operadora? | — | Inicia fluxo ComparisonScreen | Card com fundo surface, separado por margin-top extra |
+Botão circular `196px × 196px`, `border-radius: 50%`, outlined (`border: 2px solid var(--accent)`), fundo transparente. Texto "Iniciar" em Space Grotesk 700 22px na cor accent.
 
-Texto abaixo do CTA primário adapta-se ao tipo de conexão: em conexão móvel exibe aviso de consumo de dados; em Wi-Fi/cabo exibe tempo estimado de resultado.
+Quando `canStart = true`:
+- Borda pulsa entre `var(--accent)` e `rgba(108,43,255,0.4)` em 2,5 s (keyframe `lkCtaBorder`)
+- Anel externo (`::after`, `inset: -14px`) expande de `scale(0.9) opacity 0.5` para `scale(1.14) opacity 0` em loop (keyframe `lkCtaRing`)
 
-Todos os botões ficam `disabled` quando `loading=true` ou `server?.available` é falso. Durante loading, o CTA exibe "Verificando…".
+Durante loading: texto "Aguardando…", botão `disabled` (`opacity: 0.35`).
 
-### Status de conexão
+Ao clicar: chama `onStart(mode)` onde `mode` é o estado interno do toggle (`'quick'` ou `'complete'`).
 
-Linha abaixo do grupo de botões com indicador de ponto colorido:
-- `● verde` + "Conectado · {server.name}" — quando servidor disponível
-- `● vermelho` + "Servidor indisponível" — quando servidor indisponível
-- "Verificando conexão…" — durante loading ou antes de `server` estar populado
+### Toggle de modo (iOS-style)
+
+Três elementos alinhados horizontalmente:
+
+```
+Teste rápido  [○        ]  Teste completo   ← modo quick (knob à esquerda)
+Teste rápido  [        ●]  Teste completo   ← modo complete (knob à direita)
+```
+
+- **Track:** `48×28px`, `border-radius: 14px`, fundo `var(--border)` → `var(--accent)` quando ativo
+- **Knob:** `::after` circular `22×22px`, branco, desliza `translateX(20px)` com `cubic-bezier(0.34,1.4,0,1)` em 250ms
+- **Labels:** clicáveis individualmente (`onClick → setMode`). Label do modo ativo em `var(--text) font-weight 500`; inativo em `var(--text-3)`
+- Estado gerenciado localmente em `StartScreen` via `useState<SpeedTestMode>('quick')`
+
+### Seleção de modo
+
+| Modo | Preset | Acionamento |
+|---|---|---|
+| `'quick'` | PRESET_QUICK (~80 MB) | Toggle à esquerda (padrão) |
+| `'complete'` | PRESET_DEFAULT/MOBILE (~400/70 MB) | Toggle à direita |
+
+### Links inferiores
+
+- **Comparar locais** — `btn-text`, `color: var(--text-3)`, hover accent. `disabled` quando `!canStart`.
+- **Último teste** — exibido como linha de texto clicável (`↓ X ↑ Y Mbps · Ver último teste`) somente se `lastRecord != null`. Sem card, sem borda, sem fundo. Tap → `onShowLastResult()`.
+- **Ver histórico** — sempre visível. Tap → `onShowHistory()`.
 
 ### BottomSheet — peek (fechado)
 
 Sempre visível na base da tela (110px fixos). Conteúdo:
 - Handle bar (indicador de arrasto)
-- Label "Detalhes da conexão" (10px, text-3) — visível apenas no estado fechado (opacity 0 quando aberto)
 - PathRow: ícone de dispositivo → ícone de conexão → ícone de servidor, com labels e linha animada conectando
 
 Tap no handle **ou** arrasto vertical para cima sobre a alça → abre o sheet. Arrasto para baixo → fecha. Threshold de 60 px no eixo vertical.
