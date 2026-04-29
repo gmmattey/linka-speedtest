@@ -43,7 +43,7 @@ StartScreen → [Comparar locais] → ComparisonScreen (passo 1/2)
 
 ### Finalidade
 
-Ponto de entrada do app. Comunica a proposta do produto, permite iniciar o teste, visualizar informações do dispositivo e servidor, e ajustar configurações (unidade, tipo de conexão, servidor).
+Ponto de entrada do app. Permite iniciar o teste, visualizar informações do dispositivo e servidor, e ajustar configurações (unidade, escala do gráfico, tipo de conexão, servidor).
 
 ### Layout
 
@@ -51,30 +51,21 @@ Ponto de entrada do app. Comunica a proposta do produto, permite iniciar o teste
 ┌──────────────────────────────────┐
 │  HEADER (logo + toggle tema)     │  ← sem linha inferior, sem botão close
 │                                  │
-│  [⚠ erro + Tentar novamente]     │  ← só aparece se error != null
-│                                  │
-│  "Descubra se sua internet está  │  ← tagline (proposta de valor)
-│   pronta para o que você precisa."│
-│                                  │
-│  ┌────────────────────────────┐  │
-│  │     Iniciar teste      ▶   │  │  ← botão preenchido accent, 64px, destaque único
-│  └────────────────────────────┘  │
-│  Teste rápido · ~80 MB · ~30 s   │  ← descrição abaixo do CTA
+│  ┌─────────────────────────────┐ │
+│  │  [⚠ erro + Tentar novamente]│ │  ← só aparece se error != null
+│  └─────────────────────────────┘ │
 │                                  │
 │  ┌────────────────────────────┐  │
-│  │  Teste completo            │  │  ← outline, accent no hover
-│  │  (mais preciso)            │  │
-│  │  ~400 MB · recomendado     │  │
-│  │  no Wi-Fi ou cabo          │  │
+│  │  Teste rápido              │  │  ← borda accent pulsando, destaque primário
+│  │  ~80 MB · resultado em ~30s│  │
 │  └────────────────────────────┘  │
-│                                  │
 │  ┌────────────────────────────┐  │
-│  │  Wi-Fi ou operadora?       │  │  ← card surface, separado visualmente
-│  │  Compare perto e longe do  │  │    (margin-top xl)
-│  │  roteador…                 │  │
+│  │  Teste completo            │  │  ← borda neutra, borda accent no hover
+│  │  ~400 MB · mais preciso    │  │
 │  └────────────────────────────┘  │
-│                                  │
-│  ● Conectado · Cloudflare        │  ← status da conexão (11px, dot colorido)
+│  ┌────────────────────────────┐  │
+│  │  Comparar locais           │  │  ← botão sutil (compare style)
+│  └────────────────────────────┘  │
 │                                  │
 │  ┌────────────────────────────┐  │
 │  │ Último teste · 28/04 14:32 │  │  ← card só se há histórico
@@ -82,12 +73,9 @@ Ponto de entrada do app. Comunica a proposta do produto, permite iniciar o teste
 │  │ Conexão boa                │  │
 │  └────────────────────────────┘  │
 │  Ver histórico                    │  ← btn-text sempre visível
-│  Seus resultados ficam salvos    │  ← privacy note (11px, text-3)
-│  só neste aparelho.              │
 │                                  │
 ├──────────────────────────────────┤
 │  ── handle ──                    │  ← BottomSheet peek (110px fixo)
-│  Detalhes da conexão             │  ← legenda (visível só no estado fechado)
 │  [PC][WiFi][CF] PathRow          │
 └──────────────────────────────────┘
 ```
@@ -96,26 +84,16 @@ Ponto de entrada do app. Comunica a proposta do produto, permite iniciar o teste
 
 | Botão | Modo | Preset | Visual |
 |---|---|---|---|
-| Iniciar teste | `'quick'` | PRESET_QUICK (~80 MB) | Botão preenchido accent (#6C2BFF), 64px, CTA único |
-| Teste completo (mais preciso) | `'complete'` | PRESET_DEFAULT/MOBILE (~400/70 MB) | Outline accent, menor que o primário |
-| Wi-Fi ou operadora? | — | Inicia fluxo ComparisonScreen | Card com fundo surface, separado por margin-top extra |
+| Teste rápido | `'quick'` | PRESET_QUICK (~80 MB) | Borda accent pulsando (destaque primário) |
+| Teste completo | `'complete'` | PRESET_DEFAULT/MOBILE (~400/70 MB) | Borda neutra, accent no hover |
+| Comparar locais | — | Inicia fluxo ComparisonScreen | Borda sutil |
 
-Texto abaixo do CTA primário adapta-se ao tipo de conexão: em conexão móvel exibe aviso de consumo de dados; em Wi-Fi/cabo exibe tempo estimado de resultado.
-
-Todos os botões ficam `disabled` quando `loading=true` ou `server?.available` é falso. Durante loading, o CTA exibe "Verificando…".
-
-### Status de conexão
-
-Linha abaixo do grupo de botões com indicador de ponto colorido:
-- `● verde` + "Conectado · {server.name}" — quando servidor disponível
-- `● vermelho` + "Servidor indisponível" — quando servidor indisponível
-- "Verificando conexão…" — durante loading ou antes de `server` estar populado
+Todos os botões ficam `disabled` quando `loading=true` ou `error != null`.
 
 ### BottomSheet — peek (fechado)
 
 Sempre visível na base da tela (110px fixos). Conteúdo:
 - Handle bar (indicador de arrasto)
-- Label "Detalhes da conexão" (10px, text-3) — visível apenas no estado fechado (opacity 0 quando aberto)
 - PathRow: ícone de dispositivo → ícone de conexão → ícone de servidor, com labels e linha animada conectando
 
 Tap no handle **ou** arrasto vertical para cima sobre a alça → abre o sheet. Arrasto para baixo → fecha. Threshold de 60 px no eixo vertical.

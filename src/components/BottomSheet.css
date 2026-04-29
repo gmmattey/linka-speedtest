@@ -173,21 +173,6 @@
   min-height: 16px;
 }
 
-.lk-sheet__peek-label {
-  display: block;
-  font-family: var(--font-body);
-  font-size: 10px;
-  color: var(--text-3);
-  text-align: center;
-  padding: 2px 0 4px;
-  transition: opacity 150ms;
-}
-
-.lk-sheet__peek-label--hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
 .lk-sheet__privacy-note {
   margin: 0;
   font-family: var(--font-body);

@@ -108,9 +108,6 @@ export function BottomSheet({ open, onToggle, onClose, device, server, loading, 
           aria-label="Detalhes e configurações"
         >
           <div className="lk-sheet__handle" />
-          <span className={`lk-sheet__peek-label${open ? ' lk-sheet__peek-label--hidden' : ''}`}>
-            Detalhes da conexão
-          </span>
           <PathRow
             device={device?.deviceType ?? 'desktop'}
             connection={effectiveConnection}
