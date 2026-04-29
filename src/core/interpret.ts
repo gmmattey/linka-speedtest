@@ -18,7 +18,6 @@ import type {
   InterpretInput,
   StabilityLevel,
   UseCaseId,
-  UseCaseStatus,
   UseCaseVerdict,
 } from './types';
 
