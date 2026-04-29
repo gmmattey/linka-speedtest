@@ -1,14 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Header } from '../components/Header';
 import { IconGames, IconStream, IconWork, IconVideoCall, IconPdf, IconShare } from '../components/icons';
-import type { ServerInfo, SpeedTestResult, TestRecord } from '../types';
-import {
-  buildShortPhrase,
-  classify,
-  qualityHeadline,
-  stability,
-  stabilityLabel,
-} from '../utils/classifier';
+import type { Classification, Quality, ServerInfo, SpeedTestResult, Tag, TestRecord } from '../types';
+import { interpretSpeedTestResult, resolveCopy } from '../core';
+import type { UseCaseId, UseCaseStatus } from '../core';
 import { loadHistory } from '../utils/history';
 import { buildRecommendations } from '../utils/recommendations';
 import { formatDate, formatMbps, formatMs } from '../utils/format';
@@ -27,61 +22,26 @@ interface Props {
   hideIpOnShare?: boolean;
 }
 
-type UseCaseStatus = 'good' | 'maybe' | 'limited';
 type ShareStatus = 'idle' | 'copied';
 
-interface UseCase {
-  key: string;
-  Icon: React.ComponentType<{ size?: number }>;
-  label: string;
-  evaluate: (r: SpeedTestResult) => UseCaseStatus;
-  labelMap?: Partial<Record<UseCaseStatus, string>>;
-}
-
-const USE_CASES: UseCase[] = [
-  {
-    key: 'games', Icon: IconGames, label: 'Games online',
-    labelMap: { limited: 'Pode falhar' },
-    evaluate(r) {
-      if (r.dl >= 10 && r.latency <= 40 && r.jitter <= 20 && r.packetLoss <= 0.5) return 'good';
-      if (r.dl >= 5 && r.latency <= 80 && r.jitter <= 40 && r.packetLoss <= 2) return 'maybe';
-      return 'limited';
-    },
-  },
-  {
-    key: '4k', Icon: IconStream, label: 'Streaming 4K',
-    evaluate(r) {
-      if (r.dl >= 25) return 'good';
-      if (r.dl >= 10) return 'maybe';
-      return 'limited';
-    },
-  },
-  {
-    key: 'ho', Icon: IconWork, label: 'Home Office',
-    evaluate(r) {
-      if (r.dl >= 10 && r.ul >= 5 && r.latency <= 100) return 'good';
-      if (r.dl >= 5 && r.ul >= 2) return 'maybe';
-      return 'limited';
-    },
-  },
-  {
-    key: 'video', Icon: IconVideoCall, label: 'Videochamada',
-    evaluate(r) {
-      if (r.dl >= 5 && r.ul >= 2 && r.latency <= 100 && r.jitter <= 30) return 'good';
-      if (r.dl >= 2 && r.ul >= 1 && r.latency <= 150) return 'maybe';
-      return 'limited';
-    },
-  },
-];
-
-const STATUS_LABEL: Record<UseCaseStatus, string> = {
-  good: 'Bom', maybe: 'Atenção', limited: 'Ruim',
+const USE_CASE_DISPLAY: Record<UseCaseId, { Icon: React.ComponentType<{ size?: number }>; label: string }> = {
+  gaming:       { Icon: IconGames,     label: 'Games online' },
+  streaming_4k: { Icon: IconStream,    label: 'Streaming 4K' },
+  home_office:  { Icon: IconWork,      label: 'Home Office' },
+  video_call:   { Icon: IconVideoCall, label: 'Videochamada' },
 };
 
-export function buildShareText(result: SpeedTestResult, primary: ReturnType<typeof classify>['primary'], unit: 'mbps' | 'gbps' = 'mbps'): string {
+function chipLabel(id: UseCaseId, status: UseCaseStatus): string {
+  if (id === 'gaming' && status === 'limited') return 'Pode falhar';
+  if (status === 'good') return 'Bom';
+  if (status === 'maybe') return 'Atenção';
+  return 'Ruim';
+}
+
+export function buildShareText(result: SpeedTestResult, quality: Quality, unit: 'mbps' | 'gbps' = 'mbps'): string {
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
   return [
-    `linka SpeedTest — ${qualityHeadline(primary)}`,
+    `linka SpeedTest — ${resolveCopy(`quality.${quality}`)}`,
     `↓ ${formatMbps(result.dl, unit)} ${unitLabel} · ↑ ${formatMbps(result.ul, unit)} ${unitLabel}`,
     `Resposta ${formatMs(result.latency)} ms · Oscilação ${formatMs(result.jitter)} ms`,
     formatDate(result.timestamp),
@@ -114,29 +74,19 @@ export function ResultScreen({
   theme, onToggleTheme, result, server, previous,
   onRetry, onShowHistory, unit = 'mbps', hideIpOnShare = true,
 }: Props) {
-  const classification = useMemo(() => classify(result), [result]);
   const history = useMemo(() => loadHistory(), []);
-  const stab = useMemo(() => stability(result), [result]);
-  const recommendations = useMemo(
-    () => buildRecommendations(result, classification, history),
-    [result, classification, history], // eslint-disable-line react-hooks/exhaustive-deps
+  const interpreted = useMemo(
+    () => interpretSpeedTestResult({ metrics: result, profile: 'fixed_broadband', history }),
+    [result, history],
   );
-  const useCaseResults = useMemo(
-    () => USE_CASES.map(uc => ({ key: uc.key, status: uc.evaluate(result) })),
-    [result],
-  );
-  const scenarioContext = useMemo(() => {
-    const gamesStatus = useCaseResults.find(u => u.key === 'games')?.status ?? 'good';
-    return {
-      gamesAlerted: gamesStatus !== 'good',
-      gamesBad:     gamesStatus === 'limited',
-      otherAlerted: useCaseResults.some(u => u.key !== 'games' && u.status !== 'good'),
-    };
-  }, [useCaseResults]);
-  const shortPhrase = useMemo(
-    () => buildShortPhrase(result, classification.primary, scenarioContext),
-    [result, classification.primary, scenarioContext],
-  );
+  const recommendations = useMemo(() => {
+    const tags = new Set<Tag>(
+      (Object.keys(interpreted.flags) as Tag[]).filter((k) => interpreted.flags[k]),
+    );
+    const classification: Classification = { primary: interpreted.quality, tags };
+    return buildRecommendations(result, classification, history);
+  }, [result, interpreted, history]);
+
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
   const [shareStatus, setShareStatus] = useState<ShareStatus>('idle');
   const shareResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -148,7 +98,7 @@ export function ResultScreen({
   }, []);
 
   const handleShare = async () => {
-    const text = buildShareText(result, classification.primary, unit);
+    const text = buildShareText(result, interpreted.quality, unit);
     const outcome = await shareResultText(text);
 
     if (outcome === 'copied') {
@@ -199,12 +149,14 @@ export function ResultScreen({
             <div className="lk-secondary__label">Oscilação</div>
           </div>
           <div className="lk-secondary__col">
-            <div className="lk-secondary__value lk-secondary__value--stab">{stabilityLabel(stab)}</div>
+            <div className="lk-secondary__value lk-secondary__value--stab">
+              {resolveCopy(interpreted.copyKeys.stabilityLabelKey)}
+            </div>
             <div className="lk-secondary__label">Estabilidade</div>
           </div>
         </section>
 
-        <p className="lk-diagnosis">{shortPhrase}</p>
+        <p className="lk-diagnosis">{resolveCopy(interpreted.copyKeys.shortPhraseKey)}</p>
 
         {recommendations.length > 0 && (
           <section className="lk-section lk-whatnow">
@@ -221,14 +173,13 @@ export function ResultScreen({
         )}
 
         <div className="lk-usegrid">
-          {useCaseResults.map(({ key, status }) => {
-            const uc = USE_CASES.find(u => u.key === key)!;
-            const label = uc.labelMap?.[status] ?? STATUS_LABEL[status];
+          {interpreted.useCases.map(({ id, status }) => {
+            const { Icon, label } = USE_CASE_DISPLAY[id];
             return (
-              <div key={key} className="lk-usecase">
-                <div className="lk-usecase__icon"><uc.Icon size={24} /></div>
-                <div className="lk-usecase__label">{uc.label}</div>
-                <span className={`lk-chip lk-chip--${status}`}>{label}</span>
+              <div key={id} className="lk-usecase">
+                <div className="lk-usecase__icon"><Icon size={24} /></div>
+                <div className="lk-usecase__label">{label}</div>
+                <span className={`lk-chip lk-chip--${status}`}>{chipLabel(id, status)}</span>
               </div>
             );
           })}

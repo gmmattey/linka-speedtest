@@ -335,7 +335,9 @@ formatDateIsoLike(ts: number): string // YYYY-MM-DD para nome de arquivo
 
 ## 3.10 Motor unificado (`src/core/`)
 
-Camada introduzida na Fase 1 do plano de unificação (PWA + linka Flutter). Pura, sem dependência de React, DOM, navegador ou localStorage. Coexiste com `classifier.ts` legado durante a migração — nesta fase, **nenhum chamador foi migrado**; o motor existe mas só é exercitado por testes.
+Camada introduzida na Fase 1 do plano de unificação (PWA + linka Flutter). Pura, sem dependência de React, DOM, navegador ou localStorage. Coexiste com `classifier.ts` legado durante a migração.
+
+**Estado atual (Fase 2 concluída):** `ResultScreen` migrada para consumir `interpretSpeedTestResult()` + `resolveCopy()`. O motor é agora a fonte de verdade para quality, flags, stability, use cases e short phrase da tela de resultado. Recomendações continuam com texto de `utils/recommendations.ts` (bridged via `Classification` sintética derivada das flags do motor). `HistoryScreen` e demais chamadores ainda usam o legado (Fases 3+).
 
 ### 3.10.1 Contrato — `interpretSpeedTestResult(input)`
 
@@ -388,7 +390,7 @@ A função `toConnectionProfile(connectionType)` em `src/utils/connectionProfile
 
 Exportado por `src/utils/classifier.ts` e reusado pelo motor. Versiona o conjunto de regras gravado em cada `TestRecord` (`record.ruleSetVersion`). Bump quando os thresholds mudarem materialmente — assim, registros antigos podem ser reinterpretados (ou marcados como sob regra antiga) ao recarregar o histórico.
 
-Atualmente: `'v1'`. Fase 1 mantém `'v1'` porque os thresholds de `fixed_broadband` têm paridade com o legado. O bump deve acontecer quando o motor passar a divergir do classifier antigo (provavelmente Fase 2, ao migrar o primeiro chamador).
+Atualmente: `'v1'`. Os thresholds de `fixed_broadband` têm paridade com o legado — bump será necessário quando os thresholds divergirem materialmente (Fase 4/5, calibração de copy e ajuste fino de regras).
 
 ### 3.10.4 Arquivos
 
@@ -453,7 +455,7 @@ interface Settings {
   scale: 'linear' | 'log'          // padrão: 'linear' — sem UI, mantido por compat de localStorage
   connectionOverride: 'auto' | 'wifi' | 'cable' | 'mobile'  // padrão: 'auto'
   hideIpOnShare: boolean            // padrão: true — oculta IP ao compartilhar resultado
-  useUnifiedEngine: boolean         // padrão: false — feature flag de dev (Fase 1); ativará o motor src/core na Fase 2
+  useUnifiedEngine: boolean         // padrão: false — flag legado (Fase 1); não mais usado; ResultScreen usa o motor diretamente desde a Fase 2
 }
 ```
 
@@ -708,14 +710,17 @@ npx wrangler pages deploy dist --project-name linka-speedtest --branch main
 
 ## 10. Testes (`src/__tests__/`)
 
-**Framework:** Vitest com `environment: 'node'`  
-**Arquivo:** `classifier.test.ts` — 28 testes cobrindo:
+**Framework:** Vitest com `environment: 'node'`
 
-- `classify()`: todos os 5 níveis de quality + todas as 5 tags
-- `stability()`: casos extremos (score=100, score=0) e valores intermediários
-- `stabilityLabel()`: todas as 4 faixas
-- `buildDiagnosis()`: parágrafo base por quality, parágrafos por tag, análise histórica
+| Arquivo | Testes | Cobertura |
+|---|---|---|
+| `classifier.test.ts` | 28 | `classify()` (5 quality + 5 tags), `stability()`, `stabilityLabel()`, `buildDiagnosis()` |
+| `connectionProfile.test.ts` | — | `toConnectionProfile()` — mapeamento ConnectionType → ConnectionProfile |
+| `interpret.test.ts` | — | `interpretSpeedTestResult()` — motor unificado |
+| `share.test.ts` | — | `buildShareText()`, `shareResultText()` |
+
+**Total:** 90 testes passando.
 
 **Comando:** `npm test`
 
-**Regra:** os 28 testes existentes **nunca podem ser quebrados** sem justificativa documentada e plano de substituição. Qualquer mudança em `classifier.ts` exige atualização dos testes correspondentes.
+**Regra:** os 90 testes **nunca podem ser quebrados** sem justificativa documentada e plano de substituição. Mudanças em `classifier.ts` ou `src/core/` exigem atualização dos testes correspondentes.
