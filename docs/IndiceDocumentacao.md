@@ -18,8 +18,9 @@
 | Documento | Finalidade |
 |---|---|
 | [`GuiaOrganizacaoPastas.md`](GuiaOrganizacaoPastas.md) | Estrutura oficial de pastas; naming conventions; regras de criação de arquivos |
-| [`DocumentacaoFuncionalSistema.md`](DocumentacaoFuncionalSistema.md) | Descrição das 4 telas, fluxos de navegação, estados, UX |
-| [`DocumentacaoTecnicaSistema.md`](DocumentacaoTecnicaSistema.md) | Arquitetura, tipos, hooks, utils, componentes, deploy |
+| [`GuiaBranding.md`](GuiaBranding.md) | Identidade visual completa: cores, tipografia, espaçamento, componentes, copy, design direction iOS-Calma |
+| [`DocumentacaoFuncionalSistema.md`](DocumentacaoFuncionalSistema.md) | Descrição das 10 telas, fluxos de navegação, estados, UX |
+| [`DocumentacaoTecnicaSistema.md`](DocumentacaoTecnicaSistema.md) | Arquitetura, tipos, hooks, utils, componentes (Chip, IOSList, Gauge), deploy |
 | [`EvolucaoSpeedTest.md`](EvolucaoSpeedTest.md) | Roadmap e features futuras: diagnóstico avançado, comparativos, UX evolutiva |
 | [`EvolucaoTelaDesktop.md`](EvolucaoTelaDesktop.md) | Design de telas desktop — prototipagem aprovada (opção 3); layout para telas grandes |
 | [`PendenciasLayout.md`](PendenciasLayout.md) | Backlog de melhorias de layout, UX, fraseologia e consistência visual |
@@ -37,26 +38,39 @@
 **Servidor de teste:** Cloudflare Speed Test (`speed.cloudflare.com`)  
 **Testes:** Vitest (24 testes unitários — `src/__tests__/`)
 
-## Estado atual (2026-04-28)
+## Estado atual (2026-04-30)
 
-- [x] 4 telas implementadas: StartScreen, RunningScreen, ResultScreen, HistoryScreen
+### Telas implementadas (10)
+
+- [x] **StartScreen** — orb pulsante, info de servidor/ISP, atalho para histórico
+- [x] **RunningScreen** — gauge SVG por fase (DL/UL/latência), frase narrativa, estado de erro com retry
+- [x] **ResultScreen** — hero chip + título humano + chips "pronta para" + IOSList de métricas + ações (Diagnóstico / Gamer / Recomendações)
+- [x] **HistoryScreen** — gráfico de evolução, média, insights, lista com Chip de qualidade, detalhe por registro com IOSList
+- [x] **DiagnosticScreen** — grid 2-col de 6 cartões interpretando cada métrica
+- [x] **GamerScreen** — grid ping/jitter/loss + avaliação por jogo (FPS, MOBA, MMO, Cloud Gaming)
+- [x] **RecommendScreen** — 4 recomendações acionáveis com priorização por diagnóstico
+- [x] **BeforeAfterScreen** — comparativo antes/depois de uma ação (tabela com delta %)
+- [x] **ComparisonScreen** — comparativo entre dois pontos da casa (Prova Real — 3 testes consecutivos com média)
+- [x] **RoomTestScreen** — teste por cômodo com etiqueta de local associada ao resultado
+
+### Infraestrutura e design
+
+- [x] Design system iOS-Calma: superfícies neutras, zero sombras, accent restrito, IOSList + Chip
+- [x] Componentes: `Gauge` (SVG ring), `IOSList`, `Chip` (5 variantes), `Header` (legado), `LiveChart`, `IOSCard`
 - [x] Algoritmo speedtest completo (DL/UL/latência/jitter/packetLoss)
-- [x] Presets de payload por tipo de conexão: ~400 MB em Wi-Fi/cabo, ~70 MB em rede móvel
+- [x] Presets de payload: ~400 MB em Wi-Fi/cabo, ~70 MB em rede móvel
 - [x] Classificador de qualidade (5 níveis, 5 tags, diagnóstico em linguagem leiga)
-- [x] Histórico local (localStorage, FIFO 50 registros) com bloco de diagnóstico 24h acima do gráfico
-- [x] StartScreen com card do último resultado e atalho para histórico (sem precisar rodar novo teste)
-- [x] RunningScreen minimalista (número + frase narrativa) e estado de falha com retry
-- [x] Botão Iniciar vazado com pulso na borda
-- [x] BottomSheet com swipe-up para abrir e swipe-down para fechar
-- [x] Navegação por swipe lateral (pilha back/forward em `App.tsx`)
-- [x] Header sem linha e sem botão "X / voltar"
-- [x] Normalização de operadora brasileira (Vivo/Claro/TIM/Oi/Algar) sobre `asOrganization` da Cloudflare
+- [x] Motor de interpretação semântica (`interpret.ts`) com copyDictionary pt-BR
+- [x] Histórico local (localStorage, FIFO 50 registros) com insights, gráfico e resumo
+- [x] Normalização de operadora brasileira (Vivo/Claro/TIM/Oi/Algar)
 - [x] Heurística de conexão móvel para iOS Safari (sem `navigator.connection`)
 - [x] Exportação PDF (resultado individual + histórico completo)
 - [x] PWA manifest + service worker (vite-plugin-pwa)
-- [x] Deploy em produção (Cloudflare Pages)
+- [x] Deploy em produção (Cloudflare Pages — projeto `linka-speedtest`)
 - [x] Tema dark/light com persistência
 - [x] Configurações: unidade (Mbps/Gbps), conexão override, servidor
+- [x] Prova Real: média de 3 testes consecutivos
+- [x] Histórico inteligente: análise semana-a-semana e horário de pico
 
 ## Backlog registrado
 

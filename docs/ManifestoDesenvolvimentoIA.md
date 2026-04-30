@@ -133,10 +133,20 @@ A cada novo pedido na sessão, avalie:
 
 ### Branding
 
+Ver guia completo: [`GuiaBranding.md`](GuiaBranding.md).
+
+Regras inegociáveis (resumo):
+
 - "linka" **sempre minúsculo** — em copy, títulos, manifest, PDF.
-- Cor accent: `#6C2BFF` (ou `var(--accent)`).
-- Fontes: Space Grotesk 600/700 para display/números; Inter 400/500 para body.
-- Ícones: SVGs stroke-based em `icons.tsx` — sem emoji em UI de produto.
+- Cor accent: `#6C2BFF` (ou `var(--accent)`) — **apenas** em CTAs, orb, anel do gauge, ícones pinned.
+- **Zero box-shadow e text-shadow.**
+- **Zero emoji em UI de produto** — apenas SVGs stroke-based de `icons.tsx`.
+- Fontes: Space Grotesk 600/700 para números e títulos; Inter 400/500 para body.
+- Números de métrica **sempre** em Space Grotesk.
+- Cores via tokens (`var(--*)`) — sem hex hardcoded em `.tsx` ou `.css`.
+- Design direction **iOS-Calma**: superfícies neutras, hierarquia pelo tamanho, dados com cor semântica (DL azul, UL verde, accent para latência/accent).
+- Cabeçalho de tela: `‹ Início` (accent, 14px, 500) à esquerda + label (text-3, 13px) à direita, `padding: 14px 16px 4px`.
+- Copy em pt-BR, tom objetivo, sem jargão técnico ao usuário final.
 
 ---
 

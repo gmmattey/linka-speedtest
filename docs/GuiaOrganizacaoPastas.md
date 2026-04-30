@@ -13,6 +13,7 @@ Linka SpeedTest/
 │   ├── GuiaOrganizacaoPastas.md
 │   ├── ManifestoDesenvolvimentoIA.md
 │   ├── GuiaFluxoGit.md           ← Protocolo de sincronização Git para IAs e humanos
+│   ├── GuiaBranding.md           ← Identidade visual: cores, tipografia, componentes, copy, iOS-Calma
 │   ├── GuiaSelecaoModeloIA.md
 │   ├── DocumentacaoFuncionalSistema.md
 │   ├── DocumentacaoTecnicaSistema.md
