@@ -11,6 +11,7 @@ interface Props {
   onCancel: () => void;
   onRetry: () => void;
   unit?: 'mbps' | 'gbps';
+  sessionLabel?: string;
 }
 
 function phraseFor(phase: TestPhase): string {
@@ -31,6 +32,7 @@ export function RunningScreen({
   onCancel,
   onRetry,
   unit = 'mbps',
+  sessionLabel,
 }: Props) {
   if (phase === 'error') {
     return (
@@ -64,6 +66,7 @@ export function RunningScreen({
           <Gauge instantMbps={instantMbps} unit={unit} />
         </div>
         <p className="lk-running__phrase">{phraseFor(phase)}</p>
+        {sessionLabel && <p className="lk-running__session-label">{sessionLabel}</p>}
         <div className="lk-running__footer">
           <button className="btn-text lk-running__cancel" onClick={onCancel}>Cancelar</button>
         </div>

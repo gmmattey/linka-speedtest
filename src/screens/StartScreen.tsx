@@ -19,6 +19,7 @@ interface Props {
   onStart: (mode: SpeedTestMode) => void;
   onStartComparison: () => void;
   onStartBeforeAfter: () => void;
+  onStartProvaReal: () => void;
   onRetry: () => void;
   lastRecord: TestRecord | null;
   onShowLastResult: () => void;
@@ -38,6 +39,7 @@ export function StartScreen({
   onStart,
   onStartComparison,
   onStartBeforeAfter,
+  onStartProvaReal,
   onRetry,
   lastRecord,
   onShowLastResult,
@@ -128,6 +130,14 @@ export function StartScreen({
             disabled={!canStart}
           >
             Antes e Depois
+          </button>
+
+          <button
+            className="btn-text lk-start__compare-link"
+            onClick={onStartProvaReal}
+            disabled={!canStart}
+          >
+            Prova Real (3×)
           </button>
 
           {lastRecord && (

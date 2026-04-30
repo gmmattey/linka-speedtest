@@ -9,6 +9,7 @@ import { useDeviceInfo } from './hooks/useDeviceInfo';
 import { useSpeedTest } from './hooks/useSpeedTest';
 import { useSettings } from './hooks/useSettings';
 import { appendRecord, previousRecord } from './utils/history';
+import { averageSpeedResults } from './utils/provaReal';
 import type { SpeedTestMode, SpeedTestResult, TestRecord } from './types';
 
 type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter';
@@ -40,6 +41,10 @@ export default function App() {
   const [baBefore, setBaBefore] = useState<SpeedTestResult | null>(null);
   const [baAfter, setBaAfter] = useState<SpeedTestResult | null>(null);
   const baModeRef = useRef<'before' | 'after' | null>(null);
+  const [provaRealSession, setProvaRealSession] = useState<number | null>(null); // 1 | 2 | 3 | null
+  const [provaRealOverride, setProvaRealOverride] = useState<SpeedTestResult | null>(null);
+  const provaRealResultsRef = useRef<SpeedTestResult[]>([]);
+  const provaRealPendingRef = useRef(false);
   const recordedRef = useRef(false);
   const backStackRef = useRef<Screen[]>([]);
   const forwardStackRef = useRef<Screen[]>([]);
@@ -110,6 +115,36 @@ export default function App() {
       deviceInfo.server
     ) {
       recordedRef.current = true;
+
+      // ── Prova Real: acumula resultados intermediários sem registrar ──
+      if (provaRealSession !== null) {
+        provaRealResultsRef.current.push(test.result);
+        if (provaRealSession < 3) {
+          setProvaRealSession(provaRealSession + 1);
+          recordedRef.current = false;
+          provaRealPendingRef.current = true;
+          test.reset();
+        } else {
+          const averaged = averageSpeedResults(provaRealResultsRef.current);
+          provaRealResultsRef.current = [];
+          setProvaRealSession(null);
+          const prev = previousRecord();
+          setPrevious(prev);
+          const newRecord = appendRecord(averaged, {
+            serverName: deviceInfo.server.name,
+            isp: deviceInfo.server.isp,
+            deviceType: deviceInfo.device.deviceType,
+            connectionType: deviceInfo.device.connectionType,
+            testMode: 'complete',
+          });
+          setLastRecord(newRecord);
+          setProvaRealOverride(averaged);
+          goTo('result');
+        }
+        return;
+      }
+
+      // ── Fluxo normal ─────────────────────────────────────────────────
       const prev = previousRecord();
       setPrevious(prev);
       const newRecord = appendRecord(test.result, {
@@ -146,11 +181,19 @@ export default function App() {
         goTo('result');
       }
     }
-  }, [test.phase, test.result, deviceInfo.device, deviceInfo.server, goTo]);
+  }, [test.phase, test.result, deviceInfo.device, deviceInfo.server, goTo, provaRealSession]);
 
   const effectiveConnection = settings.connectionOverride !== 'auto'
     ? settings.connectionOverride
     : deviceInfo.device?.connectionType;
+
+  // Dispara o próximo teste da Prova Real quando o reset finaliza
+  useEffect(() => {
+    if (provaRealPendingRef.current && test.phase === 'idle') {
+      provaRealPendingRef.current = false;
+      test.start(effectiveConnection, 'complete');
+    }
+  }, [test.phase, test, effectiveConnection]);
 
   const handleStart = useCallback((mode: SpeedTestMode) => {
     setTestMode(mode);
@@ -160,17 +203,36 @@ export default function App() {
   }, [test, effectiveConnection, goTo]);
 
   const handleCancel = useCallback(() => {
+    provaRealResultsRef.current = [];
+    provaRealPendingRef.current = false;
+    setProvaRealSession(null);
     test.cancel();
     test.reset();
     goTo('start');
   }, [test, goTo]);
 
   const handleRetry = useCallback(() => {
+    // Cancela Prova Real se ativa e recomeça como teste normal
+    provaRealResultsRef.current = [];
+    provaRealPendingRef.current = false;
+    setProvaRealSession(null);
+    setProvaRealOverride(null);
     test.reset();
     recordedRef.current = false;
     goTo('running');
     test.start(effectiveConnection, testMode);
   }, [test, effectiveConnection, testMode, goTo]);
+
+  const handleStartProvaReal = useCallback(() => {
+    provaRealResultsRef.current = [];
+    provaRealPendingRef.current = false;
+    setProvaRealSession(1);
+    setProvaRealOverride(null);
+    setTestMode('complete');
+    recordedRef.current = false;
+    goTo('running');
+    test.start(effectiveConnection, 'complete');
+  }, [test, effectiveConnection, goTo]);
 
   const handleStartComparison = useCallback(() => {
     setComparisonStep('near');
@@ -259,7 +321,8 @@ export default function App() {
   // construímos um SpeedTestResult a partir do TestRecord selecionado.
   const view = useMemo(() => {
     switch (screen) {
-      case 'running':
+      case 'running': {
+        const sessionLabel = provaRealSession !== null ? `Teste ${provaRealSession} de 3 — Prova Real` : undefined;
         return (
           <RunningScreen
             theme={theme}
@@ -269,14 +332,17 @@ export default function App() {
             onCancel={handleCancel}
             onRetry={handleRetry}
             unit={settings.unit}
+            sessionLabel={sessionLabel}
           />
         );
-      case 'result':
-        return test.result ? (
+      }
+      case 'result': {
+        const resultToShow = provaRealOverride ?? test.result;
+        return resultToShow ? (
           <ResultScreen
             theme={theme}
             onToggleTheme={onToggleTheme}
-            result={test.result}
+            result={resultToShow}
             server={deviceInfo.server}
             previous={previous}
             onRetry={handleRetry}
@@ -286,6 +352,7 @@ export default function App() {
             gamingProfile={settings.gamingProfile}
           />
         ) : null;
+      }
       case 'comparison':
         return (
           <ComparisonScreen
@@ -336,6 +403,7 @@ export default function App() {
             onStart={handleStart}
             onStartComparison={handleStartComparison}
             onStartBeforeAfter={handleStartBeforeAfter}
+            onStartProvaReal={handleStartProvaReal}
             onRetry={deviceInfo.reload}
             lastRecord={lastRecord}
             onShowLastResult={handleShowLastResult}
@@ -351,9 +419,11 @@ export default function App() {
     handleStart, handleStartComparison, handleCancel, handleRetry, handleShowHistory, handleShowLastResult,
     handleComparisonStartNear, handleComparisonStartFar, handleComparisonRetryNear,
     handleStartBeforeAfter, handleBAStartBefore, handleBAStartAfter, handleBARetry,
+    handleStartProvaReal,
     settings, updateSettings, testMode,
     comparisonStep, comparisonNear, comparisonFar,
     baStep, baBefore, baAfter,
+    provaRealSession, provaRealOverride,
   ]);
 
   return (

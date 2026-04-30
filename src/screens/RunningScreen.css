@@ -32,6 +32,16 @@
   min-height: 22px;
 }
 
+.lk-running__session-label {
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  margin: -12px 0 var(--space-xl);
+  letter-spacing: 0.3px;
+}
+
 .lk-running__footer {
   display: flex;
   justify-content: center;
