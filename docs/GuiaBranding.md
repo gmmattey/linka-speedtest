@@ -63,8 +63,9 @@
 
 | Família | Uso | Variantes carregadas |
 |---|---|---|
-| **Space Grotesk** (`var(--font-display)`) | Números hero, títulos grandes, valores de métrica, botões | 600, 700 |
-| **Inter** (`var(--font-body)`) | Todo o resto: labels, descrições, listas, metadados | 400, 500 |
+| **Geist** (`var(--font-display)` e `var(--font-body)`) | Toda a interface — uma família única, como o iOS faz com SF Pro | 400, 500, 600, 700 |
+
+Geist é a fonte open-source da Vercel, projetada como alternativa web mais próxima do SF Pro. Uma família só elimina a dissonância entre display e body, reforçando a direção iOS-Calma.
 
 ### Escala tipográfica de referência
 
