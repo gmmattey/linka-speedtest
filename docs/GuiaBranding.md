@@ -213,6 +213,19 @@ Raio: `var(--radius)`.
 | Jitter (ms) | Oscilação |
 | Packet Loss (%) | Perda |
 
+### Vocabulário: "Ping" vs. "Latência"
+
+Decisão de auditoria de marca (2026):
+
+| Contexto | Termo a usar |
+|---|---|
+| Label do gauge na tela de medição (RunningScreen) | **Ping** |
+| Copy voltado ao público gamer | **Ping** |
+| Corpo de diagnósticos técnicos (DiagnosticScreen) | Latência (aceitável) |
+| Footer / exportação PDF | Latência (contexto técnico aceita) |
+
+Razão: persona gamer usa "ping" como vocabulário nativo. "Latência" é reservada para contexto técnico onde o usuário espera precisão terminológica.
+
 ### Qualidades
 
 | Código | Label |

@@ -105,7 +105,7 @@ export function StartScreen({
 
         {/* Linhas de info */}
         <div className="lk-start__info">
-          <div>Teste completo · download, upload e latência</div>
+          <div>Teste completo · download, upload e ping</div>
           <div>
             Consumo estimado{' '}
             <span style={{ color: 'var(--text)', fontWeight: 500 }}>
