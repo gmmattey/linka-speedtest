@@ -35,11 +35,11 @@ export async function exportResultPdf(result: SpeedTestResult, serverName: strin
   const logoB64 = await loadLogoBase64();
 
   const node = document.createElement('div');
-  node.style.cssText = 'position:fixed;left:-9999px;top:0;width:720px;padding:40px;background:#FFFFFF;color:#0D0D1A;font-family:Inter,system-ui,sans-serif;font-size:14px;';
+  node.style.cssText = 'position:fixed;left:-9999px;top:0;width:720px;padding:40px;background:#FFFFFF;color:#0D0D1A;font-family:Geist,system-ui,sans-serif;font-size:14px;';
 
   const logoHtml = logoB64
     ? `<img src="${logoB64}" style="height:28px;width:auto;" alt="linka" />`
-    : `<div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.5px;color:${COLORS.accent}">linka SpeedTest</div>`;
+    : `<div style="font-family:'Geist',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.5px;color:${COLORS.accent}">linka SpeedTest</div>`;
 
   node.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
@@ -47,26 +47,26 @@ export async function exportResultPdf(result: SpeedTestResult, serverName: strin
       <div style="color:${COLORS.muted};font-size:12px;">${formatDate(result.timestamp)}</div>
     </div>
     <div style="background:${COLORS.bg};border-left:4px solid ${COLORS.accent};padding:16px 20px;border-radius:8px;margin-bottom:24px;">
-      <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;">${resolveCopy(interpreted.copyKeys.headlineKey)}</div>
+      <div style="font-family:'Geist',sans-serif;font-weight:700;font-size:18px;">${resolveCopy(interpreted.copyKeys.headlineKey)}</div>
       <div style="color:${COLORS.muted};font-size:12px;margin-top:4px;">Servidor: ${serverName}${isp && isp !== '—' ? ' · ' + isp : ''}</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
       <div>
         <div style="color:${COLORS.muted};font-size:12px;margin-bottom:4px;">Download</div>
-        <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:36px;color:${COLORS.dl};">${formatMbps(result.dl)} <span style="font-size:14px;color:${COLORS.muted};">Mbps</span></div>
+        <div style="font-family:'Geist',sans-serif;font-weight:700;font-size:36px;color:${COLORS.dl};">${formatMbps(result.dl)} <span style="font-size:14px;color:${COLORS.muted};">Mbps</span></div>
       </div>
       <div>
         <div style="color:${COLORS.muted};font-size:12px;margin-bottom:4px;">Upload</div>
-        <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:36px;color:${COLORS.ul};">${formatMbps(result.ul)} <span style="font-size:14px;color:${COLORS.muted};">Mbps</span></div>
+        <div style="font-family:'Geist',sans-serif;font-weight:700;font-size:36px;color:${COLORS.ul};">${formatMbps(result.ul)} <span style="font-size:14px;color:${COLORS.muted};">Mbps</span></div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;padding-top:16px;border-top:1px solid ${COLORS.border};">
-      <div><div style="color:${COLORS.muted};font-size:11px;">Resposta</div><div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:18px;">${formatMs(result.latency)} ms</div></div>
-      <div><div style="color:${COLORS.muted};font-size:11px;">Oscilação</div><div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:18px;">${formatMs(result.jitter)} ms</div></div>
-      <div><div style="color:${COLORS.muted};font-size:11px;">Estabilidade</div><div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:18px;">${resolveCopy(interpreted.copyKeys.stabilityLabelKey)}</div></div>
+      <div><div style="color:${COLORS.muted};font-size:11px;">Resposta</div><div style="font-family:'Geist',sans-serif;font-weight:600;font-size:18px;">${formatMs(result.latency)} ms</div></div>
+      <div><div style="color:${COLORS.muted};font-size:11px;">Oscilação</div><div style="font-family:'Geist',sans-serif;font-weight:600;font-size:18px;">${formatMs(result.jitter)} ms</div></div>
+      <div><div style="color:${COLORS.muted};font-size:11px;">Estabilidade</div><div style="font-family:'Geist',sans-serif;font-weight:600;font-size:18px;">${resolveCopy(interpreted.copyKeys.stabilityLabelKey)}</div></div>
     </div>
     <div style="margin-bottom:24px;">
-      <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;margin-bottom:8px;">O que isso significa?</div>
+      <div style="font-family:'Geist',sans-serif;font-weight:600;font-size:15px;margin-bottom:8px;">O que isso significa?</div>
       ${interpreted.copyKeys.diagnosisKeys.map((k) => resolveCopy(k)).map((p) => `<p style="margin:0 0 8px 0;line-height:1.5;">${p}</p>`).join('')}
     </div>
     <div style="margin-top:32px;color:#9CA3AF;font-size:11px;">Gerado por linka SpeedTest · linka.app · ${formatDate(result.timestamp)}</div>
@@ -115,17 +115,17 @@ export async function exportHistoryPdf(items: TestRecord[]) {
 
   const logoHtml = logoB64
     ? `<img src="${logoB64}" style="height:28px;width:auto;" alt="linka" />`
-    : `<div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;color:${COLORS.accent}">linka SpeedTest</div>`;
+    : `<div style="font-family:'Geist',sans-serif;font-weight:700;font-size:22px;color:${COLORS.accent}">linka SpeedTest</div>`;
 
   const node = document.createElement('div');
-  node.style.cssText = 'position:fixed;left:-9999px;top:0;width:960px;padding:40px;background:#FFFFFF;color:#0D0D1A;font-family:Inter,system-ui,sans-serif;font-size:12px;';
+  node.style.cssText = 'position:fixed;left:-9999px;top:0;width:960px;padding:40px;background:#FFFFFF;color:#0D0D1A;font-family:Geist,system-ui,sans-serif;font-size:12px;';
   node.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
       ${logoHtml}
       <div style="color:${COLORS.muted};font-size:12px;">Histórico de testes · ${n} registro${n > 1 ? 's' : ''}</div>
     </div>
     <div style="background:${COLORS.bg};border-left:4px solid ${COLORS.accent};padding:14px 18px;border-radius:8px;margin-bottom:24px;">
-      <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:16px;">${resolveCopy(avgInterpreted.copyKeys.headlineKey)} — média</div>
+      <div style="font-family:'Geist',sans-serif;font-weight:700;font-size:16px;">${resolveCopy(avgInterpreted.copyKeys.headlineKey)} — média</div>
       <div style="color:${COLORS.muted};font-size:12px;margin-top:4px;">
         ↓ ${formatMbps(avgDl)} Mbps · ↑ ${formatMbps(avgUl)} Mbps · Resposta ${formatMs(avgLat)} ms
       </div>
@@ -143,7 +143,7 @@ export async function exportHistoryPdf(items: TestRecord[]) {
           <th style="text-align:left;padding:6px 4px;">Operadora</th>
         </tr>
       </thead>
-      <tbody style="font-family:'Space Grotesk',sans-serif;">${rows}</tbody>
+      <tbody style="font-family:'Geist',sans-serif;">${rows}</tbody>
     </table>
     <div style="margin-top:32px;color:#9CA3AF;font-size:10px;">Gerado por linka SpeedTest · linka.app</div>
   `;

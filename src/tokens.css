@@ -13,8 +13,8 @@
   --radius-lg: 20px;
   --radius-xl: 28px;
   --radius-pill: 999px;
-  --font-display: 'Space Grotesk', system-ui, -apple-system, sans-serif;
-  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-body: 'Geist', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
   --transition-fast: 200ms ease-out;
   --transition-normal: 220ms ease-out;

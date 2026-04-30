@@ -43,7 +43,7 @@ export async function generateShareCard(
 
   // Header
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = '600 32px "Space Grotesk", sans-serif';
+  ctx.font = '600 32px "Geist", sans-serif';
   ctx.fillText('linka SpeedTest', 60, 80);
 
   // Quality badge
@@ -61,17 +61,17 @@ export async function generateShareCard(
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
 
   ctx.fillStyle = '#3AB6FF';
-  ctx.font = '700 96px "Space Grotesk", sans-serif';
+  ctx.font = '700 96px "Geist", sans-serif';
   ctx.fillText(formatMbps(result.dl, unit), 60, 270);
   ctx.fillStyle = '#8BCFFF';
-  ctx.font = '500 28px "Space Grotesk", sans-serif';
+  ctx.font = '500 28px "Geist", sans-serif';
   ctx.fillText(`↓ Download · ${unitLabel}`, 60, 310);
 
   ctx.fillStyle = '#22C55E';
-  ctx.font = '700 96px "Space Grotesk", sans-serif';
+  ctx.font = '700 96px "Geist", sans-serif';
   ctx.fillText(formatMbps(result.ul, unit), 560, 270);
   ctx.fillStyle = '#86EFAC';
-  ctx.font = '500 28px "Space Grotesk", sans-serif';
+  ctx.font = '500 28px "Geist", sans-serif';
   ctx.fillText(`↑ Upload · ${unitLabel}`, 560, 310);
 
   // Divider
@@ -94,7 +94,7 @@ export async function generateShareCard(
   ctx.font = '400 22px "Inter", sans-serif';
   ctx.fillText(formatDate(result.timestamp), 60, 490);
   ctx.fillStyle = '#6C2BFF';
-  ctx.font = '600 22px "Space Grotesk", sans-serif';
+  ctx.font = '600 22px "Geist", sans-serif';
   ctx.fillText('linka.app', W - 200, 490);
 
   return new Promise<Blob>((resolve, reject) => {
