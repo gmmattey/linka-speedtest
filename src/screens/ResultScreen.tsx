@@ -3,8 +3,9 @@ import { Header } from '../components/Header';
 import { IconGames, IconStream, IconWork, IconVideoCall, IconPdf, IconShare, IconWhatsApp } from '../components/icons';
 import { generateShareCard } from '../utils/shareCard';
 import type { Classification, Quality, ServerInfo, SpeedTestResult, Tag, TestRecord } from '../types';
-import { interpretSpeedTestResult, resolveCopy } from '../core';
-import type { UseCaseId, UseCaseStatus } from '../core';
+import { interpretSpeedTestResult, resolveCopy, GAMING_PROFILES } from '../core';
+import type { UseCaseId, UseCaseStatus, GamingProfileId } from '../core';
+import type { GamingProfile } from '../types';
 import { loadHistory } from '../utils/history';
 import { buildRecommendations } from '../utils/recommendations';
 import { formatDate, formatMbps, formatMs } from '../utils/format';
@@ -21,6 +22,7 @@ interface Props {
   onShowHistory: () => void;
   unit?: 'mbps' | 'gbps';
   hideIpOnShare?: boolean;
+  gamingProfile?: GamingProfile;
 }
 
 type ShareStatus = 'idle' | 'copied';
@@ -71,9 +73,50 @@ export async function shareResultText(text: string): Promise<'shared' | 'copied'
   return 'none';
 }
 
+const GAMING_BLOCKING: Record<string, string> = {
+  dl: 'download insuficiente', latency: 'resposta alta',
+  jitter: 'oscilação alta', packetLoss: 'perda de sinal',
+};
+
+function GamingVerdict({ result, gamingProfile }: { result: SpeedTestResult; gamingProfile: GamingProfileId }) {
+  const def = GAMING_PROFILES[gamingProfile];
+  const t = def.good;
+  const fails: string[] = [];
+  if (result.dl < t.dl)                 fails.push('dl');
+  if (result.latency > t.latency)       fails.push('latency');
+  if (result.jitter > t.jitter)         fails.push('jitter');
+  if (result.packetLoss > t.packetLoss) fails.push('packetLoss');
+  const isGood = fails.length === 0;
+  return (
+    <section className="lk-section">
+      <h3 className="lk-section__title">Modo Gamer · {def.label}</h3>
+      <div className={`lk-gamer lk-gamer--${isGood ? 'good' : 'bad'}`}>
+        <span className="lk-gamer__icon">{isGood ? '✓' : '✗'}</span>
+        <div>
+          <p className="lk-gamer__verdict">
+            {isGood
+              ? `Ótima para ${def.label}.`
+              : `Não ideal para ${def.label} — ${fails.map((f) => GAMING_BLOCKING[f]).join(', ')}.`}
+          </p>
+          {!isGood && (
+            <p className="lk-gamer__detail">
+              {[
+                fails.includes('dl')         && `Download mín. ${t.dl} Mbps`,
+                fails.includes('latency')    && `Resposta máx. ${t.latency} ms`,
+                fails.includes('jitter')     && `Oscilação máx. ${t.jitter} ms`,
+                fails.includes('packetLoss') && `Perda máx. ${t.packetLoss}%`,
+              ].filter(Boolean).join(' · ')}
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function ResultScreen({
   theme, onToggleTheme, result, server, previous,
-  onRetry, onShowHistory, unit = 'mbps', hideIpOnShare = true,
+  onRetry, onShowHistory, unit = 'mbps', hideIpOnShare = true, gamingProfile = 'off',
 }: Props) {
   const history = useMemo(() => loadHistory(), []);
   const interpreted = useMemo(
@@ -205,6 +248,10 @@ export function ResultScreen({
             );
           })}
         </div>
+
+        {gamingProfile !== 'off' && (
+          <GamingVerdict result={result} gamingProfile={gamingProfile as GamingProfileId} />
+        )}
 
         <section className="lk-section">
           <h3 className="lk-section__title">Detalhes</h3>

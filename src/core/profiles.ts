@@ -11,7 +11,7 @@
  * Cada threshold tem comentário com a fonte (paridade legacy ou dedução móvel).
  */
 
-import type { ConnectionProfile } from '../types';
+import type { ConnectionProfile, GamingProfile } from '../types';
 
 export interface QualityThresholds {
   excellent: { dl: number; ul: number; latency: number; jitter: number; packetLoss: number };
@@ -158,4 +158,29 @@ const MOBILE_BROADBAND: ProfileRules = {
 export const PROFILES: Record<ConnectionProfile, ProfileRules> = {
   fixed_broadband: FIXED_BROADBAND,
   mobile_broadband: MOBILE_BROADBAND,
+};
+
+// =============================================================================
+// Perfis de Gaming
+// =============================================================================
+
+export type GamingProfileId = Exclude<GamingProfile, 'off'>;
+
+export interface GamingProfileThresholds {
+  dl: number;
+  latency: number;
+  jitter: number;
+  packetLoss: number;
+}
+
+export interface GamingProfileDef {
+  label: string;
+  good: GamingProfileThresholds;
+}
+
+export const GAMING_PROFILES: Record<GamingProfileId, GamingProfileDef> = {
+  casual: { label: 'Casual',       good: { dl: 3,  latency: 150, jitter: 50,  packetLoss: 3   } },
+  moba:   { label: 'MOBA',         good: { dl: 5,  latency: 50,  jitter: 20,  packetLoss: 1   } },
+  fps:    { label: 'FPS',          good: { dl: 15, latency: 30,  jitter: 10,  packetLoss: 0.5 } },
+  cloud:  { label: 'Cloud Gaming', good: { dl: 35, latency: 40,  jitter: 15,  packetLoss: 0.5 } },
 };

@@ -101,6 +101,17 @@ export function StartScreen({
             </span>
           </div>
 
+          {settings.gamingProfile !== 'off' && (
+            <p className="lk-start__data-hint lk-start__gamer-hint">
+              🎮 Modo Gamer ativo: {
+                settings.gamingProfile === 'casual' ? 'Casual'
+                : settings.gamingProfile === 'moba'  ? 'MOBA'
+                : settings.gamingProfile === 'fps'   ? 'FPS'
+                : 'Cloud Gaming'
+              }
+            </p>
+          )}
+
           <button
             className="btn-text lk-start__compare-link"
             onClick={onStartComparison}

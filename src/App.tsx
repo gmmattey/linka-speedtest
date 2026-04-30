@@ -249,6 +249,7 @@ export default function App() {
             onShowHistory={handleShowHistory}
             unit={settings.unit}
             hideIpOnShare={settings.hideIpOnShare}
+            gamingProfile={settings.gamingProfile}
           />
         ) : null;
       case 'comparison':

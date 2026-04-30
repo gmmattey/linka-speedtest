@@ -1,10 +1,12 @@
 import { useCallback, useState } from 'react';
+import type { GamingProfile } from '../types';
 
 export interface Settings {
   unit: 'mbps' | 'gbps';
   scale: 'linear' | 'log';
   connectionOverride: 'auto' | 'wifi' | 'cable' | 'mobile';
   hideIpOnShare: boolean;
+  gamingProfile: GamingProfile;
 }
 
 const KEY = 'linka.speedtest.settings.v1';
@@ -13,6 +15,7 @@ const DEFAULTS: Settings = {
   scale: 'linear',
   connectionOverride: 'auto',
   hideIpOnShare: true,
+  gamingProfile: 'off',
 };
 
 function load(): Settings {

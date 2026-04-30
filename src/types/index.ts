@@ -5,6 +5,7 @@ export type ConnectionType = 'wifi' | 'mobile' | 'cable';
 export type ConnectionProfile = 'fixed_broadband' | 'mobile_broadband';
 export type RuleSetVersion = string; // semântica: 'v1', 'v2', etc.
 export type SpeedTestMode = 'quick' | 'complete';
+export type GamingProfile = 'off' | 'casual' | 'moba' | 'fps' | 'cloud';
 export type TestPhase = 'idle' | 'latency' | 'download' | 'upload' | 'done' | 'error';
 
 export interface SpeedTestResult {

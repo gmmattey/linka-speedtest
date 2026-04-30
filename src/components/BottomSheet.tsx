@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import type { ConnectionType, DeviceInfo, ServerInfo } from '../types';
+import type { ConnectionType, DeviceInfo, GamingProfile, ServerInfo } from '../types';
 import type { Settings } from '../hooks/useSettings';
 import { SERVERS } from '../utils/serverRegistry';
 import { PathRow } from './PathRow';
@@ -48,6 +48,14 @@ const CONN_OPTS: SegOption<Settings['connectionOverride']>[] = [
   { value: 'wifi',   label: 'Wi-Fi'   },
   { value: 'cable',  label: 'Cabo'    },
   { value: 'mobile', label: 'Celular' },
+];
+
+const GAMING_OPTS: SegOption<GamingProfile>[] = [
+  { value: 'off',    label: 'Off'    },
+  { value: 'casual', label: 'Casual' },
+  { value: 'moba',   label: 'MOBA'   },
+  { value: 'fps',    label: 'FPS'    },
+  { value: 'cloud',  label: 'Cloud'  },
 ];
 
 const UNIT_OPTS: SegOption<Settings['unit']>[] = [
@@ -133,6 +141,9 @@ export function BottomSheet({ open, onToggle, onClose, device, server, loading, 
             </SettingRow>
             <SettingRow label="Conexão">
               <Seg options={CONN_OPTS} value={settings.connectionOverride} onChange={(v) => onUpdateSettings({ connectionOverride: v })} />
+            </SettingRow>
+            <SettingRow label="Modo Gamer">
+              <Seg options={GAMING_OPTS} value={settings.gamingProfile} onChange={(v) => onUpdateSettings({ gamingProfile: v })} />
             </SettingRow>
             <SettingRow label="IP ao compartilhar">
               <Seg

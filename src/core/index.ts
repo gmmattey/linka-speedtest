@@ -17,10 +17,14 @@ export { runHeadlessTest } from './embed';
 export type { HeadlessTestOptions, HeadlessTestResult } from './embed';
 export {
   PROFILES,
+  GAMING_PROFILES,
   type ProfileRules,
   type QualityThresholds,
   type FlagThresholds,
   type UseCaseThresholds,
+  type GamingProfileId,
+  type GamingProfileDef,
+  type GamingProfileThresholds,
 } from './profiles';
 export type {
   BlockingFactor,
