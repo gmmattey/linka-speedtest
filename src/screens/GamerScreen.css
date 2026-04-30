@@ -35,11 +35,11 @@
 }
 
 .lk-gamer__title {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 22px;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 1.2;
   margin-top: 10px;
   color: var(--text);
 }
@@ -77,11 +77,10 @@
 }
 
 .lk-gamer__stat-value {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 22px;
-  letter-spacing: -0.02em;
-  font-feature-settings: 'tnum' 1;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
 }
 
 .lk-gamer__stat-unit {

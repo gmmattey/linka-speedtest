@@ -109,9 +109,9 @@ const TONE_COLOR: Record<Tone, string> = {
 };
 
 const TONE_BG: Record<Tone, string> = {
-  good:  'var(--ul-tint)',
-  maybe: 'rgba(245,166,35,0.16)',
-  bad:   'rgba(255,69,58,0.16)',
+  good:  'var(--color-good-bg)',
+  maybe: 'var(--color-warn-bg)',
+  bad:   'var(--color-bad-bg)',
 };
 
 export function DiagnosticScreen({ result, connectionType, onBack }: Props) {
@@ -142,7 +142,7 @@ export function DiagnosticScreen({ result, connectionType, onBack }: Props) {
 
         <div className="lk-diag__grid">
           {cards.map((card) => (
-            <div key={card.title} className="lk-diag__card">
+            <div key={card.title} className={`lk-diag__card lk-diag__card--${card.tone}`}>
               <div className="lk-diag__card-top">
                 <div
                   className="lk-diag__card-icon"

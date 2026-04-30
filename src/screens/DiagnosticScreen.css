@@ -62,6 +62,10 @@
   padding: 12px;
 }
 
+.lk-diag__card--good  { background: var(--color-good-bg);  border-color: var(--color-good-border); }
+.lk-diag__card--maybe { background: var(--color-warn-bg);  border-color: var(--color-warn-border); }
+.lk-diag__card--bad   { background: var(--color-bad-bg);   border-color: var(--color-bad-border); }
+
 .lk-diag__card-top {
   display: flex;
   align-items: center;

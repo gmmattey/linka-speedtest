@@ -132,7 +132,7 @@
 
 .lk-seg__btn--active {
   background: var(--accent);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 
 /* Server picker */

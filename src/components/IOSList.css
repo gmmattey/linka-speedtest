@@ -31,7 +31,7 @@
   height: 28px;
   border-radius: 7px;
   background: var(--accent);
-  color: #fff;
+  color: var(--text-on-accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -57,11 +57,12 @@
 }
 
 .lk-ios-list__trailing {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-weight: 600;
   font-size: 14px;
   color: var(--text);
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .lk-ios-list__chevron {
