@@ -4,13 +4,14 @@ import { RunningScreen } from './screens/RunningScreen';
 import { ResultScreen } from './screens/ResultScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { ComparisonScreen, type ComparisonStep } from './screens/ComparisonScreen';
+import { BeforeAfterScreen, type BeforeAfterStep } from './screens/BeforeAfterScreen';
 import { useDeviceInfo } from './hooks/useDeviceInfo';
 import { useSpeedTest } from './hooks/useSpeedTest';
 import { useSettings } from './hooks/useSettings';
 import { appendRecord, previousRecord } from './utils/history';
 import type { SpeedTestMode, SpeedTestResult, TestRecord } from './types';
 
-type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison';
+type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter';
 
 const THEME_KEY = 'linka.speedtest.theme';
 const SWIPE_THRESHOLD_PX = 80;
@@ -35,6 +36,10 @@ export default function App() {
   const [comparisonNear, setComparisonNear] = useState<SpeedTestResult | null>(null);
   const [comparisonFar, setComparisonFar] = useState<SpeedTestResult | null>(null);
   const comparisonModeRef = useRef<'near' | 'far' | null>(null);
+  const [baStep, setBaStep] = useState<BeforeAfterStep>('before');
+  const [baBefore, setBaBefore] = useState<SpeedTestResult | null>(null);
+  const [baAfter, setBaAfter] = useState<SpeedTestResult | null>(null);
+  const baModeRef = useRef<'before' | 'after' | null>(null);
   const recordedRef = useRef(false);
   const backStackRef = useRef<Screen[]>([]);
   const forwardStackRef = useRef<Screen[]>([]);
@@ -127,6 +132,16 @@ export default function App() {
         setComparisonStep('done');
         comparisonModeRef.current = null;
         goTo('comparison');
+      } else if (baModeRef.current === 'before') {
+        setBaBefore(test.result);
+        setBaStep('after');
+        baModeRef.current = null;
+        goTo('beforeafter');
+      } else if (baModeRef.current === 'after') {
+        setBaAfter(test.result);
+        setBaStep('done');
+        baModeRef.current = null;
+        goTo('beforeafter');
       } else {
         goTo('result');
       }
@@ -182,6 +197,25 @@ export default function App() {
     setComparisonStep('near');
     setComparisonNear(null);
     setComparisonFar(null);
+  }, []);
+
+  const handleStartBeforeAfter = useCallback(() => {
+    setBaStep('before'); setBaBefore(null); setBaAfter(null);
+    goTo('beforeafter');
+  }, [goTo]);
+
+  const handleBAStartBefore = useCallback(() => {
+    baModeRef.current = 'before'; recordedRef.current = false;
+    goTo('running'); test.start(effectiveConnection, 'complete');
+  }, [test, effectiveConnection, goTo]);
+
+  const handleBAStartAfter = useCallback(() => {
+    baModeRef.current = 'after'; recordedRef.current = false;
+    goTo('running'); test.start(effectiveConnection, 'complete');
+  }, [test, effectiveConnection, goTo]);
+
+  const handleBARetry = useCallback(() => {
+    setBaStep('before'); setBaBefore(null); setBaAfter(null);
   }, []);
 
   const handleShowHistory = useCallback(() => {
@@ -267,6 +301,16 @@ export default function App() {
             unit={settings.unit}
           />
         );
+      case 'beforeafter':
+        return (
+          <BeforeAfterScreen
+            theme={theme} onToggleTheme={onToggleTheme}
+            step={baStep} beforeResult={baBefore} afterResult={baAfter}
+            onStartBefore={handleBAStartBefore} onStartAfter={handleBAStartAfter}
+            onBack={() => goTo('start')} onRetry={handleBARetry}
+            unit={settings.unit}
+          />
+        );
       case 'history':
         return (
           <HistoryScreen
@@ -291,6 +335,7 @@ export default function App() {
             onUpdateSettings={updateSettings}
             onStart={handleStart}
             onStartComparison={handleStartComparison}
+            onStartBeforeAfter={handleStartBeforeAfter}
             onRetry={deviceInfo.reload}
             lastRecord={lastRecord}
             onShowLastResult={handleShowLastResult}
@@ -305,8 +350,10 @@ export default function App() {
     previous, lastRecord, historyInitialId,
     handleStart, handleStartComparison, handleCancel, handleRetry, handleShowHistory, handleShowLastResult,
     handleComparisonStartNear, handleComparisonStartFar, handleComparisonRetryNear,
+    handleStartBeforeAfter, handleBAStartBefore, handleBAStartAfter, handleBARetry,
     settings, updateSettings, testMode,
     comparisonStep, comparisonNear, comparisonFar,
+    baStep, baBefore, baAfter,
   ]);
 
   return (

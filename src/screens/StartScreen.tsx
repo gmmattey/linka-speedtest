@@ -18,6 +18,7 @@ interface Props {
   onUpdateSettings: (patch: Partial<Settings>) => void;
   onStart: (mode: SpeedTestMode) => void;
   onStartComparison: () => void;
+  onStartBeforeAfter: () => void;
   onRetry: () => void;
   lastRecord: TestRecord | null;
   onShowLastResult: () => void;
@@ -36,6 +37,7 @@ export function StartScreen({
   onUpdateSettings,
   onStart,
   onStartComparison,
+  onStartBeforeAfter,
   onRetry,
   lastRecord,
   onShowLastResult,
@@ -118,6 +120,14 @@ export function StartScreen({
             disabled={!canStart}
           >
             Comparar locais
+          </button>
+
+          <button
+            className="btn-text lk-start__compare-link"
+            onClick={onStartBeforeAfter}
+            disabled={!canStart}
+          >
+            Antes e Depois
           </button>
 
           {lastRecord && (
