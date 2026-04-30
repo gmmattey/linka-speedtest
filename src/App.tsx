@@ -39,9 +39,22 @@ export default function App() {
   const backStackRef = useRef<Screen[]>([]);
   const forwardStackRef = useRef<Screen[]>([]);
 
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+
   const deviceInfo = useDeviceInfo('cloudflare');
   const test = useSpeedTest();
   const { settings, update: updateSettings } = useSettings();
+
+  useEffect(() => {
+    const handleOnline  = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online',  handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online',  handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -272,6 +285,7 @@ export default function App() {
             server={deviceInfo.server}
             loading={deviceInfo.loading}
             error={deviceInfo.error}
+            isOnline={isOnline}
             settings={settings}
             onUpdateSettings={updateSettings}
             onStart={handleStart}
@@ -284,7 +298,7 @@ export default function App() {
         );
     }
   }, [
-    screen, theme, onToggleTheme,
+    screen, theme, onToggleTheme, isOnline,
     test.phase, test.instantMbps, test.result,
     deviceInfo.device, deviceInfo.server, deviceInfo.loading, deviceInfo.error, deviceInfo.reload,
     previous, lastRecord, historyInitialId,

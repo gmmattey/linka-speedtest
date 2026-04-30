@@ -13,6 +13,7 @@ interface Props {
   server: ServerInfo | null;
   loading: boolean;
   error: string | null;
+  isOnline: boolean;
   settings: Settings;
   onUpdateSettings: (patch: Partial<Settings>) => void;
   onStart: (mode: SpeedTestMode) => void;
@@ -30,6 +31,7 @@ export function StartScreen({
   server,
   loading,
   error,
+  isOnline,
   settings,
   onUpdateSettings,
   onStart,
@@ -41,7 +43,7 @@ export function StartScreen({
 }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [mode, setMode] = useState<SpeedTestMode>('quick');
-  const canStart = !loading && !!server?.available && !!device;
+  const canStart = isOnline && !loading && !!server?.available && !!device;
   const unitLabel = settings.unit === 'gbps' ? 'Gbps' : 'Mbps';
 
   return (
@@ -49,7 +51,11 @@ export function StartScreen({
       <Header theme={theme} onToggleTheme={onToggleTheme} />
 
       <main className="lk-start__main">
-        {error ? (
+        {!isOnline ? (
+          <div className="lk-start__error" role="alert">
+            <span>Sem conexão. Conecte-se à internet para medir sua velocidade.</span>
+          </div>
+        ) : error ? (
           <div className="lk-start__error" role="alert">
             <span>⚠ {error}</span>
             <button className="btn-text" onClick={onRetry}>Tentar novamente</button>
