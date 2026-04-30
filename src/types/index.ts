@@ -56,6 +56,7 @@ export interface TestRecord {
   testMode?: SpeedTestMode;
   connectionProfile?: ConnectionProfile;
   ruleSetVersion?: RuleSetVersion;
+  locationTag?: string;
 }
 
 export interface Classification {

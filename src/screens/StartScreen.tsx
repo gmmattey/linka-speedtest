@@ -20,6 +20,7 @@ interface Props {
   onStartComparison: () => void;
   onStartBeforeAfter: () => void;
   onStartProvaReal: () => void;
+  onStartRoomTest: () => void;
   onRetry: () => void;
   lastRecord: TestRecord | null;
   onShowLastResult: () => void;
@@ -40,6 +41,7 @@ export function StartScreen({
   onStartComparison,
   onStartBeforeAfter,
   onStartProvaReal,
+  onStartRoomTest,
   onRetry,
   lastRecord,
   onShowLastResult,
@@ -138,6 +140,14 @@ export function StartScreen({
             disabled={!canStart}
           >
             Prova Real (3×)
+          </button>
+
+          <button
+            className="btn-text lk-start__compare-link"
+            onClick={onStartRoomTest}
+            disabled={!canStart}
+          >
+            Teste por local
           </button>
 
           {lastRecord && (

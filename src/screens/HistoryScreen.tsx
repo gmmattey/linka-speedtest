@@ -199,6 +199,9 @@ export function HistoryScreen({ theme, onToggleTheme, unit = 'mbps', initialSele
                       <ConnectionIcon kind={r.connectionType} size={14} />
                     </span>
                     <span>{r.serverName}{r.isp && r.isp !== '—' ? ` · ${r.isp}` : ''}</span>
+                    {r.locationTag && (
+                      <span className="lk-history__location-tag">📍 {r.locationTag}</span>
+                    )}
                   </div>
                 </li>
               ))}

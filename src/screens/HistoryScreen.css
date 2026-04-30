@@ -188,6 +188,14 @@
   color: var(--text-3);
 }
 
+.lk-history__location-tag {
+  margin-left: auto;
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 500;
+}
+
 /* Footer */
 .lk-history__footer {
   display: flex;

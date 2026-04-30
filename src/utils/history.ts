@@ -42,6 +42,7 @@ export function appendRecord(
     testMode?: SpeedTestMode;
     connectionProfile?: ConnectionProfile;
     ruleSetVersion?: RuleSetVersion;
+    locationTag?: string;
   },
 ): TestRecord {
   const c = classify(result);
@@ -62,6 +63,7 @@ export function appendRecord(
     testMode: meta.testMode,
     connectionProfile: meta.connectionProfile ?? toConnectionProfile(meta.connectionType),
     ruleSetVersion: meta.ruleSetVersion ?? RULE_SET_VERSION,
+    locationTag: meta.locationTag,
   };
   const items = [record, ...loadHistory()].slice(0, MAX);
   persist(items);

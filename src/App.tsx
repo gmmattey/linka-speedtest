@@ -5,6 +5,7 @@ import { ResultScreen } from './screens/ResultScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { ComparisonScreen, type ComparisonStep } from './screens/ComparisonScreen';
 import { BeforeAfterScreen, type BeforeAfterStep } from './screens/BeforeAfterScreen';
+import { RoomTestScreen } from './screens/RoomTestScreen';
 import { useDeviceInfo } from './hooks/useDeviceInfo';
 import { useSpeedTest } from './hooks/useSpeedTest';
 import { useSettings } from './hooks/useSettings';
@@ -12,7 +13,7 @@ import { appendRecord, previousRecord } from './utils/history';
 import { averageSpeedResults } from './utils/provaReal';
 import type { SpeedTestMode, SpeedTestResult, TestRecord } from './types';
 
-type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter';
+type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter' | 'roomtest';
 
 const THEME_KEY = 'linka.speedtest.theme';
 const SWIPE_THRESHOLD_PX = 80;
@@ -45,6 +46,7 @@ export default function App() {
   const [provaRealOverride, setProvaRealOverride] = useState<SpeedTestResult | null>(null);
   const provaRealResultsRef = useRef<SpeedTestResult[]>([]);
   const provaRealPendingRef = useRef(false);
+  const locationTagRef = useRef<string | null>(null);
   const recordedRef = useRef(false);
   const backStackRef = useRef<Screen[]>([]);
   const forwardStackRef = useRef<Screen[]>([]);
@@ -136,7 +138,9 @@ export default function App() {
             deviceType: deviceInfo.device.deviceType,
             connectionType: deviceInfo.device.connectionType,
             testMode: 'complete',
+            locationTag: locationTagRef.current ?? undefined,
           });
+          locationTagRef.current = null;
           setLastRecord(newRecord);
           setProvaRealOverride(averaged);
           goTo('result');
@@ -153,7 +157,9 @@ export default function App() {
         deviceType: deviceInfo.device.deviceType,
         connectionType: deviceInfo.device.connectionType,
         testMode,
+        locationTag: locationTagRef.current ?? undefined,
       });
+      locationTagRef.current = null;
       setLastRecord(newRecord);
 
       const cmpMode = comparisonModeRef.current;
@@ -230,6 +236,18 @@ export default function App() {
     setProvaRealOverride(null);
     setTestMode('complete');
     recordedRef.current = false;
+    goTo('running');
+    test.start(effectiveConnection, 'complete');
+  }, [test, effectiveConnection, goTo]);
+
+  const handleOpenRoomTest = useCallback(() => {
+    goTo('roomtest');
+  }, [goTo]);
+
+  const handleRoomStart = useCallback((locationTag: string) => {
+    locationTagRef.current = locationTag;
+    recordedRef.current = false;
+    setTestMode('complete');
     goTo('running');
     test.start(effectiveConnection, 'complete');
   }, [test, effectiveConnection, goTo]);
@@ -378,6 +396,15 @@ export default function App() {
             unit={settings.unit}
           />
         );
+      case 'roomtest':
+        return (
+          <RoomTestScreen
+            theme={theme}
+            onToggleTheme={onToggleTheme}
+            onStart={handleRoomStart}
+            onBack={() => goTo('start')}
+          />
+        );
       case 'history':
         return (
           <HistoryScreen
@@ -404,6 +431,7 @@ export default function App() {
             onStartComparison={handleStartComparison}
             onStartBeforeAfter={handleStartBeforeAfter}
             onStartProvaReal={handleStartProvaReal}
+            onStartRoomTest={handleOpenRoomTest}
             onRetry={deviceInfo.reload}
             lastRecord={lastRecord}
             onShowLastResult={handleShowLastResult}
@@ -419,7 +447,7 @@ export default function App() {
     handleStart, handleStartComparison, handleCancel, handleRetry, handleShowHistory, handleShowLastResult,
     handleComparisonStartNear, handleComparisonStartFar, handleComparisonRetryNear,
     handleStartBeforeAfter, handleBAStartBefore, handleBAStartAfter, handleBARetry,
-    handleStartProvaReal,
+    handleStartProvaReal, handleOpenRoomTest, handleRoomStart,
     settings, updateSettings, testMode,
     comparisonStep, comparisonNear, comparisonFar,
     baStep, baBefore, baAfter,
