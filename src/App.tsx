@@ -52,6 +52,7 @@ export default function App() {
   const provaRealPendingRef = useRef(false);
   const locationTagRef = useRef<string | null>(null);
   const recordedRef = useRef(false);
+  const runStartTimeRef = useRef<number>(0);
   const backStackRef = useRef<Screen[]>([]);
   const forwardStackRef = useRef<Screen[]>([]);
 
@@ -112,19 +113,28 @@ export default function App() {
     });
   }, []);
 
+  // Registra o instante em que o download começa (início real da medição).
   useEffect(() => {
-    if (
+    if (test.phase === 'download') {
+      runStartTimeRef.current = Date.now();
+    }
+  }, [test.phase]);
+
+  useEffect(() => {
+    if (!(
       test.phase === 'done' &&
       test.result &&
       !recordedRef.current &&
       deviceInfo.device &&
       deviceInfo.server
-    ) {
-      recordedRef.current = true;
+    )) return;
 
+    recordedRef.current = true;
+
+    const proceed = () => {
       // ── Prova Real: acumula resultados intermediários sem registrar ──
       if (provaRealSession !== null) {
-        provaRealResultsRef.current.push(test.result);
+        provaRealResultsRef.current.push(test.result!);
         if (provaRealSession < 3) {
           setProvaRealSession(provaRealSession + 1);
           recordedRef.current = false;
@@ -137,10 +147,10 @@ export default function App() {
           const prev = previousRecord();
           setPrevious(prev);
           const newRecord = appendRecord(averaged, {
-            serverName: deviceInfo.server.name,
-            isp: deviceInfo.server.isp,
-            deviceType: deviceInfo.device.deviceType,
-            connectionType: deviceInfo.device.connectionType,
+            serverName: deviceInfo.server!.name,
+            isp: deviceInfo.server!.isp,
+            deviceType: deviceInfo.device!.deviceType,
+            connectionType: deviceInfo.device!.connectionType,
             testMode: 'complete',
             locationTag: locationTagRef.current ?? undefined,
           });
@@ -155,11 +165,11 @@ export default function App() {
       // ── Fluxo normal ─────────────────────────────────────────────────
       const prev = previousRecord();
       setPrevious(prev);
-      const newRecord = appendRecord(test.result, {
-        serverName: deviceInfo.server.name,
-        isp: deviceInfo.server.isp,
-        deviceType: deviceInfo.device.deviceType,
-        connectionType: deviceInfo.device.connectionType,
+      const newRecord = appendRecord(test.result!, {
+        serverName: deviceInfo.server!.name,
+        isp: deviceInfo.server!.isp,
+        deviceType: deviceInfo.device!.deviceType,
+        connectionType: deviceInfo.device!.connectionType,
         testMode,
         locationTag: locationTagRef.current ?? undefined,
       });
@@ -168,29 +178,40 @@ export default function App() {
 
       const cmpMode = comparisonModeRef.current;
       if (cmpMode === 'near') {
-        setComparisonNear(test.result);
+        setComparisonNear(test.result!);
         setComparisonStep('far');
         comparisonModeRef.current = null;
         goTo('comparison');
       } else if (cmpMode === 'far') {
-        setComparisonFar(test.result);
+        setComparisonFar(test.result!);
         setComparisonStep('done');
         comparisonModeRef.current = null;
         goTo('comparison');
       } else if (baModeRef.current === 'before') {
-        setBaBefore(test.result);
+        setBaBefore(test.result!);
         setBaStep('after');
         baModeRef.current = null;
         goTo('beforeafter');
       } else if (baModeRef.current === 'after') {
-        setBaAfter(test.result);
+        setBaAfter(test.result!);
         setBaStep('done');
         baModeRef.current = null;
         goTo('beforeafter');
       } else {
         goTo('result');
       }
+    };
+
+    const elapsed = Date.now() - runStartTimeRef.current;
+    const remaining = Math.max(0, 10_000 - elapsed);
+
+    if (remaining <= 0) {
+      proceed();
+      return;
     }
+
+    const timer = setTimeout(proceed, remaining);
+    return () => clearTimeout(timer);
   }, [test.phase, test.result, deviceInfo.device, deviceInfo.server, goTo, provaRealSession]);
 
   const effectiveConnection = settings.connectionOverride !== 'auto'
