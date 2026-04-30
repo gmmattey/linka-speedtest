@@ -77,6 +77,24 @@ function useCaseLabel(id: UseCaseId): string {
   return 'Videochamada';
 }
 
+function useCaseIcon(id: UseCaseId): string {
+  if (id === 'gaming')       return 'game';
+  if (id === 'streaming_4k') return 'bolt';
+  if (id === 'home_office')  return 'home';
+  return 'video';
+}
+
+function useCaseIconBg(status: string): string {
+  if (status === 'good')  return 'var(--ul-tint)';
+  if (status === 'maybe') return 'rgba(245,166,35,0.12)';
+  return 'rgba(255,69,58,0.12)';
+}
+
+function useCaseIconColor(status: string): string {
+  if (status === 'good')  return 'var(--ul)';
+  if (status === 'maybe') return 'var(--warn)';
+  return 'var(--error)';
+}
 
 export function ResultScreen({
   theme: _theme, onToggleTheme: _onToggleTheme,
@@ -138,21 +156,18 @@ export function ResultScreen({
       icon: <Icon name="download" size={14} color="#fff" />,
       iconBg: 'var(--dl)',
       title: 'Download',
-      trailing: <span className="lk-result__metric" style={{ color: 'var(--dl)' }}>{formatMbps(result.dl, unit)} {unitLabel}</span>,
+      trailing: <span className="lk-result__metric">{formatMbps(result.dl, unit)} {unitLabel}</span>,
     },
     {
       icon: <Icon name="upload" size={14} color="#fff" />,
       iconBg: 'var(--ul)',
       title: 'Upload',
-      trailing: <span className="lk-result__metric" style={{ color: 'var(--ul)' }}>{formatMbps(result.ul, unit)} {unitLabel}</span>,
+      trailing: <span className="lk-result__metric">{formatMbps(result.ul, unit)} {unitLabel}</span>,
     },
     {
       icon: <Icon name="history" size={14} color="var(--text-2)" />,
       iconBg: 'var(--surface-3)',
       title: 'Histórico',
-      trailing: history.length > 0
-        ? <span className="lk-result__metric-sub">{history.length} teste{history.length !== 1 ? 's' : ''}</span>
-        : undefined,
       showChevron: true,
       onClick: onShowHistory,
     },
@@ -185,7 +200,7 @@ export function ResultScreen({
     {
       icon: <Icon name={maisExpanded ? 'chevron' : 'chevron'} size={14} color="var(--accent)" />,
       iconBg: 'var(--accent-tint)',
-      title: maisExpanded ? 'Menos detalhes' : 'Mais detalhes',
+      title: maisExpanded ? 'Menos' : 'Mais',
       onClick: () => setMaisExpanded(e => !e),
     },
   ];
@@ -209,18 +224,17 @@ export function ResultScreen({
           <div className="lk-result__title">{shortPhrase}</div>
         </div>
 
-        {/* Pronto para — lista com ponto colorido */}
+        {/* Pronto para — IOSList com ícones semânticos */}
         {interpreted.useCases.length > 0 && (
           <div className="lk-result__uses">
             <p className="lk-result__uses-label">Pronto para</p>
-            <ul className="lk-result__uses-list">
-              {interpreted.useCases.map(({ id, status }) => (
-                <li key={id} className="lk-result__use-item">
-                  <span className={`lk-result__use-dot lk-result__use-dot--${status}`} />
-                  <span className="lk-result__use-name">{useCaseLabel(id)}</span>
-                </li>
-              ))}
-            </ul>
+            <IOSList
+              items={interpreted.useCases.map(({ id, status }) => ({
+                icon: <Icon name={useCaseIcon(id)} size={14} color={useCaseIconColor(status)} />,
+                iconBg: useCaseIconBg(status),
+                title: useCaseLabel(id),
+              }))}
+            />
           </div>
         )}
 
