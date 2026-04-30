@@ -113,5 +113,61 @@ export function buildHistoryInsights(records: TestRecord[]): HistoryInsight[] {
     });
   }
 
-  return insights.slice(0, 3);
+  // Comparação semana a semana
+  const now = Date.now();
+  const DAY_MS = 24 * 3600 * 1000;
+  const thisWeek = all.filter((r) => now - r.timestamp < 7 * DAY_MS);
+  const lastWeek = all.filter((r) => now - r.timestamp >= 7 * DAY_MS && now - r.timestamp < 14 * DAY_MS);
+  if (thisWeek.length >= 2 && lastWeek.length >= 2) {
+    const twDl = avg(thisWeek, 'dl');
+    const lwDl = avg(lastWeek, 'dl');
+    const weekDelta = pct(twDl, lwDl);
+    if (weekDelta < -20 && !insights.some((i) => i.type === 'drop')) {
+      insights.push({
+        id: 'week_drop',
+        type: 'drop',
+        title: 'Semana pior que a anterior',
+        description: `O download desta semana (${twDl.toFixed(0)} Mbps em média) está ${Math.abs(weekDelta).toFixed(0)}% abaixo da semana passada.`,
+        severity: weekDelta < -40 ? 'critical' : 'warning',
+      });
+    } else if (weekDelta > 20 && !insights.some((i) => i.type === 'improvement')) {
+      insights.push({
+        id: 'week_improvement',
+        type: 'improvement',
+        title: 'Semana melhor que a anterior',
+        description: `O download desta semana (${twDl.toFixed(0)} Mbps) está ${weekDelta.toFixed(0)}% acima da semana passada.`,
+        severity: 'info',
+      });
+    }
+  }
+
+  // Análise de horário de pico — detecta se a conexão é significativamente pior em algum período
+  if (all.length >= 6) {
+    type Bucket = 'madrugada' | 'manhã' | 'tarde' | 'noite';
+    const buckets: Record<Bucket, number[]> = { madrugada: [], manhã: [], tarde: [], noite: [] };
+    for (const r of all) {
+      const h = new Date(r.timestamp).getHours();
+      const b: Bucket = h < 6 ? 'madrugada' : h < 12 ? 'manhã' : h < 18 ? 'tarde' : 'noite';
+      buckets[b].push(r.dl);
+    }
+    const populated = (Object.keys(buckets) as Bucket[])
+      .filter((b) => buckets[b].length >= 2)
+      .map((b) => ({ b, avg: buckets[b].reduce((s, v) => s + v, 0) / buckets[b].length }));
+    if (populated.length >= 2) {
+      const best  = populated.reduce((a, c) => c.avg > a.avg ? c : a);
+      const worst = populated.reduce((a, c) => c.avg < a.avg ? c : a);
+      const peakDrop = pct(worst.avg, best.avg);
+      if (peakDrop < -30 && !insights.some((i) => i.id === 'peak_hour')) {
+        insights.push({
+          id: 'peak_hour',
+          type: 'recurring_issue',
+          title: `Conexão mais lenta à ${worst.b}`,
+          description: `À ${worst.b} o download é ${Math.abs(peakDrop).toFixed(0)}% menor do que à ${best.b}. Congestionamento de rede pode ser a causa.`,
+          severity: peakDrop < -50 ? 'critical' : 'warning',
+        });
+      }
+    }
+  }
+
+  return insights.slice(0, 4);
 }
