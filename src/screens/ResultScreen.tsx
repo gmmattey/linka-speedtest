@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Header } from '../components/Header';
-import { IconGames, IconStream, IconWork, IconVideoCall, IconPdf, IconShare } from '../components/icons';
+import { IconGames, IconStream, IconWork, IconVideoCall, IconPdf, IconShare, IconWhatsApp } from '../components/icons';
+import { generateShareCard } from '../utils/shareCard';
 import type { Classification, Quality, ServerInfo, SpeedTestResult, Tag, TestRecord } from '../types';
 import { interpretSpeedTestResult, resolveCopy } from '../core';
 import type { UseCaseId, UseCaseStatus } from '../core';
@@ -89,6 +90,7 @@ export function ResultScreen({
 
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
   const [shareStatus, setShareStatus] = useState<ShareStatus>('idle');
+  const [waGenerating, setWaGenerating] = useState(false);
   const shareResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => {
@@ -110,6 +112,25 @@ export function ResultScreen({
         setShareStatus('idle');
         shareResetTimeoutRef.current = null;
       }, 2000);
+    }
+  };
+
+  const handleWhatsApp = async () => {
+    if (waGenerating) return;
+    setWaGenerating(true);
+    try {
+      const blob = await generateShareCard(result, interpreted.quality, unit);
+      const file = new File([blob], 'linka-speedtest.png', { type: 'image/png' });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'linka SpeedTest' });
+      } else {
+        const text = buildShareText(result, interpreted.quality, unit);
+        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+      }
+    } catch {
+      // cancelado ou sem suporte — silencioso
+    } finally {
+      setWaGenerating(false);
     }
   };
 
@@ -209,8 +230,11 @@ export function ResultScreen({
 
         <section className="lk-actions">
           <button className="btn-primary lk-actions__btn" onClick={onRetry}>Testar novamente</button>
+          <button className="btn-text lk-actions__whatsapp" onClick={handleWhatsApp} disabled={waGenerating}>
+            <IconWhatsApp size={16} /> {waGenerating ? 'Gerando…' : 'Compartilhar no WhatsApp'}
+          </button>
           <button className="btn-text" onClick={handleShare}>
-            <IconShare size={16} /> {shareStatus === 'copied' ? 'Copiado!' : 'Compartilhar'}
+            <IconShare size={16} /> {shareStatus === 'copied' ? 'Copiado!' : 'Compartilhar texto'}
           </button>
         </section>
       </main>

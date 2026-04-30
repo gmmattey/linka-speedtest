@@ -312,6 +312,14 @@
   width: 100%;
 }
 
+.lk-actions__whatsapp {
+  color: #22C55E;
+}
+
+.lk-actions__whatsapp:disabled {
+  opacity: 0.5;
+}
+
 /* O que fazer agora --------- */
 
 .lk-rec-list {
