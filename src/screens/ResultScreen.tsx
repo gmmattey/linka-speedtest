@@ -6,7 +6,7 @@ import { Icon } from '../components/icons';
 import { generateShareCard } from '../utils/shareCard';
 import type { Quality, ServerInfo, SpeedTestResult, TestRecord } from '../types';
 import { interpretSpeedTestResult, resolveCopy } from '../core';
-import type { UseCaseId, UseCaseStatus } from '../core';
+import type { UseCaseId } from '../core';
 import { loadHistory } from '../utils/history';
 import { formatMbps, formatMs } from '../utils/format';
 import type { GamingProfile } from '../types';
@@ -77,11 +77,6 @@ function useCaseLabel(id: UseCaseId): string {
   return 'Videochamada';
 }
 
-function useCaseVariant(status: UseCaseStatus): ChipVariant {
-  if (status === 'good')  return 'good';
-  if (status === 'maybe') return 'maybe';
-  return 'bad';
-}
 
 export function ResultScreen({
   theme: _theme, onToggleTheme: _onToggleTheme,
@@ -89,7 +84,7 @@ export function ResultScreen({
   onRetry, onShowHistory,
   onDiagnostic, onGamer, onRecommend,
   onStartComparison, onStartBeforeAfter, onStartProvaReal, onStartRoomTest,
-  unit = 'mbps', hideIpOnShare = true, gamingProfile: _gamingProfile = 'off',
+  unit = 'mbps', hideIpOnShare: _hideIpOnShare = true, gamingProfile: _gamingProfile = 'off',
 }: Props) {
   const history = useMemo(() => loadHistory(), []);
   const interpreted = useMemo(
@@ -98,6 +93,7 @@ export function ResultScreen({
   );
 
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
+  const [maisExpanded, setMaisExpanded] = useState(false);
   const [shareStatus, setShareStatus] = useState<ShareStatus>('idle');
   const [waGenerating, setWaGenerating] = useState(false);
   const shareResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -137,37 +133,60 @@ export function ResultScreen({
 
   const shortPhrase = resolveCopy(interpreted.copyKeys.shortPhraseKey);
 
-  const iosListItems = [
+  const metricsItems = [
     {
       icon: <Icon name="download" size={14} color="#fff" />,
       iconBg: 'var(--dl)',
       title: 'Download',
-      trailing: <span className="lk-result__metric">{formatMbps(result.dl, unit)} {unitLabel}</span>,
+      trailing: <span className="lk-result__metric" style={{ color: 'var(--dl)' }}>{formatMbps(result.dl, unit)} {unitLabel}</span>,
     },
     {
       icon: <Icon name="upload" size={14} color="#fff" />,
       iconBg: 'var(--ul)',
       title: 'Upload',
-      trailing: <span className="lk-result__metric">{formatMbps(result.ul, unit)} {unitLabel}</span>,
+      trailing: <span className="lk-result__metric" style={{ color: 'var(--ul)' }}>{formatMbps(result.ul, unit)} {unitLabel}</span>,
     },
     {
-      icon: <Icon name="ping" size={14} color="#fff" />,
-      iconBg: 'var(--accent)',
-      title: 'Latência',
-      trailing: <span className="lk-result__metric">{formatMs(result.latency)} ms</span>,
-    },
-    {
-      icon: <Icon name="jitter" size={14} color="var(--text-2)" />,
+      icon: <Icon name="history" size={14} color="var(--text-2)" />,
       iconBg: 'var(--surface-3)',
-      title: 'Jitter',
-      subtitle: 'Variação da latência',
-      trailing: <span className="lk-result__metric">{formatMs(result.jitter)} ms</span>,
+      title: 'Histórico',
+      trailing: history.length > 0
+        ? <span className="lk-result__metric-sub">{history.length} teste{history.length !== 1 ? 's' : ''}</span>
+        : undefined,
+      showChevron: true,
+      onClick: onShowHistory,
     },
+    ...(maisExpanded ? [
+      {
+        icon: <Icon name="jitter" size={14} color="var(--text-2)" />,
+        iconBg: 'var(--surface-3)',
+        title: 'Oscilação',
+        trailing: <span className="lk-result__metric-sub">{formatMs(result.jitter)} ms</span>,
+      },
+      {
+        icon: <Icon name="loss" size={14} color="var(--text-2)" />,
+        iconBg: 'var(--surface-3)',
+        title: 'Perda de pacotes',
+        trailing: <span className="lk-result__metric-sub">{result.packetLoss.toFixed(1)}%</span>,
+      },
+      ...(server?.isp && server.isp !== '—' ? [{
+        icon: <Icon name="signal" size={14} color="var(--text-2)" />,
+        iconBg: 'var(--surface-3)',
+        title: 'Operadora',
+        trailing: <span className="lk-result__metric-sub">{server.isp}</span>,
+      }] : []),
+      ...(server ? [{
+        icon: <Icon name="pin" size={14} color="var(--text-2)" />,
+        iconBg: 'var(--surface-3)',
+        title: 'Servidor',
+        trailing: <span className="lk-result__metric-sub">{server.name}{server.colo && server.colo !== '—' ? ` · ${server.colo}` : ''}</span>,
+      }] : []),
+    ] : []),
     {
-      icon: <Icon name="loss" size={14} color="var(--text-2)" />,
-      iconBg: 'var(--surface-3)',
-      title: 'Perda de pacotes',
-      trailing: <span className="lk-result__metric">{result.packetLoss.toFixed(1)}%</span>,
+      icon: <Icon name={maisExpanded ? 'chevron' : 'chevron'} size={14} color="var(--accent)" />,
+      iconBg: 'var(--accent-tint)',
+      title: maisExpanded ? 'Menos detalhes' : 'Mais detalhes',
+      onClick: () => setMaisExpanded(e => !e),
     },
   ];
 
@@ -188,49 +207,27 @@ export function ResultScreen({
             {qualityBadgeLabel(interpreted.quality)}
           </Chip>
           <div className="lk-result__title">{shortPhrase}</div>
-          <p className="lk-result__desc">{resolveCopy(`diagnosis.${interpreted.quality}`)}</p>
         </div>
 
-        {/* Pronta para… chips */}
+        {/* Pronto para — lista com ponto colorido */}
         {interpreted.useCases.length > 0 && (
           <div className="lk-result__uses">
-            <div className="lk-result__uses-label">Pronta para</div>
-            <div className="lk-result__uses-chips">
+            <p className="lk-result__uses-label">Pronto para</p>
+            <ul className="lk-result__uses-list">
               {interpreted.useCases.map(({ id, status }) => (
-                <Chip key={id} variant={useCaseVariant(status)}>
-                  {useCaseLabel(id)}
-                </Chip>
+                <li key={id} className="lk-result__use-item">
+                  <span className={`lk-result__use-dot lk-result__use-dot--${status}`} />
+                  <span className="lk-result__use-name">{useCaseLabel(id)}</span>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         )}
 
-        {/* iOS-list métricas */}
+        {/* Métricas */}
         <div className="lk-result__metrics">
-          <IOSList items={iosListItems} />
+          <IOSList items={metricsItems} />
         </div>
-
-        {/* Detalhes do servidor */}
-        {server && (
-          <div className="lk-result__detail">
-            <div className="lk-result__detail-row">
-              <span className="lk-result__detail-k">Servidor</span>
-              <span className="lk-result__detail-v">{server.name}{server.colo && server.colo !== '—' ? ` · ${server.colo}` : ''}</span>
-            </div>
-            {server.isp && server.isp !== '—' && (
-              <div className="lk-result__detail-row">
-                <span className="lk-result__detail-k">Operadora</span>
-                <span className="lk-result__detail-v">{server.isp}</span>
-              </div>
-            )}
-            {!hideIpOnShare && server.ip && (
-              <div className="lk-result__detail-row">
-                <span className="lk-result__detail-k">IP</span>
-                <span className="lk-result__detail-v">{server.ip}</span>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Ferramentas — IOSList */}
         <div className="lk-result__tools">
