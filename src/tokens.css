@@ -13,9 +13,10 @@
   --radius-lg: 20px;
   --radius-xl: 28px;
   --radius-pill: 999px;
-  --font-display: 'Geist', system-ui, -apple-system, sans-serif;
-  --font-body: 'Geist', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  --font-display:    'Geist', system-ui, -apple-system, sans-serif;
+  --font-body:       'Geist', system-ui, -apple-system, sans-serif;
+  --font-mono:       'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  --font-editorial:  'Instrument Serif', Georgia, serif;
   --transition-fast: 200ms ease-out;
   --transition-normal: 220ms ease-out;
   --t-fast: 180ms cubic-bezier(0.32, 0.72, 0, 1);
@@ -24,59 +25,89 @@
 }
 
 [data-theme='dark'] {
-  --bg: #000000;
-  --bg-elev: #0A0A0C;
-  --surface: #131318;
-  --surface-2: #1C1C24;
-  --surface-3: #25252F;
-  --surface-translucent: rgba(20, 20, 26, 0.72);
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.14);
-  --hairline: rgba(255, 255, 255, 0.06);
-  --accent: #6C2BFF;
-  --accent-soft: #8B57FF;
-  --accent-tint: rgba(108, 43, 255, 0.16);
-  --accent-tint-strong: rgba(108, 43, 255, 0.28);
-  --dl: #3AB6FF;
-  --dl-tint: rgba(58, 182, 255, 0.16);
-  --ul: #22C55E;
-  --ul-tint: rgba(34, 197, 94, 0.16);
-  --text: #F4F4F7;
-  --text-2: #A8A8B3;
-  --text-3: #6F6F7A;
-  --text-on-accent: #FFFFFF;
-  --error: #FF453A;
-  --warn: #F5A623;
-  --success: #22C55E;
-  --info: #3AB6FF;
+  --bg:                   #0A0A0F;
+  --bg-elev:              #0F0F14;
+  --surface:              #1A1A22;
+  --surface-2:            #22222B;
+  --surface-3:            #2D2D38;
+  --surface-translucent:  rgba(26, 26, 34, 0.72);
+  --border:               #2A2A35;
+  --border-strong:        #333342;
+  --border-subtle:        #1F1F2A;
+  --hairline:             rgba(255, 255, 255, 0.06);
+  --accent:               #7C5FFF;
+  --accent-soft:          #9B7FFF;
+  --accent-tint:          rgba(124, 95, 255, 0.12);
+  --accent-tint-strong:   rgba(124, 95, 255, 0.28);
+  --accent-border:        rgba(124, 95, 255, 0.28);
+  --accent-glow:          rgba(124, 95, 255, 0.50);
+  --dl:                   #60A5FA;
+  --dl-tint:              rgba(96, 165, 250, 0.16);
+  --ul:                   #34D399;
+  --ul-tint:              rgba(52, 211, 153, 0.16);
+  --text:                 #FAFAF7;
+  --text-2:               #9A9A9A;
+  --text-3:               #6B6B6B;
+  --text-on-accent:       #FFFFFF;
+  --error:                #F87171;
+  --warn:                 #FBBF24;
+  --success:              #34D399;
+  --info:                 #60A5FA;
+  --grade-a:              #34D399;
+  --grade-b:              #86EFAC;
+  --grade-c:              #FBBF24;
+  --grade-d:              #F97316;
+  --grade-f:              #F87171;
+  --color-good-bg:        rgba(52, 211, 153, 0.10);
+  --color-good-border:    rgba(52, 211, 153, 0.22);
+  --color-warn-bg:        rgba(251, 191, 36, 0.08);
+  --color-warn-border:    rgba(251, 191, 36, 0.25);
+  --color-bad-bg:         rgba(248, 113, 113, 0.08);
+  --color-bad-border:     rgba(248, 113, 113, 0.25);
+  --card-shadow:          none;
 }
 
 [data-theme='light'] {
-  --bg: #F2F2F7;
-  --bg-elev: #FFFFFF;
-  --surface: #FFFFFF;
-  --surface-2: #F7F7FB;
-  --surface-3: #ECECF1;
-  --surface-translucent: rgba(255, 255, 255, 0.78);
-  --border: rgba(0, 0, 0, 0.08);
-  --border-strong: rgba(0, 0, 0, 0.14);
-  --hairline: rgba(0, 0, 0, 0.06);
-  --accent: #6C2BFF;
-  --accent-soft: #8B57FF;
-  --accent-tint: rgba(108, 43, 255, 0.10);
-  --accent-tint-strong: rgba(108, 43, 255, 0.18);
-  --dl: #007AFF;
-  --dl-tint: rgba(0, 122, 255, 0.12);
-  --ul: #34C759;
-  --ul-tint: rgba(52, 199, 89, 0.12);
-  --text: #0B0B0F;
-  --text-2: #545461;
-  --text-3: #8E8E93;
-  --text-on-accent: #FFFFFF;
-  --error: #FF3B30;
-  --warn: #FF9500;
-  --success: #34C759;
-  --info: #007AFF;
+  --bg:                   #FAFAF7;
+  --bg-elev:              #FFFFFF;
+  --surface:              #FFFFFF;
+  --surface-2:            #F3F2EE;
+  --surface-3:            #ECEAE4;
+  --surface-translucent:  rgba(255, 255, 255, 0.78);
+  --border:               #E8E6E0;
+  --border-strong:        #D8D5CC;
+  --border-subtle:        #F0EEE8;
+  --hairline:             rgba(0, 0, 0, 0.06);
+  --accent:               #5B3FE8;
+  --accent-soft:          #7C6BF0;
+  --accent-tint:          rgba(91, 63, 232, 0.08);
+  --accent-tint-strong:   rgba(91, 63, 232, 0.25);
+  --accent-border:        rgba(91, 63, 232, 0.25);
+  --accent-glow:          rgba(91, 63, 232, 0.50);
+  --dl:                   #2563EB;
+  --dl-tint:              rgba(37, 99, 235, 0.12);
+  --ul:                   #16A34A;
+  --ul-tint:              rgba(22, 163, 74, 0.12);
+  --text:                 #0F0F14;
+  --text-2:               #3A3A3A;
+  --text-3:               #6B6B6B;
+  --text-on-accent:       #FFFFFF;
+  --error:                #DC2626;
+  --warn:                 #D97706;
+  --success:              #16A34A;
+  --info:                 #2563EB;
+  --grade-a:              #16A34A;
+  --grade-b:              #4ADE80;
+  --grade-c:              #D97706;
+  --grade-d:              #EA580C;
+  --grade-f:              #DC2626;
+  --color-good-bg:        rgba(22, 163, 74, 0.08);
+  --color-good-border:    rgba(22, 163, 74, 0.20);
+  --color-warn-bg:        rgba(217, 119, 6, 0.08);
+  --color-warn-border:    rgba(217, 119, 6, 0.25);
+  --color-bad-bg:         rgba(220, 38, 38, 0.08);
+  --color-bad-border:     rgba(220, 38, 38, 0.25);
+  --card-shadow:          0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 * {
@@ -87,7 +118,6 @@
 *,
 *::before,
 *::after {
-  box-shadow: none !important;
   text-shadow: none !important;
 }
 
@@ -132,8 +162,8 @@ a {
 }
 
 .numeric {
-  font-family: var(--font-display);
-  font-feature-settings: 'tnum' 1;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .card {
@@ -141,6 +171,7 @@ a {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 18px;
+  box-shadow: var(--card-shadow);
 }
 
 .btn-primary {
@@ -181,7 +212,7 @@ a {
 }
 
 .btn-outline:hover:not(:disabled) {
-  background: rgba(108, 43, 255, 0.08);
+  background: var(--accent-tint);
 }
 
 .btn-text {

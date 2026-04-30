@@ -112,7 +112,7 @@
 }
 
 .lk-ba__preview-metrics {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-weight: 600;
   font-size: 14px;
   color: var(--text);
@@ -136,8 +136,8 @@
   line-height: 1.5;
 }
 
-.lk-ba__verdict--improved  { border-left-color: var(--ul);    background: rgba(34,197,94,0.08); }
-.lk-ba__verdict--worse     { border-left-color: var(--error);  background: rgba(255,69,58,0.08); }
+.lk-ba__verdict--improved  { border-left-color: var(--ul);    background: var(--color-good-bg); }
+.lk-ba__verdict--worse     { border-left-color: var(--error);  background: var(--color-bad-bg); }
 .lk-ba__verdict--no_change { border-left-color: var(--border); }
 
 /* Table */
@@ -179,17 +179,19 @@
 }
 
 .lk-ba__val {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-weight: 600;
   font-size: 13px;
   color: var(--text);
+  font-variant-numeric: tabular-nums;
 }
 
 .lk-ba__delta {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-weight: 700;
   font-size: 12px;
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .lk-ba__delta--good    { color: var(--ul); }

@@ -26,12 +26,14 @@ function qualityToChipVariant(quality: string): ChipVariant {
 }
 
 export function HistoryScreen({
-  theme: _theme,
+  theme,
   onToggleTheme: _onToggleTheme,
   unit = 'mbps',
   initialSelectedId,
   onBack,
 }: Props) {
+  const dlColor = theme === 'dark' ? '#60A5FA' : '#2563EB';
+  const ulColor = theme === 'dark' ? '#34D399' : '#16A34A';
   const [items, setItems] = useState<TestRecord[]>([]);
   const [selected, setSelected] = useState<TestRecord | null>(null);
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
@@ -163,17 +165,17 @@ export function HistoryScreen({
                     <AreaChart data={chartData} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
                       <defs>
                         <linearGradient id="hDl" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#3AB6FF" stopOpacity={0.25} />
-                          <stop offset="100%" stopColor="#3AB6FF" stopOpacity={0} />
+                          <stop offset="0%" stopColor={dlColor} stopOpacity={0.25} />
+                          <stop offset="100%" stopColor={dlColor} stopOpacity={0} />
                         </linearGradient>
                         <linearGradient id="hUl" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#22C55E" stopOpacity={0.25} />
-                          <stop offset="100%" stopColor="#22C55E" stopOpacity={0} />
+                          <stop offset="0%" stopColor={ulColor} stopOpacity={0.25} />
+                          <stop offset="100%" stopColor={ulColor} stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <YAxis hide domain={[0, 'auto']} />
-                      <Area type="monotone" dataKey="dl" stroke="#3AB6FF" strokeWidth={2} fill="url(#hDl)" isAnimationActive={false} dot={false} activeDot={false} />
-                      <Area type="monotone" dataKey="ul" stroke="#22C55E" strokeWidth={2} fill="url(#hUl)" isAnimationActive={false} dot={false} activeDot={false} />
+                      <Area type="monotone" dataKey="dl" stroke={dlColor} strokeWidth={2} fill="url(#hDl)" isAnimationActive={false} dot={false} activeDot={false} />
+                      <Area type="monotone" dataKey="ul" stroke={ulColor} strokeWidth={2} fill="url(#hUl)" isAnimationActive={false} dot={false} activeDot={false} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>

@@ -16,7 +16,7 @@
 }
 
 .lk-gauge__phase {
-  font-family: var(--font-body);
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -25,12 +25,12 @@
 }
 
 .lk-gauge__num {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 52px;
-  letter-spacing: -0.04em;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 72px;
+  letter-spacing: -0.02em;
   line-height: 1;
-  font-feature-settings: 'tnum' 1, 'ss01' 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .lk-gauge__unit {

@@ -92,11 +92,50 @@ function packetLossLabel(pct: number): { text: string; color: string } {
   return { text: 'Alto', color: 'var(--error)' };
 }
 
-function useCaseLabel(id: UseCaseId): string {
-  if (id === 'gaming')       return 'Jogos online';
-  if (id === 'streaming_4k') return 'Vídeo 4K';
-  if (id === 'home_office')  return 'Home Office';
-  return 'Videochamada';
+type GradeTier = 'a' | 'b' | 'c' | 'd' | 'f';
+
+function dlGrade(dl: number): GradeTier {
+  if (dl >= 100) return 'a';
+  if (dl >= 25)  return 'b';
+  if (dl >= 10)  return 'c';
+  if (dl >= 5)   return 'd';
+  return 'f';
+}
+
+function ulGrade(ul: number): GradeTier {
+  if (ul >= 50) return 'a';
+  if (ul >= 10) return 'b';
+  if (ul >= 5)  return 'c';
+  if (ul >= 1)  return 'd';
+  return 'f';
+}
+
+function latGrade(ms: number): GradeTier {
+  if (ms <= 20)  return 'a';
+  if (ms <= 50)  return 'b';
+  if (ms <= 100) return 'c';
+  if (ms <= 200) return 'd';
+  return 'f';
+}
+
+function jitterGrade(ms: number): GradeTier {
+  if (ms <= 5)  return 'a';
+  if (ms <= 15) return 'b';
+  if (ms <= 30) return 'c';
+  if (ms <= 50) return 'd';
+  return 'f';
+}
+
+function gradeLabel(g: GradeTier): string {
+  const map: Record<GradeTier, string> = { a: 'Excelente', b: 'Bom', c: 'Regular', d: 'Ruim', f: 'Crítico' };
+  return map[g];
+}
+
+function gradeStyle(g: GradeTier): { background: string; color: string } {
+  const bg = (g === 'a' || g === 'b') ? 'var(--color-good-bg)'
+           : g === 'c' ? 'var(--color-warn-bg)'
+           : 'var(--color-bad-bg)';
+  return { background: bg, color: `var(--grade-${g})` };
 }
 
 function useCaseIcon(id: UseCaseId): string {
@@ -108,14 +147,27 @@ function useCaseIcon(id: UseCaseId): string {
 
 function useCaseIconBg(status: string): string {
   if (status === 'good')  return 'var(--ul-tint)';
-  if (status === 'maybe') return 'rgba(245,166,35,0.12)';
-  return 'rgba(255,69,58,0.12)';
+  if (status === 'maybe') return 'var(--color-warn-bg)';
+  return 'var(--color-bad-bg)';
 }
 
 function useCaseIconColor(status: string): string {
   if (status === 'good')  return 'var(--ul)';
   if (status === 'maybe') return 'var(--warn)';
   return 'var(--error)';
+}
+
+function useCaseLabel(id: UseCaseId): string {
+  if (id === 'gaming')       return 'Jogos';
+  if (id === 'streaming_4k') return '4K';
+  if (id === 'home_office')  return 'Office';
+  return 'Vídeo';
+}
+
+function useCaseChipLabel(status: string): string {
+  if (status === 'good')  return 'Bom';
+  if (status === 'maybe') return 'Atenção';
+  return 'Ruim';
 }
 
 export function ResultScreen({
@@ -174,45 +226,14 @@ export function ResultScreen({
 
   const shortPhrase = resolveCopy(interpreted.copyKeys.shortPhraseKey);
 
-  const metricsItems = [
+  const detailItems = [
     {
-      icon: <Icon name="download" size={14} color="#fff" />,
-      iconBg: 'var(--dl)',
-      title: 'Download',
-      trailing: <span className="lk-result__metric">{formatMbps(result.dl, unit)} {unitLabel}</span>,
-    },
-    {
-      icon: <Icon name="upload" size={14} color="#fff" />,
-      iconBg: 'var(--ul)',
-      title: 'Upload',
-      trailing: <span className="lk-result__metric">{formatMbps(result.ul, unit)} {unitLabel}</span>,
-    },
-    {
-      icon: <Icon name="ping" size={14} color="var(--text-2)" />,
+      icon: <Icon name="loss" size={14} color="var(--text-2)" />,
       iconBg: 'var(--surface-3)',
-      title: 'Latência',
-      trailing: <span className="lk-result__metric-sub">{formatMs(result.latency)} ms</span>,
-    },
-    {
-      icon: <Icon name="jitter" size={14} color="var(--text-2)" />,
-      iconBg: 'var(--surface-3)',
-      title: 'Oscilação',
-      trailing: <span className="lk-result__metric-sub">{formatMs(result.jitter)} ms</span>,
-    },
-    {
-      icon: <Icon name="history" size={14} color="var(--text-2)" />,
-      iconBg: 'var(--surface-3)',
-      title: 'Histórico',
-      showChevron: true,
-      onClick: onShowHistory,
+      title: 'Perda de pacotes',
+      trailing: <span className="lk-result__metric-sub">{result.packetLoss?.toFixed(1) ?? '—'}%</span>,
     },
     ...(maisExpanded ? [
-      {
-        icon: <Icon name="loss" size={14} color="var(--text-2)" />,
-        iconBg: 'var(--surface-3)',
-        title: 'Perda de pacotes',
-        trailing: <span className="lk-result__metric-sub">{result.packetLoss.toFixed(1)}%</span>,
-      },
       ...(server?.isp && server.isp !== '—' ? [{
         icon: <Icon name="signal" size={14} color="var(--text-2)" />,
         iconBg: 'var(--surface-3)',
@@ -236,7 +257,6 @@ export function ResultScreen({
 
   return (
     <div className="lk-result fade-in">
-      {/* Header */}
       <div className="lk-result__head">
         <button className="lk-result__back" onClick={onShowHistory}>‹ Início</button>
         <button className="lk-result__share-btn" onClick={handleShare} aria-label="Compartilhar">
@@ -245,34 +265,87 @@ export function ResultScreen({
       </div>
 
       <div className="lk-result__scroll">
-        {/* Hero */}
+        {/* Quality chip */}
         <div className="lk-result__hero">
           <Chip variant={qualityToChipVariant(interpreted.quality)}>
             {qualityBadgeLabel(interpreted.quality)}
           </Chip>
-          <div className="lk-result__title">{shortPhrase}</div>
         </div>
 
-        {/* Pronto para — IOSList com ícones semânticos */}
+        {/* Metric grid 2×2 + verdict */}
+        <div className="lk-result__metrics-block">
+          <div className="lk-result__metric-grid">
+            <div className="lk-result__metric-cell">
+              <div className="lk-result__metric-lbl">Download</div>
+              <div className="lk-result__metric-val--lg" style={{ color: 'var(--dl)' }}>
+                {formatMbps(result.dl, unit)}
+              </div>
+              <span className="lk-result__metric-unit">{unitLabel}</span>
+              <div className="lk-result__grade-badge" style={gradeStyle(dlGrade(result.dl))}>
+                {dlGrade(result.dl).toUpperCase()} · {gradeLabel(dlGrade(result.dl))}
+              </div>
+            </div>
+            <div className="lk-result__metric-cell">
+              <div className="lk-result__metric-lbl">Upload</div>
+              <div className="lk-result__metric-val--lg" style={{ color: 'var(--ul)' }}>
+                {formatMbps(result.ul, unit)}
+              </div>
+              <span className="lk-result__metric-unit">{unitLabel}</span>
+              <div className="lk-result__grade-badge" style={gradeStyle(ulGrade(result.ul))}>
+                {ulGrade(result.ul).toUpperCase()} · {gradeLabel(ulGrade(result.ul))}
+              </div>
+            </div>
+            <div className="lk-result__metric-cell">
+              <div className="lk-result__metric-lbl">Resposta</div>
+              <div className="lk-result__metric-val--md">
+                {formatMs(result.latency)}<span className="lk-result__metric-unit--inline"> ms</span>
+              </div>
+              <div className="lk-result__grade-badge" style={gradeStyle(latGrade(result.latency))}>
+                {latGrade(result.latency).toUpperCase()} · {gradeLabel(latGrade(result.latency))}
+              </div>
+            </div>
+            <div className="lk-result__metric-cell">
+              <div className="lk-result__metric-lbl">Oscilação</div>
+              <div className="lk-result__metric-val--md">
+                {formatMs(result.jitter)}<span className="lk-result__metric-unit--inline"> ms</span>
+              </div>
+              <div className="lk-result__grade-badge" style={gradeStyle(jitterGrade(result.jitter))}>
+                {jitterGrade(result.jitter).toUpperCase()} · {gradeLabel(jitterGrade(result.jitter))}
+              </div>
+            </div>
+          </div>
+          <div className="lk-result__verdict">{shortPhrase}</div>
+        </div>
+
+        {/* Use cases row */}
         {interpreted.useCases.length > 0 && (
-          <div className="lk-result__uses">
-            <p className="lk-result__uses-label">Pronto para</p>
-            <IOSList
-              items={interpreted.useCases.map(({ id, status }) => ({
-                icon: <Icon name={useCaseIcon(id)} size={14} color={useCaseIconColor(status)} />,
-                iconBg: useCaseIconBg(status),
-                title: useCaseLabel(id),
-              }))}
-            />
+          <div className="lk-result__use-row">
+            {interpreted.useCases.map(({ id, status }) => (
+              <div key={id} className="lk-result__use-item">
+                <div
+                  className="lk-result__use-icon"
+                  style={{ background: useCaseIconBg(status), color: useCaseIconColor(status) }}
+                >
+                  <Icon name={useCaseIcon(id)} size={18} />
+                </div>
+                <span className="lk-result__use-lbl">{useCaseLabel(id)}</span>
+                <span
+                  className="lk-result__use-chip"
+                  style={{ background: useCaseIconBg(status), color: useCaseIconColor(status) }}
+                >
+                  {useCaseChipLabel(status)}
+                </span>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Métricas */}
-        <div className="lk-result__metrics">
-          <IOSList items={metricsItems} />
+        {/* Secondary details */}
+        <div className="lk-result__details">
+          <IOSList items={detailItems} />
         </div>
 
-        {/* Seção Avançado — visível apenas quando mode === 'advanced' */}
+        {/* Advanced section — visível apenas no modo avançado */}
         {result.mode === 'advanced' && (result.bufferbloatGrade || result.dlP25 != null) && (
           <div className="lk-result__advanced">
             <p className="lk-result__advanced-label">Diagnóstico avançado</p>
@@ -281,7 +354,7 @@ export function ResultScreen({
                 ...(result.bufferbloatGrade ? [{
                   icon: <Icon name="bolt" size={14} color={bufferbloatGradeColor(result.bufferbloatGrade)} />,
                   iconBg: 'var(--surface-3)',
-                  title: 'Bufferbloat',
+                  title: 'Latência sob carga',
                   subtitle: bufferbloatGradeLabel(result.bufferbloatGrade),
                   trailing: (
                     <span
@@ -295,7 +368,7 @@ export function ResultScreen({
                 ...(result.latencyLoaded != null ? [{
                   icon: <Icon name="ping" size={14} color="var(--text-2)" />,
                   iconBg: 'var(--surface-3)',
-                  title: 'Latência sob carga',
+                  title: 'Latência carregada',
                   trailing: (
                     <span className="lk-result__metric-sub">
                       {formatMs(result.latencyLoaded)} ms
@@ -310,7 +383,7 @@ export function ResultScreen({
                 ...(result.jitterLoaded != null ? [{
                   icon: <Icon name="jitter" size={14} color="var(--text-2)" />,
                   iconBg: 'var(--surface-3)',
-                  title: 'Oscilação sob carga',
+                  title: 'Oscilação carregada',
                   trailing: <span className="lk-result__metric-sub">{formatMs(result.jitterLoaded)} ms</span>,
                 }] : []),
                 ...(result.dlP25 != null && result.dlP75 != null ? [{
@@ -342,13 +415,12 @@ export function ResultScreen({
           </div>
         )}
 
-        {/* Seção DNS — visível apenas quando há resultado DNS */}
+        {/* DNS section */}
         {result.dns && result.dns.servers.length > 0 && (
           <div className="lk-result__advanced">
             <p className="lk-result__advanced-label">DNS</p>
             <IOSList
               items={[
-                // Vencedor em destaque
                 {
                   icon: <Icon name="bolt" size={14} color="var(--ul)" />,
                   iconBg: 'var(--ul-tint)',
@@ -360,7 +432,6 @@ export function ResultScreen({
                     </span>
                   ),
                 },
-                // Demais servidores
                 ...result.dns.servers
                   .filter(s => s.id !== result.dns!.winner.id && s.samples > 0)
                   .sort((a, b) => a.p50 - b.p50)
@@ -375,7 +446,6 @@ export function ResultScreen({
                       </span>
                     ),
                   })),
-                // Botão "Como trocar"
                 ...(onShowDNSGuide ? [{
                   icon: <Icon name="cog" size={14} color="#fff" />,
                   iconBg: 'var(--accent)',
@@ -392,7 +462,7 @@ export function ResultScreen({
           </div>
         )}
 
-        {/* Ferramentas — IOSList */}
+        {/* Ferramentas */}
         <div className="lk-result__tools">
           <p className="lk-result__tools-label">Explorar</p>
           <IOSList
@@ -457,7 +527,6 @@ export function ResultScreen({
           />
         </div>
 
-        {/* Footer de ações primárias */}
         <div className="lk-result__footer">
           <button className="btn-primary lk-result__retry" onClick={onRetry}>
             <Icon name="refresh" size={16} />Testar novamente

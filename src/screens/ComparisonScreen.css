@@ -112,7 +112,7 @@
 }
 
 .lk-cmp__preview-metrics {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-weight: 600;
   font-size: 14px;
   color: var(--text);
@@ -136,9 +136,9 @@
   line-height: 1.5;
 }
 
-.lk-cmp__verdict--coverage_issue { border-left-color: var(--warn);    background: rgba(245,166,35,0.08); }
-.lk-cmp__verdict--both_bad       { border-left-color: var(--error);   background: rgba(255,69,58,0.08); }
-.lk-cmp__verdict--both_good      { border-left-color: var(--ul);      background: rgba(34,197,94,0.08); }
+.lk-cmp__verdict--coverage_issue { border-left-color: var(--warn);  background: var(--color-warn-bg); }
+.lk-cmp__verdict--both_bad       { border-left-color: var(--error); background: var(--color-bad-bg); }
+.lk-cmp__verdict--both_good      { border-left-color: var(--ul);    background: var(--color-good-bg); }
 .lk-cmp__verdict--other          { border-left-color: var(--border); }
 
 /* Table */
@@ -184,10 +184,11 @@
 }
 
 .lk-cmp__val {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-weight: 600;
   font-size: 13px;
   color: var(--text);
+  font-variant-numeric: tabular-nums;
 }
 
 .lk-cmp__val--bad  { color: var(--error); }
@@ -195,10 +196,11 @@
 .lk-cmp__val--near { color: var(--accent); }
 
 .lk-cmp__drop {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-weight: 700;
   font-size: 13px;
   color: var(--error);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Actions */

@@ -11,17 +11,17 @@
 }
 
 .lk-chip--good {
-  background: var(--ul-tint);
-  color: var(--ul);
+  background: var(--color-good-bg);
+  color: var(--grade-a);
 }
 
 .lk-chip--maybe {
-  background: rgba(245, 166, 35, 0.16);
+  background: var(--color-warn-bg);
   color: var(--warn);
 }
 
 .lk-chip--bad {
-  background: rgba(255, 69, 58, 0.16);
+  background: var(--color-bad-bg);
   color: var(--error);
 }
 
