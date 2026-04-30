@@ -15,19 +15,24 @@ function detectDevice(): DeviceInfo {
   else if (w <= 1024) deviceType = 'tablet';
 
   const conn = (navigator as Navigator & { connection?: NetworkInformation }).connection;
-  let connectionType: ConnectionType;
   const t = conn?.type;
   const eff = conn?.effectiveType;
-  // connection.type é o tipo físico real (wifi/cellular/ethernet) e tem prioridade.
-  // effectiveType só indica velocidade estimada e pode reportar '4g' em ethernet rápida.
+
+  let connectionType: ConnectionType;
+  // connection.type dá o tipo físico real quando disponível (Chrome Android/Windows/Mac).
   if (t === 'wifi') connectionType = 'wifi';
   else if (t === 'cellular') connectionType = 'mobile';
-  else if (t === 'ethernet' || t === 'wimax' || t === 'other') connectionType = 'cable';
+  else if (t === 'ethernet' || t === 'wimax') connectionType = 'cable';
+  // effectiveType lento indica quase certamente rede celular.
   else if (!t && (eff === '2g' || eff === '3g' || eff === 'slow-2g')) connectionType = 'mobile';
-  // Sem API de conexão (iOS Safari, Firefox): assume Wi-Fi pois a maioria dos
-  // usuários domésticos está em Wi-Fi mesmo em dispositivos móveis.
-  else if (deviceType === 'mobile') connectionType = 'wifi';
-  else connectionType = 'cable';
+  else {
+    // Sem sinal confiável da API (Firefox, Safari, Chrome com type='unknown').
+    // Usa o sistema operacional real — não o tamanho da janela — para o fallback:
+    // SO mobile (iOS/Android) → provavelmente Wi-Fi doméstico.
+    // SO desktop (Windows/Mac/Linux) → provavelmente cabo.
+    const isMobileOS = /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
+    connectionType = isMobileOS ? 'wifi' : 'cable';
+  }
 
   return { deviceType, connectionType };
 }
