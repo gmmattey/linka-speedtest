@@ -3,206 +3,236 @@
   flex-direction: column;
   min-height: 100dvh;
   background: var(--bg);
+  padding: 0 16px 24px;
 }
 
-.lk-start__main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding-bottom: 120px; /* space for sheet peek */
-}
+/* ── Topbar ──────────────────────────────────────── */
 
-.lk-start__error {
-  padding: 12px 16px;
-  margin: var(--space-md) var(--space-lg) 0;
-  background: rgba(255, 77, 79, 0.08);
-  border-left: 3px solid var(--error);
-  border-radius: var(--radius-button);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 13px;
+.lk-start__topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-md);
+  padding: 12px 2px 8px;
 }
 
-/* ── Hero: círculo centralizado ───────────────────── */
+.lk-start__logo {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
 
-.lk-start__hero {
-  flex: 1;
+.lk-start__topbar-btn {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  transition: background var(--t-fast);
 }
 
-/* ── Circular CTA ─────────────────────────────────── */
+.lk-start__topbar-btn:hover {
+  background: var(--surface-3);
+}
 
-.lk-start__cta {
+/* ── Alert ───────────────────────────────────────── */
+
+.lk-start__alert {
+  margin: 4px 0 8px;
+  padding: 10px 14px;
+  background: rgba(255, 69, 58, 0.08);
+  border-left: 3px solid var(--error);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* ── Body: orb + info ────────────────────────────── */
+
+.lk-start__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* ── Orb pulsante ────────────────────────────────── */
+
+.lk-start__orb {
   all: unset;
   box-sizing: border-box;
   position: relative;
-  width: 196px;
-  height: 196px;
+  width: 200px;
+  height: 200px;
   border-radius: 50%;
-  border: 2px solid var(--accent);
   background: transparent;
+  border: 1.5px solid var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   touch-action: manipulation;
-  transition: opacity 150ms, transform 100ms;
+  transition: transform var(--t-fast);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--accent);
+  letter-spacing: -0.01em;
 }
 
-.lk-start__cta:disabled {
+.lk-start__orb::before,
+.lk-start__orb::after {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  animation: lkOrbPulse 2.4s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+  pointer-events: none;
+}
+
+.lk-start__orb::after {
+  animation-delay: 1.2s;
+}
+
+.lk-start__orb:hover {
+  transform: scale(1.02);
+}
+
+.lk-start__orb:active {
+  transform: scale(0.97);
+}
+
+.lk-start__orb--disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
 
-.lk-start__cta--ready {
-  animation: lkCtaBorder 2.5s ease-in-out infinite;
+.lk-start__orb--disabled::before,
+.lk-start__orb--disabled::after {
+  animation: none;
 }
 
-.lk-start__cta--ready::after {
-  content: '';
-  position: absolute;
-  inset: -14px;
-  border-radius: 50%;
-  border: 1.5px solid var(--accent);
-  animation: lkCtaRing 2.5s ease-in-out infinite;
-  pointer-events: none;
+@keyframes lkOrbPulse {
+  0%   { transform: scale(1);    opacity: 0.6; }
+  70%  { transform: scale(1.22); opacity: 0; }
+  100% { transform: scale(1.22); opacity: 0; }
 }
 
-.lk-start__cta--ready:active {
-  transform: scale(0.96);
+.lk-start__orb-label {
+  position: relative;
+  z-index: 1;
 }
 
-@keyframes lkCtaBorder {
-  0%, 100% { border-color: var(--accent); }
-  50%       { border-color: rgba(108, 43, 255, 0.4); }
-}
+/* ── Info text ───────────────────────────────────── */
 
-@keyframes lkCtaRing {
-  0%   { opacity: 0.5; transform: scale(0.9); }
-  60%  { opacity: 0.1; transform: scale(1.08); }
-  100% { opacity: 0;   transform: scale(1.14); }
-}
-
-.lk-start__cta-label {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 22px;
-  color: var(--accent);
-  letter-spacing: -0.3px;
-}
-
-/* ── Controles inferiores ─────────────────────────── */
-
-.lk-start__controls {
+.lk-start__info {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--space-lg);
-  padding: 0 var(--space-lg) var(--space-xl);
-}
-
-/* ── Toggle estilo iOS ────────────────────────────── */
-
-.lk-start__toggle-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.lk-start__toggle-label {
-  font-family: var(--font-body);
+  gap: 6px;
+  color: var(--text-2);
   font-size: 13px;
-  color: var(--text-3);
-  cursor: pointer;
-  transition: color 200ms;
-  user-select: none;
+  letter-spacing: -0.005em;
+  line-height: 1.45;
 }
 
-.lk-start__toggle-label--active {
-  color: var(--text);
-  font-weight: 500;
+/* ── iOS-list de contexto ────────────────────────── */
+
+.lk-start__list {
+  margin-bottom: 14px;
 }
 
-.lk-start__toggle-switch {
-  all: unset;
-  box-sizing: border-box;
-  position: relative;
-  width: 48px;
-  height: 28px;
-  border-radius: 14px;
-  background: var(--border);
-  cursor: pointer;
-  transition: background 250ms;
-  flex-shrink: 0;
-  touch-action: manipulation;
+/* ── Último resultado ────────────────────────────── */
+
+.lk-start__last {
+  text-align: center;
+  margin-bottom: 8px;
 }
 
-.lk-start__toggle-switch::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: #ffffff;
-  transition: transform 250ms cubic-bezier(0.34, 1.4, 0, 1);
-}
-
-.lk-start__toggle-switch--on {
-  background: var(--accent);
-}
-
-.lk-start__toggle-switch--on::after {
-  transform: translateX(20px);
-}
-
-/* ── Links inferiores ─────────────────────────────── */
-
-.lk-start__compare-link {
-  font-size: 13px;
-  color: var(--text-3);
-}
-
-.lk-start__compare-link:not(:disabled):hover {
-  color: var(--accent);
-}
-
-.lk-start__compare-link:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.lk-start__last-link {
+.lk-start__last-btn {
   font-family: var(--font-display);
   font-size: 13px;
   font-weight: 600;
   color: var(--text-2);
 }
 
-.lk-start__last-link:hover {
+.lk-start__last-btn:hover {
   color: var(--accent);
 }
 
-.lk-start__history-link {
-  font-size: 13px;
-  color: var(--text-3);
+/* ── Links secundários ───────────────────────────── */
+
+.lk-start__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+  margin-bottom: 16px;
 }
 
-.lk-start__data-hint {
-  margin: 0;
-  font-family: var(--font-body);
+.lk-start__link {
   font-size: 12px;
   color: var(--text-3);
-  text-align: center;
 }
 
-.lk-start__gamer-hint {
+.lk-start__link:hover {
   color: var(--accent);
+}
+
+.lk-start__link:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Tema toggle ─────────────────────────────────── */
+
+.lk-start__theme {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.lk-start__theme-toggle {
+  display: inline-flex;
+  padding: 2px;
+  background: var(--surface-2);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+}
+
+.lk-start__theme-btn {
+  padding: 5px 14px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-2);
+  border-radius: var(--radius-pill);
+  transition: all var(--t-fast);
+}
+
+.lk-start__theme-btn--active {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ── Dica de rodapé ──────────────────────────────── */
+
+.lk-start__hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-3);
+  opacity: 0.6;
 }

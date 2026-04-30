@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { Header } from '../components/Header';
 import type { SpeedTestResult } from '../types';
 import { calculateComparison } from '../utils/comparison';
 import { formatMbps, formatMs } from '../utils/format';
@@ -21,8 +20,16 @@ interface Props {
 }
 
 export function ComparisonScreen({
-  theme, onToggleTheme, step, nearResult, farResult,
-  onStartNear, onStartFar, onBack, onRetryNear, unit = 'mbps',
+  theme: _theme,
+  onToggleTheme: _onToggleTheme,
+  step,
+  nearResult,
+  farResult,
+  onStartNear,
+  onStartFar,
+  onBack,
+  onRetryNear,
+  unit = 'mbps',
 }: Props) {
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
   const comparison = useMemo(
@@ -32,15 +39,15 @@ export function ComparisonScreen({
 
   return (
     <div className="lk-cmp">
-      <Header theme={theme} onToggleTheme={onToggleTheme} />
+      <div className="lk-cmp__head">
+        <button className="lk-cmp__back" onClick={onBack}>‹ Início</button>
+        <span className="lk-cmp__head-label">Comparar locais</span>
+      </div>
 
-      <main className="lk-cmp__main fade-in">
-        <div className="lk-cmp__header">
-          <button className="btn-text lk-cmp__back" onClick={onBack}>← Voltar</button>
-          <h2 className="lk-cmp__title">Comparar locais</h2>
-          <p className="lk-cmp__subtitle">
-            Compare a conexão perto do roteador com o local onde você sente problema.
-          </p>
+      <div className="lk-cmp__scroll fade-in">
+        <div className="lk-cmp__hero">
+          <div className="lk-cmp__title">Compare sua cobertura</div>
+          <p className="lk-cmp__sub">Meça perto e longe do roteador para ver onde o sinal perde força.</p>
         </div>
 
         {step === 'near' && (
@@ -61,9 +68,9 @@ export function ComparisonScreen({
             <p className="lk-cmp__step-instruction">
               Vá para o local onde a internet fica ruim e inicie o teste.
             </p>
-            <div className="lk-cmp__near-preview">
-              <span className="lk-cmp__near-label">Perto do roteador</span>
-              <span className="lk-cmp__near-metrics">
+            <div className="lk-cmp__preview">
+              <span className="lk-cmp__preview-label">Perto do roteador</span>
+              <span className="lk-cmp__preview-metrics">
                 ↓ {formatMbps(nearResult.dl, unit)} · ↑ {formatMbps(nearResult.ul, unit)} {unitLabel} · {formatMs(nearResult.latency)} ms
               </span>
             </div>
@@ -79,7 +86,7 @@ export function ComparisonScreen({
         )}
 
         {step === 'done' && nearResult && farResult && comparison && (
-          <div className="lk-cmp__result fade-in">
+          <div className="lk-cmp__result">
             <div className={`lk-cmp__verdict lk-cmp__verdict--${comparison.diagnosis}`}>
               {comparison.message}
             </div>
@@ -87,7 +94,7 @@ export function ComparisonScreen({
             <div className="lk-cmp__table">
               <div className="lk-cmp__table-header">
                 <span />
-                <span>Perto do roteador</span>
+                <span>Perto</span>
                 <span>Longe</span>
               </div>
               <div className="lk-cmp__table-row">
@@ -119,7 +126,7 @@ export function ComparisonScreen({
               </div>
               {comparison.downloadDropPercent > 1 && (
                 <div className="lk-cmp__table-row lk-cmp__table-row--drop">
-                  <span>Queda download</span>
+                  <span>Queda DL</span>
                   <span />
                   <span className="lk-cmp__drop">
                     -{comparison.downloadDropPercent.toFixed(0)}%
@@ -129,8 +136,8 @@ export function ComparisonScreen({
             </div>
 
             <div className="lk-cmp__actions">
-              <button className="btn-primary" onClick={onRetryNear}>
-                Fazer nova comparação
+              <button className="btn-primary lk-cmp__actions-primary" onClick={onRetryNear}>
+                Nova comparação
               </button>
               <button className="btn-text" onClick={onBack}>
                 Voltar ao início
@@ -138,7 +145,7 @@ export function ComparisonScreen({
             </div>
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

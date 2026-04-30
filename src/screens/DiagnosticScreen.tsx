@@ -1,0 +1,168 @@
+import type { ConnectionType, SpeedTestResult } from '../types';
+import { Icon } from '../components/icons';
+import './DiagnosticScreen.css';
+
+interface Props {
+  result: SpeedTestResult;
+  connectionType: ConnectionType | null;
+  onBack: () => void;
+}
+
+type Tone = 'good' | 'maybe' | 'bad';
+
+interface DiagCard {
+  icon: string;
+  title: string;
+  verdict: string;
+  note: string;
+  tone: Tone;
+}
+
+function buildCards(result: SpeedTestResult, connectionType: ConnectionType | null): DiagCard[] {
+  const { dl, ul, latency, jitter, packetLoss } = result;
+
+  const internetTone: Tone = dl >= 25 ? 'good' : dl >= 5 ? 'maybe' : 'bad';
+  const responseTone: Tone = latency <= 40 ? 'good' : latency <= 100 ? 'maybe' : 'bad';
+  const jitterTone: Tone = jitter <= 5 ? 'good' : jitter <= 20 ? 'maybe' : 'bad';
+  const lossTone: Tone = packetLoss === 0 ? 'good' : packetLoss <= 1 ? 'maybe' : 'bad';
+  const wifiTone: Tone = connectionType !== 'wifi' ? 'good' : latency <= 30 ? 'good' : 'maybe';
+
+  const goodUseCases = [dl >= 25, ul >= 5, latency <= 80, jitter <= 10, packetLoss <= 0.5].filter(Boolean).length;
+  const useTone: Tone = goodUseCases >= 4 ? 'good' : goodUseCases >= 2 ? 'maybe' : 'bad';
+
+  const verdict = (tone: Tone, g: string, m: string, b: string) => tone === 'good' ? g : tone === 'maybe' ? m : b;
+
+  return [
+    {
+      icon: 'bolt',
+      title: 'Internet',
+      verdict: verdict(internetTone, 'Aprovado', 'Atenção', 'Falha'),
+      note: internetTone === 'good'
+        ? 'Velocidade compatível com uso diário.'
+        : internetTone === 'maybe'
+          ? 'Velocidade abaixo do recomendado para 4K e multi-dispositivos.'
+          : 'Velocidade muito baixa — impacta a maioria dos usos.',
+      tone: internetTone,
+    },
+    {
+      icon: 'wifi',
+      title: 'Wi-Fi',
+      verdict: verdict(wifiTone, 'Aprovado', 'Atenção', 'Falha'),
+      note: connectionType !== 'wifi'
+        ? 'Conexão cabeada — sem dependência de sinal Wi-Fi.'
+        : wifiTone === 'good'
+          ? 'Sinal estável. Latência dentro do esperado para Wi-Fi.'
+          : 'Latência elevada pode indicar sinal fraco ou congestionamento.',
+      tone: wifiTone,
+    },
+    {
+      icon: 'ping',
+      title: 'Resposta',
+      verdict: verdict(responseTone, 'Aprovado', 'Atenção', 'Falha'),
+      note: responseTone === 'good'
+        ? `${latency} ms — excelente para jogos e chamadas.`
+        : responseTone === 'maybe'
+          ? `${latency} ms — aceitável, mas pode afetar jogos competitivos.`
+          : `${latency} ms — latência alta compromete chamadas e jogos.`,
+      tone: responseTone,
+    },
+    {
+      icon: 'jitter',
+      title: 'Oscilação',
+      verdict: verdict(jitterTone, 'Aprovado', 'Atenção', 'Falha'),
+      note: jitterTone === 'good'
+        ? `Jitter ${jitter.toFixed(1)} ms — variação dentro do esperado.`
+        : jitterTone === 'maybe'
+          ? `Jitter ${jitter.toFixed(1)} ms — oscilação perceptível em chamadas.`
+          : `Jitter ${jitter.toFixed(1)} ms — conexão instável.`,
+      tone: jitterTone,
+    },
+    {
+      icon: 'loss',
+      title: 'Falhas',
+      verdict: verdict(lossTone, 'Aprovado', 'Atenção', 'Falha'),
+      note: lossTone === 'good'
+        ? 'Sem perda de pacotes detectada.'
+        : lossTone === 'maybe'
+          ? `${packetLoss.toFixed(1)}% de perda — pode causar engasgos.`
+          : `${packetLoss.toFixed(1)}% de perda — conexão com problemas sérios.`,
+      tone: lossTone,
+    },
+    {
+      icon: 'shield',
+      title: 'Qualidade por uso',
+      verdict: `${goodUseCases} de 5`,
+      note: useTone === 'good'
+        ? 'Conexão adequada para praticamente todos os usos.'
+        : useTone === 'maybe'
+          ? 'Alguns usos intensivos podem oscilar.'
+          : 'Conexão limitada — usos básicos apenas.',
+      tone: useTone,
+    },
+  ];
+}
+
+const TONE_COLOR: Record<Tone, string> = {
+  good:  'var(--success)',
+  maybe: 'var(--warn)',
+  bad:   'var(--error)',
+};
+
+const TONE_BG: Record<Tone, string> = {
+  good:  'var(--ul-tint)',
+  maybe: 'rgba(245,166,35,0.16)',
+  bad:   'rgba(255,69,58,0.16)',
+};
+
+export function DiagnosticScreen({ result, connectionType, onBack }: Props) {
+  const cards = buildCards(result, connectionType);
+  const approvedCount = cards.filter((c) => c.tone === 'good').length;
+
+  return (
+    <div className="lk-diag fade-in">
+      <div className="lk-diag__head">
+        <button className="lk-diag__back" onClick={onBack}>‹ Início</button>
+        <span className="lk-diag__head-label">Diagnóstico</span>
+      </div>
+
+      <div className="lk-diag__scroll">
+        <div className="lk-diag__hero">
+          <div className="lk-diag__hero-title">
+            {approvedCount} de 6 áreas{' '}
+            <span style={{ color: approvedCount >= 5 ? 'var(--success)' : 'var(--warn)' }}>OK</span>
+          </div>
+          <p className="lk-diag__hero-sub">
+            {approvedCount >= 5
+              ? 'Sua conexão está saudável.'
+              : approvedCount >= 3
+                ? 'Alguns pontos de atenção encontrados.'
+                : 'Sua conexão apresenta problemas significativos.'}
+          </p>
+        </div>
+
+        <div className="lk-diag__grid">
+          {cards.map((card) => (
+            <div key={card.title} className="lk-diag__card">
+              <div className="lk-diag__card-top">
+                <div
+                  className="lk-diag__card-icon"
+                  style={{ background: TONE_BG[card.tone], color: TONE_COLOR[card.tone] }}
+                >
+                  <Icon name={card.icon} size={14} />
+                </div>
+                <span
+                  className="lk-diag__card-badge"
+                  style={{ background: TONE_BG[card.tone], color: TONE_COLOR[card.tone] }}
+                >
+                  {card.verdict}
+                </span>
+              </div>
+              <div className="lk-diag__card-title">{card.title}</div>
+              <div className="lk-diag__card-note">{card.note}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -560,45 +560,87 @@ Props: `open, onToggle, onClose, device, server, loading, settings, onUpdateSett
 - Subcomponente interno `Seg<T>` para controles segmentados
 - **Seção de privacidade:** toggle "IP ao compartilhar" (`['hide','show']`) que altera `settings.hideIpOnShare`. Nota informativa abaixo: "Seus testes ficam salvos neste aparelho. Você decide quando exportar ou compartilhar."
 
-### 5.4 `Gauge`
+### 5.4 `Gauge` (redesenhado)
 
-Props: `instantMbps, unit?`
+Props: `value: number (0–1), phase: string, num: string, unit: string, color: string, size?: number`
 
-Sem SVG. Apenas `<div>` com:
-- `.lk-gauge__value` — número (96px, font-display, peso 700)
-- `.lk-gauge__unit` — unidade (18px)
+SVG com dois `<circle>`: track (`--surface-3`) e fill (cor dinâmica) com `strokeDasharray={2πr}`, `strokeDashoffset = 2πr × (1 – value)`, `strokeLinecap="round"`. Overlay central absolutamente posicionado exibe:
+- `.lk-gauge__phase` — label da fase (10px, uppercase, `--accent`)
+- `.lk-gauge__num` — número hero (52px, Space Grotesk 700, `tnum`)
+- `.lk-gauge__unit` — unidade (12px, `--text-3`)
 
-Recebe `instantMbps` já suavizado por EMA via `useSpeedTest`. Não tem mais a label de fase (movida para `phraseFor()` na RunningScreen) nem o aro de progresso.
+Usado em `RunningScreen` com helpers que calculam `gaugeProgress(phase)`, `gaugePhaseLabel(phase)` e `gaugeColor(phase)`.
 
-### 5.5 `LiveChart`
+### 5.5 `IOSList` (novo)
+
+```tsx
+interface IOSListItem {
+  icon?: ReactNode;       // conteúdo do quadrado 28×28
+  iconBg?: string;        // cor de fundo do ícone (CSS var ou hex)
+  title: string;
+  subtitle?: string;
+  trailing?: ReactNode;   // valor ou chip à direita
+  showChevron?: boolean;
+  onClick?: () => void;
+}
+```
+
+Lista estilo iOS Settings. Fundo `--surface`, borda `--border`, `border-radius: --radius`, `overflow: hidden`. Cada row: flex, `padding: 13px 14px`, separada por `border-bottom: 1px solid var(--hairline)`. Ícone: `28×28px`, `border-radius: 7px`. Última row sem border-bottom.
+
+Usada em: ResultScreen (métricas DL/UL/lat), GamerScreen (avaliação por jogo), StartScreen (informações do servidor).
+
+### 5.6 `Chip` (novo)
+
+```tsx
+type ChipVariant = 'good' | 'maybe' | 'bad' | 'accent' | 'neutral';
+interface ChipProps { variant: ChipVariant; children: ReactNode; }
+```
+
+Badge/pílula com 5 variantes semânticas. Estilos:
+
+| Variante | Fundo | Texto |
+|---|---|---|
+| `good` | `--ul-tint` | `--ul` |
+| `maybe` | `rgba(245,166,35,0.16)` | `--warn` |
+| `bad` | `rgba(255,69,58,0.16)` | `--error` |
+| `accent` | `--accent-tint` | `--accent` |
+| `neutral` | `--surface-2` + borda `--border` | `--text-2` |
+
+Usada em: ResultScreen (badge de qualidade, chips de casos de uso), GamerScreen (badge "Otimizado p/ jogos").
+
+### 5.7 `LiveChart`
 
 Não consumido por nenhuma tela atualmente. Mantido para uso futuro.
 
-### 5.6 `icons.tsx` — Biblioteca de ícones
+### 5.8 `icons.tsx` — Biblioteca de ícones
 
-Todos os ícones são SVGs inline stroke-based. Aceitam prop `size?: number` (default 24).
+Todos os ícones são SVGs inline. Componente primitivo `<Icon name={...} size={...} color={...} />` que consulta o mapa `ICON_PATHS`. Os exports nomeados legados (`DeviceIcon`, `ConnectionIcon`, etc.) são preservados.
 
-| Componente | Uso |
+Ícones disponíveis no mapa `ICON_PATHS`:
+
+| Nome | Uso |
 |---|---|
-| `IconDeviceMobile` | Celular |
-| `IconDeviceTablet` | Tablet |
-| `IconDeviceDesktop` | PC/Desktop |
-| `DeviceIcon(kind)` | Wrapper que escolhe pelo DeviceType |
-| `IconWifi` | Conexão Wi-Fi |
-| `IconCellular` | Conexão móvel |
-| `IconCable` | Conexão cabo/ethernet |
-| `ConnectionIcon(kind)` | Wrapper pelo ConnectionType |
-| `IconServer` | Servidor (PathRow) |
-| `IconBuilding` | Empresa/ISP |
-| `IconGames` | Games online (ResultScreen use cases) |
-| `IconStream` | Streaming (ResultScreen use cases) |
-| `IconWork` | Home Office (ResultScreen use cases) |
-| `IconVideoCall` | Videochamada (ResultScreen use cases) |
-| `IconPdf` | FAB PDF |
-| `IconShare` | Compartilhar |
-| `IconWhatsApp` | WhatsApp (fill-based, não stroke) — botão de compartilhar na ResultScreen |
+| `download` / `upload` | Indicadores de velocidade |
+| `ping` / `jitter` / `loss` | Métricas de latência |
+| `wifi` / `router` / `home` | Wi-Fi e roteador |
+| `history` | Histórico |
+| `game` | Modo Gamer |
+| `bolt` | Internet / velocidade |
+| `shield` | Qualidade de uso |
+| `bulb` | Recomendações |
+| `cog` | Configurações |
+| `refresh` | Refazer teste |
+| `share` | Compartilhar |
+| `check` | Aprovado |
+| `close` | Fechar |
+| `chevron` | Seta de navegação |
+| `arrowDown` | Download |
+| `pin` | Localização |
+| `signal` | Sinal |
 
-### 5.7 `InfoCards` (mantido, desativado)
+Componentes nomeados mantidos para compatibilidade com PathRow e BottomSheet: `DeviceIcon`, `ConnectionIcon`, `IconServer`, `IconBuilding`, `IconGames`, `IconStream`, `IconWork`, `IconVideoCall`, `IconPdf`, `IconShare`, `IconWhatsApp`.
+
+### 5.9 `InfoCards` (mantido, desativado)
 
 Componente da versão anterior da StartScreen. Mantido no projeto mas não mais utilizado. Pode ser removido quando o código for sanitizado.
 
@@ -611,7 +653,7 @@ Estado gerenciado em `App.tsx`:
 | State | Tipo | Descrição |
 |---|---|---|
 | `theme` | `'dark'\|'light'` | Tema atual, persiste em localStorage |
-| `screen` | `Screen` | Tela ativa: `'start'\|'running'\|'result'\|'history'\|'comparison'\|'beforeafter'\|'roomtest'` |
+| `screen` | `Screen` | Tela ativa: `'start'\|'running'\|'result'\|'history'\|'comparison'\|'beforeafter'\|'roomtest'\|'diagnostic'\|'gamer'\|'recommend'` |
 | `isOnline` | `boolean` | Conectividade detectada via eventos `online`/`offline` do browser |
 | `previous` | `TestRecord\|null` | Registro do teste anterior à sessão atual (para comparação na ResultScreen) |
 | `lastRecord` | `TestRecord\|null` | Último registro do histórico, exibido como card na StartScreen |
@@ -740,28 +782,44 @@ Um `useEffect` sem deps (executa só na montagem) chama `previousRecord()` e pop
 ### Temas
 
 ```css
-[data-theme="dark"]  { --bg: #000000; --surface: #0D0D0D; --border: #1C1C1E; --text: #FFFFFF; ... }
-[data-theme="light"] { --bg: #FFFFFF; --surface: #F6F7F9; --border: #E5E7EB; --text: #0D0D1A; ... }
+[data-theme="dark"]  { --bg: #09090F; --bg-elev: #0A0A0C; --surface: #131318; --surface-2: #1C1C24; --surface-3: #25252F; --border: rgba(255,255,255,0.08); --hairline: rgba(255,255,255,0.06); --text: #F5F5FA; ... }
+[data-theme="light"] { --bg: #F2F2F7; --bg-elev: #FFFFFF; --surface: #FFFFFF; --surface-2: #F2F2F7; --surface-3: #ECECF1; --border: rgba(0,0,0,0.08); --hairline: rgba(0,0,0,0.06); --text: #0D0D1A; ... }
 ```
+
+`--bg: #F2F2F7` no light segue o System Gray 6 do iOS (linguagem iOS-Calma do design system).
 
 ### Tokens globais (ambos os temas)
 
 | Token | Valor | Uso |
 |---|---|---|
 | `--accent` | `#6C2BFF` | Cor primária da marca |
+| `--accent-tint` | `rgba(108,43,255,0.14)` | Fundo tintado de elementos accent |
 | `--dl` | `#3AB6FF` | Download (azul) |
+| `--dl-tint` | `rgba(58,182,255,0.14)` | Fundo tintado DL |
 | `--ul` | `#22C55E` | Upload (verde) |
-| `--error` | `#EF4444` | Erros e alertas |
-| `--font-display` | `'Space Grotesk', sans-serif` | Números e títulos |
+| `--ul-tint` | `rgba(34,197,94,0.14)` | Fundo tintado UL / Chip good |
+| `--warn` | `#F5A623` | Atenção / amarelo |
+| `--error` | `#FF453A` | Erros e falhas |
+| `--info` | `#3AB6FF` | Informação |
+| `--font-display` | `'Space Grotesk', sans-serif` | Números hero e títulos |
 | `--font-body` | `'Inter', sans-serif` | Texto corrido |
+| `--font-mono` | `'JetBrains Mono', ui-monospace, monospace` | Valores numéricos monospace |
 | `--radius` | `16px` | Border-radius de cards |
+| `--radius-sm` | `8px` | Border-radius pequeno |
+| `--radius-lg` | `20px` | Border-radius grande |
+| `--radius-xl` | `28px` | Border-radius extra-largo |
 | `--radius-button` | `12px` | Border-radius de botões |
+| `--radius-pill` | `100px` | Border-radius de pílulas/chips |
+| `--t-fast` | `180ms cubic-bezier(0.32,0.72,0,1)` | Transições rápidas |
+| `--t-med` | `280ms cubic-bezier(0.32,0.72,0,1)` | Transições padrão |
+| `--t-slow` | `480ms cubic-bezier(0.32,0.72,0,1)` | Transições lentas |
 | `--space-xs` | `4px` | Espaçamento base |
 | `--space-sm` | `8px` | |
 | `--space-md` | `12px` | |
 | `--space-lg` | `16px` | |
 | `--space-xl` | `24px` | |
-| `--space-xxl` | `32px` | |
+| `--space-2xl` | `32px` | |
+| `--space-3xl` | `48px` | |
 
 ### Regras globais
 

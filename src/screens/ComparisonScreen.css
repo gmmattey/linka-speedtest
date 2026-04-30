@@ -5,40 +5,52 @@
   background: var(--bg);
 }
 
-.lk-cmp__main {
-  flex: 1;
-  max-width: 480px;
-  width: 100%;
-  margin: 0 auto;
-  padding: var(--space-lg);
+.lk-cmp__head {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-xl);
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 4px;
+  flex-shrink: 0;
 }
 
 .lk-cmp__back {
-  align-self: flex-start;
-  margin-bottom: -8px;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.lk-cmp__head-label {
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.lk-cmp__scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 16px 32px;
+}
+
+.lk-cmp__hero {
+  padding: 4px 0 18px;
 }
 
 .lk-cmp__title {
-  margin: 0;
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 22px;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-top: 10px;
   color: var(--text);
-  letter-spacing: -0.3px;
 }
 
-.lk-cmp__subtitle {
-  margin: 4px 0 0;
-  font-family: var(--font-body);
-  font-size: 14px;
+.lk-cmp__sub {
+  font-size: 12px;
   color: var(--text-2);
-  line-height: 1.5;
+  margin: 6px 0 0;
 }
 
-/* Step --------- */
+/* Step */
 
 .lk-cmp__step {
   display: flex;
@@ -52,9 +64,7 @@
   height: 24px;
   padding: 0 10px;
   border-radius: var(--radius-pill);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  font-family: var(--font-body);
+  background: var(--accent-tint);
   font-size: 11px;
   font-weight: 600;
   color: var(--accent);
@@ -63,7 +73,6 @@
 
 .lk-cmp__step-instruction {
   margin: 0;
-  font-family: var(--font-body);
   font-size: 15px;
   color: var(--text);
   line-height: 1.5;
@@ -71,6 +80,9 @@
 
 .lk-cmp__start-btn {
   width: 100%;
+  height: 50px;
+  font-size: 15px;
+  border-radius: var(--radius);
 }
 
 .lk-cmp__step-actions {
@@ -80,63 +92,63 @@
   align-items: center;
 }
 
-.lk-cmp__near-preview {
+.lk-cmp__preview {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 12px 14px;
+  padding: 13px 14px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
-  border-radius: var(--radius-button);
+  border-radius: var(--radius);
 }
 
-.lk-cmp__near-label {
-  font-family: var(--font-body);
+.lk-cmp__preview-label {
   font-size: 11px;
   color: var(--text-3);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
+  font-weight: 600;
 }
 
-.lk-cmp__near-metrics {
+.lk-cmp__preview-metrics {
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 14px;
   color: var(--text);
 }
 
-/* Result --------- */
+/* Result */
 
 .lk-cmp__result {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl);
+  gap: var(--space-lg);
 }
 
 .lk-cmp__verdict {
   padding: 14px 16px;
   border-left: 4px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius);
   background: var(--surface);
-  font-family: var(--font-body);
   font-size: 14px;
   color: var(--text);
   line-height: 1.5;
 }
 
-.lk-cmp__verdict--coverage_issue { border-left-color: var(--warn); background: rgba(245,166,35,0.06); }
-.lk-cmp__verdict--both_bad       { border-left-color: var(--error); background: rgba(255,77,79,0.06); }
-.lk-cmp__verdict--both_good      { border-left-color: var(--success); background: rgba(34,197,94,0.06); }
+.lk-cmp__verdict--coverage_issue { border-left-color: var(--warn);    background: rgba(245,166,35,0.08); }
+.lk-cmp__verdict--both_bad       { border-left-color: var(--error);   background: rgba(255,69,58,0.08); }
+.lk-cmp__verdict--both_good      { border-left-color: var(--ul);      background: rgba(34,197,94,0.08); }
 .lk-cmp__verdict--other          { border-left-color: var(--border); }
 
-/* Table --------- */
+/* Table */
 
 .lk-cmp__table {
   display: flex;
   flex-direction: column;
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-button);
+  border-radius: var(--radius);
   overflow: hidden;
 }
 
@@ -145,8 +157,8 @@
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: var(--space-sm);
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--hairline);
 }
 
 .lk-cmp__table-row:last-child {
@@ -154,23 +166,21 @@
 }
 
 .lk-cmp__table-header {
-  background: var(--surface);
-  font-family: var(--font-body);
   font-size: 11px;
   color: var(--text-3);
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.06em;
+  font-weight: 600;
 }
 
 .lk-cmp__table-row {
-  font-family: var(--font-body);
   font-size: 12px;
   color: var(--text-2);
   align-items: center;
 }
 
 .lk-cmp__table-row--drop {
-  background: var(--surface);
+  background: var(--surface-2);
 }
 
 .lk-cmp__val {
@@ -181,7 +191,7 @@
 }
 
 .lk-cmp__val--bad  { color: var(--error); }
-.lk-cmp__val--ok   { color: var(--success); }
+.lk-cmp__val--ok   { color: var(--ul); }
 .lk-cmp__val--near { color: var(--accent); }
 
 .lk-cmp__drop {
@@ -191,16 +201,19 @@
   color: var(--error);
 }
 
-/* Actions --------- */
+/* Actions */
 
 .lk-cmp__actions {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
   align-items: center;
-  padding-bottom: var(--space-xxl);
+  padding-bottom: var(--space-xl);
 }
 
-.lk-cmp__actions .btn-primary {
+.lk-cmp__actions-primary {
   width: 100%;
+  height: 50px;
+  font-size: 15px;
+  border-radius: var(--radius);
 }

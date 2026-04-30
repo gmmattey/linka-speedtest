@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, ResponsiveContainer, YAxis } from 'recharts';
-import { Header } from '../components/Header';
-import { DeviceIcon, ConnectionIcon, IconPdf } from '../components/icons';
+import { IOSList } from '../components/IOSList';
+import { Chip, type ChipVariant } from '../components/Chip';
+import { Icon, DeviceIcon, ConnectionIcon, IconPdf } from '../components/icons';
 import type { SpeedTestResult, TestRecord } from '../types';
 import { interpretSpeedTestResult, resolveCopy } from '../core';
 import { clearHistory, loadHistory } from '../utils/history';
@@ -15,9 +16,22 @@ interface Props {
   onToggleTheme: () => void;
   unit?: 'mbps' | 'gbps';
   initialSelectedId?: string;
+  onBack?: () => void;
 }
 
-export function HistoryScreen({ theme, onToggleTheme, unit = 'mbps', initialSelectedId }: Props) {
+function qualityToChipVariant(quality: string): ChipVariant {
+  if (quality === 'excellent' || quality === 'good') return 'good';
+  if (quality === 'fair') return 'maybe';
+  return 'bad';
+}
+
+export function HistoryScreen({
+  theme: _theme,
+  onToggleTheme: _onToggleTheme,
+  unit = 'mbps',
+  initialSelectedId,
+  onBack,
+}: Props) {
   const [items, setItems] = useState<TestRecord[]>([]);
   const [selected, setSelected] = useState<TestRecord | null>(null);
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
@@ -52,8 +66,6 @@ export function HistoryScreen({ theme, onToggleTheme, unit = 'mbps', initialSele
     const avgJit = items.reduce((s, r) => s + r.jitter, 0)     / n;
     const avgLos = items.reduce((s, r) => s + r.packetLoss, 0) / n;
 
-    // Dispersão: % dos últimos 5 testes com qualidade ruim → proxy de instabilidade temporal.
-    // Evita falsa boa notícia quando a conexão alterna entre excelente e péssima.
     const last5 = items.slice(0, 5);
     const syntheticLoss = (last5.filter((r) => r.quality === 'slow' || r.quality === 'unavailable').length / last5.length) * 100;
 
@@ -103,10 +115,14 @@ export function HistoryScreen({ theme, onToggleTheme, unit = 'mbps', initialSele
 
   return (
     <div className="lk-history">
-      <Header theme={theme} onToggleTheme={onToggleTheme} />
-      <main className="lk-history__main">
-        <h2 className="lk-history__title">Histórico de testes</h2>
+      <div className="lk-history__head">
+        {onBack ? (
+          <button className="lk-history__back" onClick={onBack}>‹ Início</button>
+        ) : <span />}
+        <span className="lk-history__head-label">Histórico</span>
+      </div>
 
+      <main className="lk-history__main">
         {items.length === 0 ? (
           <div className="lk-history__empty">
             Nenhum teste registrado ainda. Volte e rode seu primeiro teste.
@@ -184,23 +200,25 @@ export function HistoryScreen({ theme, onToggleTheme, unit = 'mbps', initialSele
                 <li key={r.id} className="lk-history__item" onClick={() => setSelected(r)}>
                   <div className="lk-history__row1">
                     <span className="lk-history__date">{formatDate(r.timestamp)}</span>
-                    <span className={`lk-chip lk-chip--${r.quality === 'slow' || r.quality === 'unavailable' ? 'limited' : r.quality === 'fair' ? 'maybe' : 'good'}`}>
+                    <Chip variant={qualityToChipVariant(r.quality)}>
                       {resolveCopy(`quality.${r.quality}`)}
-                    </span>
+                    </Chip>
                   </div>
                   <div className="lk-history__row2">
                     <span className="lk-history__dl">↓ {formatMbps(r.dl, unit)}</span>
                     <span className="lk-history__ul">↑ {formatMbps(r.ul, unit)} {unitLabel}</span>
-                    <span>lat {formatMs(r.latency)} ms</span>
+                    <span className="lk-history__lat">{formatMs(r.latency)} ms</span>
                   </div>
                   <div className="lk-history__row3">
                     <span className="lk-history__icons">
-                      <DeviceIcon kind={r.deviceType} size={14} />
-                      <ConnectionIcon kind={r.connectionType} size={14} />
+                      <DeviceIcon kind={r.deviceType} size={13} />
+                      <ConnectionIcon kind={r.connectionType} size={13} />
                     </span>
                     <span>{r.serverName}{r.isp && r.isp !== '—' ? ` · ${r.isp}` : ''}</span>
                     {r.locationTag && (
-                      <span className="lk-history__location-tag">📍 {r.locationTag}</span>
+                      <span className="lk-history__location-tag">
+                        <Icon name="pin" size={10} color="var(--accent)" /> {r.locationTag}
+                      </span>
                     )}
                   </div>
                 </li>
@@ -235,76 +253,91 @@ function HistoryDetail({ record, onBack, unit }: { record: TestRecord; onBack: (
   }), [record]);
 
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
-  const flagKeys = (Object.keys(interpreted.flags) as Array<keyof typeof interpreted.flags>)
-    .filter((k) => interpreted.flags[k]);
+
+  const deviceLabel = `${
+    record.deviceType === 'mobile' ? 'Celular' : record.deviceType === 'tablet' ? 'Tablet' : 'PC'
+  } · ${
+    record.connectionType === 'wifi' ? 'Wi-Fi' : record.connectionType === 'mobile' ? 'Celular' : 'Cabo'
+  }`;
 
   return (
     <div className="lk-history lk-history--detail fade-in">
-      <div className="lk-hist-detail__header">
-        <button className="btn-text" onClick={onBack}>← Voltar</button>
+      <div className="lk-hist-detail__head">
+        <button className="lk-hist-detail__back" onClick={onBack}>‹ Voltar</button>
         <span className="lk-hist-detail__date">{formatDate(record.timestamp)}</span>
       </div>
 
-      <main className="lk-result__main">
-        <section className={`lk-banner lk-banner--${interpreted.quality}`}>
-          <div className="lk-banner__icon">
-            {interpreted.quality === 'slow' || interpreted.quality === 'unavailable' ? '✗' : interpreted.quality === 'fair' ? '!' : '✓'}
+      <div className="lk-hist-detail__scroll">
+        <div className="lk-hist-detail__hero">
+          <Chip variant={qualityToChipVariant(interpreted.quality)}>
+            {resolveCopy(`quality.${interpreted.quality}`)}
+          </Chip>
+          <div className="lk-hist-detail__title">
+            {resolveCopy(interpreted.copyKeys.headlineKey)}
           </div>
-          <div className="lk-banner__body">
-            <div className="lk-banner__title">{resolveCopy(interpreted.copyKeys.headlineKey)}</div>
-            {flagKeys.length > 0 && (
-              <div className="lk-banner__tags">
-                {flagKeys.map((k) => (
-                  <span key={k} className="lk-chip">{resolveCopy(`flag.${k}`)}</span>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
+          <p className="lk-hist-detail__sub">
+            {resolveCopy(interpreted.copyKeys.stabilityLabelKey)}
+          </p>
+        </div>
 
-        <section className="lk-primary">
-          <div className="lk-primary__col">
-            <div className="lk-primary__label">↓ Download</div>
-            <div className="lk-primary__value lk-primary__value--dl numeric">
-              {formatMbps(record.dl, unit)}<span className="lk-primary__unit">{unitLabel}</span>
-            </div>
-          </div>
-          <div className="lk-primary__divider" />
-          <div className="lk-primary__col">
-            <div className="lk-primary__label">↑ Upload</div>
-            <div className="lk-primary__value lk-primary__value--ul numeric">
-              {formatMbps(record.ul, unit)}<span className="lk-primary__unit">{unitLabel}</span>
-            </div>
-          </div>
-        </section>
+        <IOSList
+          items={[
+            {
+              icon: <Icon name="download" size={14} color="var(--dl)" />,
+              iconBg: 'var(--dl-tint)',
+              title: 'Download',
+              trailing: <span style={{ color: 'var(--dl)', fontWeight: 600, fontSize: 14 }}>{formatMbps(record.dl, unit)} {unitLabel}</span>,
+            },
+            {
+              icon: <Icon name="upload" size={14} color="var(--ul)" />,
+              iconBg: 'var(--ul-tint)',
+              title: 'Upload',
+              trailing: <span style={{ color: 'var(--ul)', fontWeight: 600, fontSize: 14 }}>{formatMbps(record.ul, unit)} {unitLabel}</span>,
+            },
+            {
+              icon: <Icon name="ping" size={14} color="var(--accent)" />,
+              iconBg: 'var(--accent-tint)',
+              title: 'Resposta',
+              trailing: <span style={{ fontWeight: 600, fontSize: 14 }}>{formatMs(record.latency)} ms</span>,
+            },
+            {
+              icon: <Icon name="jitter" size={14} color="var(--accent)" />,
+              iconBg: 'var(--accent-tint)',
+              title: 'Oscilação',
+              trailing: <span style={{ fontWeight: 600, fontSize: 14 }}>{record.jitter.toFixed(1)} ms</span>,
+            },
+            {
+              icon: <Icon name="loss" size={14} color="var(--accent)" />,
+              iconBg: 'var(--accent-tint)',
+              title: 'Perda',
+              trailing: <span style={{ fontWeight: 600, fontSize: 14 }}>{record.packetLoss.toFixed(1)}%</span>,
+            },
+          ]}
+        />
 
-        <section className="lk-secondary">
-          <div className="lk-secondary__col">
-            <div className="lk-secondary__value numeric">{formatMs(record.latency)} ms</div>
-            <div className="lk-secondary__label">Resposta</div>
-          </div>
-          <div className="lk-secondary__col">
-            <div className="lk-secondary__value numeric">{formatMs(record.jitter)} ms</div>
-            <div className="lk-secondary__label">Oscilação</div>
-          </div>
-          <div className="lk-secondary__col">
-            <div className="lk-secondary__value lk-secondary__value--stab">
-              {resolveCopy(interpreted.copyKeys.stabilityLabelKey)}
-            </div>
-            <div className="lk-secondary__label">Estabilidade</div>
-          </div>
-        </section>
+        <p className="lk-hist-detail__section-label">Detalhes</p>
 
-        <section className="lk-section">
-          <h3 className="lk-section__title">Detalhes</h3>
-          <dl className="lk-details">
-            <div><dt>Servidor</dt><dd>{record.serverName}</dd></div>
-            <div><dt>Operadora</dt><dd>{record.isp && record.isp !== '—' ? record.isp : '—'}</dd></div>
-            <div><dt>Dispositivo</dt><dd>{record.deviceType === 'mobile' ? 'Celular' : record.deviceType === 'tablet' ? 'Tablet' : 'PC'} · {record.connectionType === 'wifi' ? 'Wi-Fi' : record.connectionType === 'mobile' ? 'Celular' : 'Cabo'}</dd></div>
-            <div><dt>Perda de sinal</dt><dd>{record.packetLoss.toFixed(1)}%</dd></div>
-          </dl>
-        </section>
-      </main>
+        <IOSList
+          items={[
+            {
+              title: 'Servidor',
+              trailing: <span className="lk-hist-detail__detail-val">{record.serverName}</span>,
+            },
+            {
+              title: 'Operadora',
+              trailing: <span className="lk-hist-detail__detail-val">{record.isp && record.isp !== '—' ? record.isp : '—'}</span>,
+            },
+            {
+              title: 'Dispositivo',
+              trailing: <span className="lk-hist-detail__detail-val">{deviceLabel}</span>,
+            },
+            ...(record.locationTag ? [{
+              title: 'Local',
+              trailing: <span className="lk-hist-detail__detail-val" style={{ color: 'var(--accent)' }}>{record.locationTag}</span>,
+            }] : []),
+          ]}
+        />
+      </div>
     </div>
   );
 }

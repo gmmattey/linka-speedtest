@@ -6,6 +6,19 @@
   overflow: hidden;
 }
 
+.lk-running__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 4px;
+  flex-shrink: 0;
+}
+
+.lk-running__head-label {
+  font-size: 13px;
+  color: var(--text-3);
+}
+
 .lk-running__main {
   flex: 1;
   display: flex;
@@ -25,7 +38,6 @@
 
 .lk-running__phrase {
   text-align: center;
-  font-family: var(--font-body);
   font-size: 15px;
   color: var(--text-2);
   margin: 0 0 var(--space-xl);
@@ -34,7 +46,6 @@
 
 .lk-running__session-label {
   text-align: center;
-  font-family: var(--font-body);
   font-size: 12px;
   font-weight: 600;
   color: var(--accent);
@@ -54,6 +65,7 @@
 }
 
 /* Error state */
+
 .lk-running__main--error {
   justify-content: center;
   align-items: center;
@@ -82,7 +94,6 @@
 }
 
 .lk-running__error-msg {
-  font-family: var(--font-body);
   font-size: 14px;
   color: var(--text-2);
   margin: 0;
@@ -94,4 +105,9 @@
   align-items: center;
   gap: var(--space-sm);
   margin-top: var(--space-md);
+  width: 100%;
+}
+
+.lk-running__error-actions .btn-primary {
+  width: 100%;
 }

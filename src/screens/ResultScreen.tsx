@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Header } from '../components/Header';
-import { IconGames, IconStream, IconWork, IconVideoCall, IconPdf, IconShare, IconWhatsApp } from '../components/icons';
+import { IOSList } from '../components/IOSList';
+import { Chip } from '../components/Chip';
+import type { ChipVariant } from '../components/Chip';
+import { Icon } from '../components/icons';
 import { generateShareCard } from '../utils/shareCard';
-import type { Classification, Quality, ServerInfo, SpeedTestResult, Tag, TestRecord } from '../types';
-import { interpretSpeedTestResult, resolveCopy, GAMING_PROFILES } from '../core';
-import type { UseCaseId, UseCaseStatus, GamingProfileId } from '../core';
-import type { GamingProfile } from '../types';
+import type { Quality, ServerInfo, SpeedTestResult, TestRecord } from '../types';
+import { interpretSpeedTestResult, resolveCopy } from '../core';
+import type { UseCaseId, UseCaseStatus } from '../core';
 import { loadHistory } from '../utils/history';
-import { buildRecommendations } from '../utils/recommendations';
-import { formatDate, formatMbps, formatMs } from '../utils/format';
-import { exportResultPdf } from '../utils/pdfExport';
+import { formatMbps, formatMs } from '../utils/format';
+import type { GamingProfile } from '../types';
 import './ResultScreen.css';
 
 interface Props {
@@ -20,6 +20,9 @@ interface Props {
   previous: TestRecord | null;
   onRetry: () => void;
   onShowHistory: () => void;
+  onDiagnostic?: () => void;
+  onGamer?: () => void;
+  onRecommend?: () => void;
   unit?: 'mbps' | 'gbps';
   hideIpOnShare?: boolean;
   gamingProfile?: GamingProfile;
@@ -27,133 +30,86 @@ interface Props {
 
 type ShareStatus = 'idle' | 'copied';
 
-const USE_CASE_DISPLAY: Record<UseCaseId, { Icon: React.ComponentType<{ size?: number }>; label: string }> = {
-  gaming:       { Icon: IconGames,     label: 'Games online' },
-  streaming_4k: { Icon: IconStream,    label: 'Streaming 4K' },
-  home_office:  { Icon: IconWork,      label: 'Home Office' },
-  video_call:   { Icon: IconVideoCall, label: 'Videochamada' },
-};
-
-function chipLabel(id: UseCaseId, status: UseCaseStatus): string {
-  if (id === 'gaming' && status === 'limited') return 'Pode falhar';
-  if (status === 'good') return 'Bom';
-  if (status === 'maybe') return 'Atenção';
-  return 'Ruim';
-}
-
 export function buildShareText(result: SpeedTestResult, quality: Quality, unit: 'mbps' | 'gbps' = 'mbps'): string {
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
   return [
     `linka SpeedTest — ${resolveCopy(`quality.${quality}`)}`,
     `↓ ${formatMbps(result.dl, unit)} ${unitLabel} · ↑ ${formatMbps(result.ul, unit)} ${unitLabel}`,
     `Resposta ${formatMs(result.latency)} ms · Oscilação ${formatMs(result.jitter)} ms`,
-    formatDate(result.timestamp),
+    new Date(result.timestamp).toLocaleString('pt-BR'),
   ].join('\n');
 }
 
 export async function shareResultText(text: string): Promise<'shared' | 'copied' | 'none'> {
   if (navigator.share) {
-    try {
-      await navigator.share({ title: 'linka SpeedTest', text });
-      return 'shared';
-    } catch {
-      return 'none';
-    }
+    try { await navigator.share({ title: 'linka SpeedTest', text }); return 'shared'; }
+    catch { return 'none'; }
   }
-
   if (navigator.clipboard) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return 'copied';
-    } catch {
-      return 'none';
-    }
+    try { await navigator.clipboard.writeText(text); return 'copied'; }
+    catch { return 'none'; }
   }
-
   return 'none';
 }
 
-const GAMING_BLOCKING: Record<string, string> = {
-  dl: 'download insuficiente', latency: 'resposta alta',
-  jitter: 'oscilação alta', packetLoss: 'perda de sinal',
-};
+function qualityToChipVariant(q: Quality): ChipVariant {
+  if (q === 'excellent' || q === 'good') return 'good';
+  if (q === 'fair') return 'maybe';
+  return 'bad';
+}
 
-function GamingVerdict({ result, gamingProfile }: { result: SpeedTestResult; gamingProfile: GamingProfileId }) {
-  const def = GAMING_PROFILES[gamingProfile];
-  const t = def.good;
-  const fails: string[] = [];
-  if (result.dl < t.dl)                 fails.push('dl');
-  if (result.latency > t.latency)       fails.push('latency');
-  if (result.jitter > t.jitter)         fails.push('jitter');
-  if (result.packetLoss > t.packetLoss) fails.push('packetLoss');
-  const isGood = fails.length === 0;
-  return (
-    <section className="lk-section">
-      <h3 className="lk-section__title">Modo Gamer · {def.label}</h3>
-      <div className={`lk-gamer lk-gamer--${isGood ? 'good' : 'bad'}`}>
-        <span className="lk-gamer__icon">{isGood ? '✓' : '✗'}</span>
-        <div>
-          <p className="lk-gamer__verdict">
-            {isGood
-              ? `Ótima para ${def.label}.`
-              : `Não ideal para ${def.label} — ${fails.map((f) => GAMING_BLOCKING[f]).join(', ')}.`}
-          </p>
-          {!isGood && (
-            <p className="lk-gamer__detail">
-              {[
-                fails.includes('dl')         && `Download mín. ${t.dl} Mbps`,
-                fails.includes('latency')    && `Resposta máx. ${t.latency} ms`,
-                fails.includes('jitter')     && `Oscilação máx. ${t.jitter} ms`,
-                fails.includes('packetLoss') && `Perda máx. ${t.packetLoss}%`,
-              ].filter(Boolean).join(' · ')}
-            </p>
-          )}
-        </div>
-      </div>
-    </section>
-  );
+function qualityBadgeLabel(q: Quality): string {
+  if (q === 'excellent') return 'Excelente';
+  if (q === 'good') return 'Boa';
+  if (q === 'fair') return 'Regular';
+  if (q === 'slow') return 'Lenta';
+  return 'Sem conexão';
+}
+
+function useCaseLabel(id: UseCaseId): string {
+  if (id === 'gaming')       return 'Jogos online';
+  if (id === 'streaming_4k') return 'Vídeo 4K';
+  if (id === 'home_office')  return 'Home Office';
+  return 'Videochamada';
+}
+
+function useCaseVariant(status: UseCaseStatus): ChipVariant {
+  if (status === 'good')  return 'good';
+  if (status === 'maybe') return 'maybe';
+  return 'bad';
 }
 
 export function ResultScreen({
-  theme, onToggleTheme, result, server, previous,
-  onRetry, onShowHistory, unit = 'mbps', hideIpOnShare = true, gamingProfile = 'off',
+  theme: _theme, onToggleTheme: _onToggleTheme,
+  result, server, previous: _previous,
+  onRetry, onShowHistory,
+  onDiagnostic, onGamer, onRecommend,
+  unit = 'mbps', hideIpOnShare = true, gamingProfile: _gamingProfile = 'off',
 }: Props) {
   const history = useMemo(() => loadHistory(), []);
   const interpreted = useMemo(
     () => interpretSpeedTestResult({ metrics: result, profile: 'fixed_broadband', history }),
     [result, history],
   );
-  const recommendations = useMemo(() => {
-    const tags = new Set<Tag>(
-      (Object.keys(interpreted.flags) as Tag[]).filter((k) => interpreted.flags[k]),
-    );
-    const classification: Classification = { primary: interpreted.quality, tags };
-    return buildRecommendations(result, classification, history);
-  }, [result, interpreted, history]);
 
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
   const [shareStatus, setShareStatus] = useState<ShareStatus>('idle');
   const [waGenerating, setWaGenerating] = useState(false);
-  const shareResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shareResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => {
-    if (shareResetTimeoutRef.current) {
-      clearTimeout(shareResetTimeoutRef.current);
-    }
+    if (shareResetRef.current) clearTimeout(shareResetRef.current);
   }, []);
 
   const handleShare = async () => {
     const text = buildShareText(result, interpreted.quality, unit);
     const outcome = await shareResultText(text);
-
     if (outcome === 'copied') {
       setShareStatus('copied');
-      if (shareResetTimeoutRef.current) {
-        clearTimeout(shareResetTimeoutRef.current);
-      }
-      shareResetTimeoutRef.current = setTimeout(() => {
+      if (shareResetRef.current) clearTimeout(shareResetRef.current);
+      shareResetRef.current = setTimeout(() => {
         setShareStatus('idle');
-        shareResetTimeoutRef.current = null;
+        shareResetRef.current = null;
       }, 2000);
     }
   };
@@ -170,125 +126,141 @@ export function ResultScreen({
         const text = buildShareText(result, interpreted.quality, unit);
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
       }
-    } catch {
-      // cancelado ou sem suporte — silencioso
-    } finally {
-      setWaGenerating(false);
-    }
+    } catch { /* cancelado */ }
+    finally { setWaGenerating(false); }
   };
 
-  const handlePdf = async () => {
-    try { await exportResultPdf(result, server?.name ?? 'Cloudflare', server?.isp); }
-    catch (e) { console.error(e); }
-  };
+  const shortPhrase = resolveCopy(interpreted.copyKeys.shortPhraseKey);
+
+  const iosListItems = [
+    {
+      icon: <Icon name="download" size={14} color="#fff" />,
+      iconBg: 'var(--dl)',
+      title: 'Download',
+      trailing: <span className="lk-result__metric">{formatMbps(result.dl, unit)} {unitLabel}</span>,
+    },
+    {
+      icon: <Icon name="upload" size={14} color="#fff" />,
+      iconBg: 'var(--ul)',
+      title: 'Upload',
+      trailing: <span className="lk-result__metric">{formatMbps(result.ul, unit)} {unitLabel}</span>,
+    },
+    {
+      icon: <Icon name="ping" size={14} color="#fff" />,
+      iconBg: 'var(--accent)',
+      title: 'Latência',
+      trailing: <span className="lk-result__metric">{formatMs(result.latency)} ms</span>,
+    },
+    {
+      icon: <Icon name="jitter" size={14} color="var(--text-2)" />,
+      iconBg: 'var(--surface-3)',
+      title: 'Jitter',
+      subtitle: 'Variação da latência',
+      trailing: <span className="lk-result__metric">{formatMs(result.jitter)} ms</span>,
+    },
+    {
+      icon: <Icon name="loss" size={14} color="var(--text-2)" />,
+      iconBg: 'var(--surface-3)',
+      title: 'Perda de pacotes',
+      trailing: <span className="lk-result__metric">{result.packetLoss.toFixed(1)}%</span>,
+    },
+  ];
 
   return (
-    <div className="lk-result">
-      <Header theme={theme} onToggleTheme={onToggleTheme} />
-      <main className="lk-result__main fade-in">
+    <div className="lk-result fade-in">
+      {/* Header */}
+      <div className="lk-result__head">
+        <button className="lk-result__back" onClick={onShowHistory}>‹ Início</button>
+        <button className="lk-result__share-btn" onClick={handleShare} aria-label="Compartilhar">
+          <Icon name="share" size={18} />
+        </button>
+      </div>
 
-        <section className="lk-primary">
-          <div className="lk-primary__col">
-            <div className="lk-primary__label">↓ Download</div>
-            <div className="lk-primary__value lk-primary__value--dl numeric">
-              {formatMbps(result.dl, unit)}<span className="lk-primary__unit">{unitLabel}</span>
-            </div>
-          </div>
-          <div className="lk-primary__divider" />
-          <div className="lk-primary__col">
-            <div className="lk-primary__label">↑ Upload</div>
-            <div className="lk-primary__value lk-primary__value--ul numeric">
-              {formatMbps(result.ul, unit)}<span className="lk-primary__unit">{unitLabel}</span>
-            </div>
-          </div>
-        </section>
-
-        <section className="lk-secondary">
-          <div className="lk-secondary__col">
-            <div className="lk-secondary__value numeric">{formatMs(result.latency)} ms</div>
-            <div className="lk-secondary__label">Resposta</div>
-          </div>
-          <div className="lk-secondary__col">
-            <div className="lk-secondary__value numeric">{formatMs(result.jitter)} ms</div>
-            <div className="lk-secondary__label">Oscilação</div>
-          </div>
-          <div className="lk-secondary__col">
-            <div className="lk-secondary__value lk-secondary__value--stab">
-              {resolveCopy(interpreted.copyKeys.stabilityLabelKey)}
-            </div>
-            <div className="lk-secondary__label">Estabilidade</div>
-          </div>
-        </section>
-
-        <p className="lk-diagnosis">{resolveCopy(interpreted.copyKeys.shortPhraseKey)}</p>
-
-        {recommendations.length > 0 && (
-          <section className="lk-section lk-whatnow">
-            <h3 className="lk-section__title">O que fazer agora</h3>
-            <ul className="lk-rec-list">
-              {recommendations.map((r) => (
-                <li key={r.id} className={`lk-rec lk-rec--${r.priority}`}>
-                  <span className="lk-rec__title">{r.title}</span>
-                  <span className="lk-rec__desc">{r.description}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        <div className="lk-usegrid">
-          {interpreted.useCases.map(({ id, status }) => {
-            const { Icon, label } = USE_CASE_DISPLAY[id];
-            return (
-              <div key={id} className="lk-usecase">
-                <div className="lk-usecase__icon"><Icon size={24} /></div>
-                <div className="lk-usecase__label">{label}</div>
-                <span className={`lk-chip lk-chip--${status}`}>{chipLabel(id, status)}</span>
-              </div>
-            );
-          })}
+      <div className="lk-result__scroll">
+        {/* Hero */}
+        <div className="lk-result__hero">
+          <Chip variant={qualityToChipVariant(interpreted.quality)}>
+            {qualityBadgeLabel(interpreted.quality)}
+          </Chip>
+          <div className="lk-result__title">{shortPhrase}</div>
+          <p className="lk-result__desc">{resolveCopy(`diagnosis.${interpreted.quality}`)}</p>
         </div>
 
-        {gamingProfile !== 'off' && (
-          <GamingVerdict result={result} gamingProfile={gamingProfile as GamingProfileId} />
-        )}
-
-        <section className="lk-section">
-          <h3 className="lk-section__title">Detalhes</h3>
-          <dl className="lk-details">
-            <div><dt>Servidor</dt><dd>{server?.name ?? 'Cloudflare'}{server?.colo && server.colo !== '—' ? ` · ${server.colo}` : ''}</dd></div>
-            <div><dt>Operadora</dt><dd>{server?.isp && server.isp !== '—' ? server.isp : '—'}</dd></div>
-            <div><dt>Seu IP</dt><dd>{hideIpOnShare ? 'Oculto' : (server?.ip ?? '—')}</dd></div>
-            <div><dt>Perda de sinal</dt><dd>{result.packetLoss.toFixed(1)}%</dd></div>
-            <div><dt>Data</dt><dd>{formatDate(result.timestamp)}</dd></div>
-          </dl>
-        </section>
-
-        {previous && (
-          <section className="lk-section">
-            <h3 className="lk-section__title">Teste anterior</h3>
-            <div className="lk-prev">
-              <span>{formatDate(previous.timestamp)}</span>
-              <span>↓ {formatMbps(previous.dl, unit)} · ↑ {formatMbps(previous.ul, unit)} {unitLabel}</span>
-              <button className="btn-text" onClick={onShowHistory}>Ver histórico →</button>
+        {/* Pronta para… chips */}
+        {interpreted.useCases.length > 0 && (
+          <div className="lk-result__uses">
+            <div className="lk-result__uses-label">Pronta para</div>
+            <div className="lk-result__uses-chips">
+              {interpreted.useCases.map(({ id, status }) => (
+                <Chip key={id} variant={useCaseVariant(status)}>
+                  {useCaseLabel(id)}
+                </Chip>
+              ))}
             </div>
-          </section>
+          </div>
         )}
 
-        <section className="lk-actions">
-          <button className="btn-primary lk-actions__btn" onClick={onRetry}>Testar novamente</button>
-          <button className="btn-text lk-actions__whatsapp" onClick={handleWhatsApp} disabled={waGenerating}>
-            <IconWhatsApp size={16} /> {waGenerating ? 'Gerando…' : 'Compartilhar no WhatsApp'}
-          </button>
-          <button className="btn-text" onClick={handleShare}>
-            <IconShare size={16} /> {shareStatus === 'copied' ? 'Copiado!' : 'Compartilhar texto'}
-          </button>
-        </section>
-      </main>
+        {/* iOS-list métricas */}
+        <div className="lk-result__metrics">
+          <IOSList items={iosListItems} />
+        </div>
 
-      <button className="lk-fab" onClick={handlePdf} aria-label="Exportar PDF">
-        <IconPdf size={22} />
-      </button>
+        {/* Detalhes do servidor */}
+        {server && (
+          <div className="lk-result__detail">
+            <div className="lk-result__detail-row">
+              <span className="lk-result__detail-k">Servidor</span>
+              <span className="lk-result__detail-v">{server.name}{server.colo && server.colo !== '—' ? ` · ${server.colo}` : ''}</span>
+            </div>
+            {server.isp && server.isp !== '—' && (
+              <div className="lk-result__detail-row">
+                <span className="lk-result__detail-k">Operadora</span>
+                <span className="lk-result__detail-v">{server.isp}</span>
+              </div>
+            )}
+            {!hideIpOnShare && server.ip && (
+              <div className="lk-result__detail-row">
+                <span className="lk-result__detail-k">IP</span>
+                <span className="lk-result__detail-v">{server.ip}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Ações secundárias */}
+        <div className="lk-result__actions-secondary">
+          {onDiagnostic && (
+            <button className="lk-result__action-btn" onClick={onDiagnostic}>
+              <Icon name="shield" size={15} />Diagnóstico
+            </button>
+          )}
+          {onGamer && (
+            <button className="lk-result__action-btn" onClick={onGamer}>
+              <Icon name="game" size={15} />Modo Gamer
+            </button>
+          )}
+          {onRecommend && (
+            <button className="lk-result__action-btn" onClick={onRecommend}>
+              <Icon name="bulb" size={15} />Recomendações
+            </button>
+          )}
+        </div>
+
+        {/* Footer de ações primárias */}
+        <div className="lk-result__footer">
+          <button className="btn-primary lk-result__retry" onClick={onRetry}>
+            <Icon name="refresh" size={16} />Testar novamente
+          </button>
+          <div className="lk-result__footer-row">
+            <button className="btn-text" onClick={handleWhatsApp} disabled={waGenerating}>
+              {waGenerating ? 'Gerando…' : 'WhatsApp'}
+            </button>
+            <button className="btn-text" onClick={handleShare}>
+              {shareStatus === 'copied' ? 'Copiado!' : 'Compartilhar texto'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

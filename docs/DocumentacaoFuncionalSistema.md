@@ -11,6 +11,9 @@ App (estado global)
 ├── StartScreen         ← tela inicial (padrão)
 ├── RunningScreen       ← durante o teste (todos os modos)
 ├── ResultScreen        ← resultado do teste
+│   ├── DiagnosticScreen  ← diagnóstico de 6 áreas (acesso via ResultScreen)
+│   ├── GamerScreen       ← avaliação gamer: ping/jitter/loss + rows por jogo
+│   └── RecommendScreen   ← 4 ações para melhorar o Wi-Fi
 ├── HistoryScreen       ← histórico de testes
 ├── ComparisonScreen    ← comparativo perto vs longe do roteador
 ├── BeforeAfterScreen   ← comparação antes/depois de uma ação
@@ -42,6 +45,11 @@ StartScreen → [Prova Real (3×)] → RunningScreen (Teste 1 de 3)
 
 StartScreen → [Teste por local] → RoomTestScreen → [seleciona cômodo]
    → RunningScreen → ResultScreen (com locationTag)
+
+ResultScreen → [Diagnóstico] → DiagnosticScreen → [‹ Início] → ResultScreen
+ResultScreen → [Modo Gamer]  → GamerScreen      → [‹ Início] → ResultScreen
+                                                  → [Refazer teste] → RunningScreen
+ResultScreen → [Recomendações] → RecommendScreen → [‹ Início] → ResultScreen
 ```
 
 ### Navegação por gestos
@@ -418,7 +426,149 @@ Configurado no BottomSheet → seção Privacidade.
 
 ---
 
-## 4. HistoryScreen
+## 4. DiagnosticScreen
+
+### Finalidade
+
+Analisa o resultado do último teste em 6 áreas (Internet, Wi-Fi, Resposta, Oscilação, Falhas, Qualidade por uso) e apresenta um diagnóstico em cards visuais. Acessível a partir do botão "Diagnóstico" na ResultScreen.
+
+### Layout
+
+```
+┌──────────────────────────────────┐
+│  ‹ Início          Diagnóstico   │
+│                                  │
+│  N de 6 áreas OK                 │  ← N em verde se ≥5, amarelo senão
+│  "Sua conexão está saudável."    │
+│                                  │
+│  ┌──────────┐  ┌──────────┐      │  ← grid 2-col
+│  │ [ícone]  │  │ [ícone]  │      │
+│  │ Aprovado │  │ Atenção  │      │  ← badge colorido por tone
+│  │ Internet │  │ Wi-Fi    │      │
+│  │ descrição│  │ descrição│      │
+│  └──────────┘  └──────────┘      │
+│   ... mais 4 cards ...           │
+└──────────────────────────────────┘
+```
+
+### Avaliações
+
+| Área | Critério "Aprovado" | Critério "Atenção" | Critério "Falha" |
+|---|---|---|---|
+| Internet | DL ≥ 25 Mbps | DL ≥ 5 Mbps | DL < 5 Mbps |
+| Wi-Fi | cabo ou lat ≤ 30 ms | lat > 30 ms em Wi-Fi | — |
+| Resposta | lat ≤ 40 ms | lat ≤ 100 ms | lat > 100 ms |
+| Oscilação | jitter ≤ 5 ms | jitter ≤ 20 ms | jitter > 20 ms |
+| Falhas | packetLoss = 0 | packetLoss ≤ 1% | packetLoss > 1% |
+| Qualidade por uso | 4–5 critérios OK | 2–3 critérios OK | 0–1 critério OK |
+
+### Props
+
+```ts
+result: SpeedTestResult
+connectionType: ConnectionType | null
+onBack: () => void
+```
+
+---
+
+## 5. GamerScreen
+
+### Finalidade
+
+Exibe as métricas relevantes para jogos online (ping, jitter, perda de pacotes) e avalia cada categoria de jogo. Acessível pelo botão "Modo Gamer" na ResultScreen.
+
+### Layout
+
+```
+┌──────────────────────────────────┐
+│  ‹ Início          Modo Gamer    │
+│                                  │
+│  [Otimizado p/ jogos]            │  ← Chip accent
+│  "Ótima para FPS competitivo."   │  ← título com avaliação geral
+│  "Latência, jitter e perda…"     │
+│                                  │
+│  ┌──────┐  ┌──────┐  ┌──────┐   │  ← stat grid 3-col
+│  │ Ping │  │Jitter│  │ Loss │   │
+│  │ 18ms │  │ 3ms  │  │ 0,0% │   │
+│  └──────┘  └──────┘  └──────┘   │
+│                                  │
+│  ┌────────────────────────────┐  │  ← IOSList
+│  │ 🎮 FPS competitivo   Excelente│  │
+│  │ 🎮 MOBA              Excelente│  │
+│  │ 🎮 MMO               Excelente│  │
+│  │ 🎮 Cloud Gaming      Atenção  │  │
+│  └────────────────────────────┘  │
+│                                  │
+│  [Refazer teste]                 │  ← btn-primary, volta para RunningScreen
+└──────────────────────────────────┘
+```
+
+### Thresholds por jogo
+
+| Jogo | Excelente | Atenção | Ruim |
+|---|---|---|---|
+| FPS competitivo | lat≤20, jitter≤3, loss=0 | lat≤40 | lat>40 |
+| MOBA | lat≤30, jitter≤5 | lat≤60 | lat>60 |
+| MMO | lat≤60 | lat≤120 | lat>120 |
+| Cloud Gaming | DL≥15, lat≤40 | DL≥8, lat≤80 | abaixo disso |
+
+### Props
+
+```ts
+result: SpeedTestResult
+onBack: () => void
+onRetest: () => void
+```
+
+---
+
+## 6. RecommendScreen
+
+### Finalidade
+
+Lista até 4 ações concretas para melhorar a conexão. Se houver recomendações dinâmicas geradas por `buildRecommendations()` (baseadas no resultado), exibe-as em ordem de prioridade. Caso contrário, exibe 4 dicas estáticas gerais de Wi-Fi. Acessível pelo botão "Recomendações" na ResultScreen.
+
+### Layout
+
+```
+┌──────────────────────────────────┐
+│  ‹ Início       Recomendações    │
+│                                  │
+│  "N ações para melhorar          │  ← dinâmico ou "4 ações que podem…"
+│   sua conexão"                   │
+│  "Em ordem de impacto. Comece    │
+│   pela primeira."                │
+│                                  │
+│  ┌──────────────────────────┐    │
+│  │ [●] 1. Mude o canal Wi-Fi│    │  ← card: ícone tintado + título + desc + CTA
+│  │     Redes próximas podem  │    │
+│  │     estar usando…         │    │
+│  │     Como fazer →          │    │
+│  └──────────────────────────┘    │
+│   ... mais 3 cards ...           │
+└──────────────────────────────────┘
+```
+
+### Recomendações estáticas (fallback)
+
+1. Mude o canal Wi-Fi — evitar interferência de redes próximas
+2. Reposicione o roteador — centro da casa, longe de armários
+3. Considere usar cabo — ganho de 30%+ para TV e desktop
+4. Sistema mesh — para casas com sinal fraco em múltiplos cômodos
+
+### Props
+
+```ts
+result: SpeedTestResult | null
+quality: string               // Classification.primary
+tags: Tag[]
+onBack: () => void
+```
+
+---
+
+## 7. HistoryScreen
 
 ### Finalidade
 
@@ -548,7 +698,7 @@ A StartScreen pode abrir o HistoryScreen com um registro pré-selecionado via pr
 
 ---
 
-## 5. BeforeAfterScreen
+## 8. BeforeAfterScreen
 
 ### Finalidade
 
@@ -661,7 +811,7 @@ Tap em qualquer preset ou "Iniciar" (com input preenchido) chama `onStart(locati
 
 ---
 
-## 6. ComparisonScreen
+## 9. ComparisonScreen
 
 ### Finalidade
 
@@ -744,7 +894,7 @@ Guia o usuário por dois testes consecutivos — um perto do roteador e outro lo
 
 ---
 
-## 6. Comportamentos globais
+## 10. Comportamentos globais
 
 ### Tema dark/light
 

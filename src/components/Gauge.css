@@ -1,24 +1,41 @@
 .lk-gauge {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lk-gauge__center {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  text-align: center;
-  width: 100%;
 }
 
-.lk-gauge__value {
+.lk-gauge__phase {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.lk-gauge__num {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 96px;
-  letter-spacing: -3px;
-  color: var(--text);
+  font-size: 52px;
+  letter-spacing: -0.04em;
   line-height: 1;
+  font-feature-settings: 'tnum' 1, 'ss01' 1;
 }
 
 .lk-gauge__unit {
-  font-family: var(--font-body);
-  font-size: 18px;
-  color: var(--text-2);
-  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-3);
+  margin-top: 4px;
+  letter-spacing: 0.04em;
 }

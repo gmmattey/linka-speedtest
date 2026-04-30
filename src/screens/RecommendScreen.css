@@ -1,0 +1,116 @@
+.lk-rec-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+.lk-rec-screen__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 4px;
+  flex-shrink: 0;
+}
+
+.lk-rec-screen__back {
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.lk-rec-screen__head-label {
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.lk-rec-screen__scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 16px 32px;
+}
+
+.lk-rec-screen__hero {
+  padding: 4px 0 18px;
+}
+
+.lk-rec-screen__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-top: 10px;
+  color: var(--text);
+}
+
+.lk-rec-screen__sub {
+  font-size: 12px;
+  color: var(--text-2);
+  margin: 6px 0 0;
+}
+
+/* ── Cards ───────────────────────────────────────────── */
+
+.lk-rec-screen__card {
+  display: flex;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.lk-rec-screen__card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--accent-tint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lk-rec-screen__card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.lk-rec-screen__card-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.lk-rec-screen__card-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.lk-rec-screen__card-num {
+  font-size: 11px;
+  color: var(--text-3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.lk-rec-screen__card-desc {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.45;
+}
+
+.lk-rec-screen__cta {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

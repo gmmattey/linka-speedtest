@@ -1,0 +1,37 @@
+.lk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  font-family: var(--font-body);
+}
+
+.lk-chip--good {
+  background: var(--ul-tint);
+  color: var(--ul);
+}
+
+.lk-chip--maybe {
+  background: rgba(245, 166, 35, 0.16);
+  color: var(--warn);
+}
+
+.lk-chip--bad {
+  background: rgba(255, 69, 58, 0.16);
+  color: var(--error);
+}
+
+.lk-chip--accent {
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+
+.lk-chip--neutral {
+  background: var(--surface-2);
+  color: var(--text-2);
+  border: 1px solid var(--border);
+}

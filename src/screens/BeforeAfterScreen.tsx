@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { Header } from '../components/Header';
 import type { SpeedTestResult } from '../types';
 import { calculateBeforeAfter } from '../utils/beforeAfter';
 import { formatMbps, formatMs } from '../utils/format';
@@ -35,8 +34,16 @@ function deltaClass(percent: number, higherIsBetter: boolean): string {
 }
 
 export function BeforeAfterScreen({
-  theme, onToggleTheme, step, beforeResult, afterResult,
-  onStartBefore, onStartAfter, onBack, onRetry, unit = 'mbps',
+  theme: _theme,
+  onToggleTheme: _onToggleTheme,
+  step,
+  beforeResult,
+  afterResult,
+  onStartBefore,
+  onStartAfter,
+  onBack,
+  onRetry,
+  unit = 'mbps',
 }: Props) {
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
   const comparison = useMemo(
@@ -46,21 +53,24 @@ export function BeforeAfterScreen({
 
   return (
     <div className="lk-ba">
-      <Header theme={theme} onToggleTheme={onToggleTheme} />
-      <main className="lk-ba__main fade-in">
-        <div className="lk-ba__header">
-          <button className="btn-text lk-ba__back" onClick={onBack}>← Voltar</button>
-          <h2 className="lk-ba__title">Antes e Depois</h2>
-          <p className="lk-ba__subtitle">
-            Faça uma ação — reiniciar o roteador, trocar de canal Wi‑Fi, mudar de lugar — e veja se melhorou.
-          </p>
+      <div className="lk-ba__head">
+        <button className="lk-ba__back" onClick={onBack}>‹ Início</button>
+        <span className="lk-ba__head-label">Antes e Depois</span>
+      </div>
+
+      <div className="lk-ba__scroll fade-in">
+        <div className="lk-ba__hero">
+          <div className="lk-ba__title">Meça o impacto de uma ação</div>
+          <p className="lk-ba__sub">Reinicie o roteador, troque o canal Wi‑Fi ou mude de lugar — e veja se melhorou.</p>
         </div>
 
         {step === 'before' && (
           <div className="lk-ba__step">
             <div className="lk-ba__step-badge">Passo 1 de 2 — Antes</div>
             <p className="lk-ba__step-instruction">Inicie o teste agora, antes de fazer qualquer mudança.</p>
-            <button className="btn-primary lk-ba__start-btn" onClick={onStartBefore}>Iniciar teste (antes)</button>
+            <button className="btn-primary lk-ba__start-btn" onClick={onStartBefore}>
+              Iniciar teste (antes)
+            </button>
           </div>
         )}
 
@@ -75,43 +85,62 @@ export function BeforeAfterScreen({
               </span>
             </div>
             <div className="lk-ba__step-actions">
-              <button className="btn-primary lk-ba__start-btn" onClick={onStartAfter}>Iniciar teste (depois)</button>
+              <button className="btn-primary lk-ba__start-btn" onClick={onStartAfter}>
+                Iniciar teste (depois)
+              </button>
               <button className="btn-text" onClick={onRetry}>Refazer primeiro teste</button>
             </div>
           </div>
         )}
 
         {step === 'done' && beforeResult && afterResult && comparison && (
-          <div className="lk-ba__result fade-in">
-            <div className={`lk-ba__verdict lk-ba__verdict--${comparison.verdict}`}>{comparison.message}</div>
+          <div className="lk-ba__result">
+            <div className={`lk-ba__verdict lk-ba__verdict--${comparison.verdict}`}>
+              {comparison.message}
+            </div>
+
             <div className="lk-ba__table">
-              <div className="lk-ba__table-header"><span /><span>Antes</span><span>Depois</span><span>Δ</span></div>
+              <div className="lk-ba__table-header">
+                <span />
+                <span>Antes</span>
+                <span>Depois</span>
+                <span>Δ</span>
+              </div>
               <div className="lk-ba__table-row">
                 <span>↓ Download</span>
                 <span className="lk-ba__val">{formatMbps(beforeResult.dl, unit)} {unitLabel}</span>
                 <span className="lk-ba__val">{formatMbps(afterResult.dl, unit)} {unitLabel}</span>
-                <span className={`lk-ba__delta ${deltaClass(comparison.dlDeltaPercent, true)}`}>{deltaLabel(comparison.dlDeltaPercent, true)}</span>
+                <span className={`lk-ba__delta ${deltaClass(comparison.dlDeltaPercent, true)}`}>
+                  {deltaLabel(comparison.dlDeltaPercent, true)}
+                </span>
               </div>
               <div className="lk-ba__table-row">
                 <span>↑ Upload</span>
                 <span className="lk-ba__val">{formatMbps(beforeResult.ul, unit)} {unitLabel}</span>
                 <span className="lk-ba__val">{formatMbps(afterResult.ul, unit)} {unitLabel}</span>
-                <span className={`lk-ba__delta ${deltaClass(comparison.ulDeltaPercent, true)}`}>{deltaLabel(comparison.ulDeltaPercent, true)}</span>
+                <span className={`lk-ba__delta ${deltaClass(comparison.ulDeltaPercent, true)}`}>
+                  {deltaLabel(comparison.ulDeltaPercent, true)}
+                </span>
               </div>
               <div className="lk-ba__table-row">
                 <span>Resposta</span>
                 <span className="lk-ba__val">{formatMs(beforeResult.latency)} ms</span>
                 <span className="lk-ba__val">{formatMs(afterResult.latency)} ms</span>
-                <span className={`lk-ba__delta ${deltaClass(comparison.latencyDeltaPercent, false)}`}>{deltaLabel(comparison.latencyDeltaPercent, false)}</span>
+                <span className={`lk-ba__delta ${deltaClass(comparison.latencyDeltaPercent, false)}`}>
+                  {deltaLabel(comparison.latencyDeltaPercent, false)}
+                </span>
               </div>
             </div>
+
             <div className="lk-ba__actions">
-              <button className="btn-primary" onClick={onRetry}>Fazer nova comparação</button>
+              <button className="btn-primary lk-ba__actions-primary" onClick={onRetry}>
+                Nova comparação
+              </button>
               <button className="btn-text" onClick={onBack}>Voltar ao início</button>
             </div>
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

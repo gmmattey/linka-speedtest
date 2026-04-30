@@ -39,9 +39,11 @@ Linka SpeedTest/
 │   │
 │   ├── components/               ← Componentes reutilizáveis (sem estado de negócio)
 │   │   ├── BottomSheet.tsx / .css
-│   │   ├── Gauge.tsx / .css
+│   │   ├── Chip.tsx / .css       ← Badge/chip com variantes semânticas (good/maybe/bad/accent/neutral)
+│   │   ├── Gauge.tsx / .css      ← Anel SVG com fase + número hero + unidade
 │   │   ├── Header.tsx / .css
 │   │   ├── InfoCards.tsx / .css  ← Mantido mas desativado (substituído pelo BottomSheet)
+│   │   ├── IOSList.tsx / .css    ← Lista estilo iOS Settings (ícone + título + trailing)
 │   │   ├── LiveChart.tsx
 │   │   ├── PathRow.tsx / .css
 │   │   └── icons.tsx             ← Biblioteca centralizada de SVGs inline
@@ -55,7 +57,13 @@ Linka SpeedTest/
 │   │   ├── StartScreen.tsx / .css
 │   │   ├── RunningScreen.tsx / .css
 │   │   ├── ResultScreen.tsx / .css
-│   │   └── HistoryScreen.tsx / .css
+│   │   ├── HistoryScreen.tsx / .css
+│   │   ├── ComparisonScreen.tsx / .css
+│   │   ├── BeforeAfterScreen.tsx / .css
+│   │   ├── RoomTestScreen.tsx / .css
+│   │   ├── DiagnosticScreen.tsx / .css  ← Diagnóstico de 6 áreas em grid 2-col
+│   │   ├── GamerScreen.tsx / .css       ← Avaliação de jogos: ping/jitter/loss + rows por game
+│   │   └── RecommendScreen.tsx / .css   ← 4 ações para melhorar o Wi-Fi
 │   │
 │   ├── utils/                    ← Funções puras / lógica de domínio (sem React) — específicas do PWA
 │   │   ├── classifier.ts         ← Classificação de qualidade + diagnóstico (legado, em coexistência com src/core)

@@ -1,5 +1,5 @@
-import { Header } from '../components/Header';
 import { Gauge } from '../components/Gauge';
+import { formatMbps } from '../utils/format';
 import type { TestPhase } from '../types';
 import './RunningScreen.css';
 
@@ -24,9 +24,37 @@ function phraseFor(phase: TestPhase): string {
   }
 }
 
+function gaugePhaseLabel(phase: TestPhase): string {
+  switch (phase) {
+    case 'download': return 'DOWNLOAD';
+    case 'upload':   return 'UPLOAD';
+    case 'latency':  return 'LATÊNCIA';
+    case 'done':     return 'CONCLUÍDO';
+    default:         return 'AGUARDANDO';
+  }
+}
+
+function gaugeProgress(phase: TestPhase): number {
+  switch (phase) {
+    case 'latency':  return 0.15;
+    case 'download': return 0.5;
+    case 'upload':   return 0.85;
+    case 'done':     return 1;
+    default:         return 0;
+  }
+}
+
+function gaugeColor(phase: TestPhase): string {
+  switch (phase) {
+    case 'download': return 'var(--dl)';
+    case 'upload':   return 'var(--ul)';
+    default:         return 'var(--accent)';
+  }
+}
+
 export function RunningScreen({
-  theme,
-  onToggleTheme,
+  theme: _theme,
+  onToggleTheme: _onToggleTheme,
   phase,
   instantMbps,
   onCancel,
@@ -37,7 +65,10 @@ export function RunningScreen({
   if (phase === 'error') {
     return (
       <div className="lk-running">
-        <Header theme={theme} onToggleTheme={onToggleTheme} />
+        <div className="lk-running__head">
+          <span />
+          <span className="lk-running__head-label">Erro</span>
+        </div>
         <main className="lk-running__main lk-running__main--error">
           <div className="lk-running__error" role="alert">
             <div className="lk-running__error-icon" aria-hidden="true">
@@ -60,10 +91,19 @@ export function RunningScreen({
 
   return (
     <div className="lk-running">
-      <Header theme={theme} onToggleTheme={onToggleTheme} />
+      <div className="lk-running__head">
+        <span />
+        <span className="lk-running__head-label">Medindo…</span>
+      </div>
       <main className="lk-running__main">
         <div className="lk-running__gauge">
-          <Gauge instantMbps={instantMbps} unit={unit} />
+          <Gauge
+            value={gaugeProgress(phase)}
+            phase={gaugePhaseLabel(phase)}
+            num={instantMbps != null ? formatMbps(instantMbps, unit) : '—'}
+            unit={unit === 'gbps' ? 'Gbps' : 'Mbps'}
+            color={gaugeColor(phase)}
+          />
         </div>
         <p className="lk-running__phrase">{phraseFor(phase)}</p>
         {sessionLabel && <p className="lk-running__session-label">{sessionLabel}</p>}

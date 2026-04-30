@@ -6,14 +6,18 @@ import { HistoryScreen } from './screens/HistoryScreen';
 import { ComparisonScreen, type ComparisonStep } from './screens/ComparisonScreen';
 import { BeforeAfterScreen, type BeforeAfterStep } from './screens/BeforeAfterScreen';
 import { RoomTestScreen } from './screens/RoomTestScreen';
+import { DiagnosticScreen } from './screens/DiagnosticScreen';
+import { GamerScreen } from './screens/GamerScreen';
+import { RecommendScreen } from './screens/RecommendScreen';
 import { useDeviceInfo } from './hooks/useDeviceInfo';
 import { useSpeedTest } from './hooks/useSpeedTest';
 import { useSettings } from './hooks/useSettings';
 import { appendRecord, previousRecord } from './utils/history';
 import { averageSpeedResults } from './utils/provaReal';
+import { classify } from './utils/classifier';
 import type { SpeedTestMode, SpeedTestResult, TestRecord } from './types';
 
-type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter' | 'roomtest';
+type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter' | 'roomtest' | 'diagnostic' | 'gamer' | 'recommend';
 
 const THEME_KEY = 'linka.speedtest.theme';
 const SWIPE_THRESHOLD_PX = 80;
@@ -309,6 +313,10 @@ export default function App() {
     goTo('history');
   }, [lastRecord, goTo]);
 
+  const handleDiagnostic = useCallback(() => goTo('diagnostic'), [goTo]);
+  const handleGamer = useCallback(() => goTo('gamer'), [goTo]);
+  const handleRecommend = useCallback(() => goTo('recommend'), [goTo]);
+
   // ── Swipe lateral (back/forward) ─────────────────────────
   const swipeStartRef = useRef<{ x: number; y: number; valid: boolean } | null>(null);
 
@@ -368,8 +376,43 @@ export default function App() {
             unit={settings.unit}
             hideIpOnShare={settings.hideIpOnShare}
             gamingProfile={settings.gamingProfile}
+            onDiagnostic={handleDiagnostic}
+            onGamer={handleGamer}
+            onRecommend={handleRecommend}
           />
         ) : null;
+      }
+      case 'diagnostic': {
+        const resultForDiag = provaRealOverride ?? test.result;
+        return resultForDiag ? (
+          <DiagnosticScreen
+            result={resultForDiag}
+            connectionType={deviceInfo.device?.connectionType ?? null}
+            onBack={() => goTo('result')}
+          />
+        ) : null;
+      }
+      case 'gamer': {
+        const resultForGamer = provaRealOverride ?? test.result;
+        return resultForGamer ? (
+          <GamerScreen
+            result={resultForGamer}
+            onBack={() => goTo('result')}
+            onRetest={handleRetry}
+          />
+        ) : null;
+      }
+      case 'recommend': {
+        const resultForRec = provaRealOverride ?? test.result;
+        const classification = resultForRec ? classify(resultForRec) : null;
+        return (
+          <RecommendScreen
+            result={resultForRec}
+            quality={classification?.primary ?? ''}
+            tags={classification ? [...classification.tags] : []}
+            onBack={() => goTo('result')}
+          />
+        );
       }
       case 'comparison':
         return (
@@ -412,6 +455,7 @@ export default function App() {
             onToggleTheme={onToggleTheme}
             unit={settings.unit}
             initialSelectedId={historyInitialId}
+            onBack={() => goTo('start')}
           />
         );
       case 'start':
@@ -448,6 +492,7 @@ export default function App() {
     handleComparisonStartNear, handleComparisonStartFar, handleComparisonRetryNear,
     handleStartBeforeAfter, handleBAStartBefore, handleBAStartAfter, handleBARetry,
     handleStartProvaReal, handleOpenRoomTest, handleRoomStart,
+    handleDiagnostic, handleGamer, handleRecommend,
     settings, updateSettings, testMode,
     comparisonStep, comparisonNear, comparisonFar,
     baStep, baBefore, baAfter,

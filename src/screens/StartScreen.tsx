@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import type { DeviceInfo, ServerInfo, SpeedTestMode, TestRecord } from '../types';
 import type { Settings } from '../hooks/useSettings';
-import { Header } from '../components/Header';
-import { BottomSheet } from '../components/BottomSheet';
+import { IOSList } from '../components/IOSList';
+import { Icon } from '../components/icons';
 import { formatMbps } from '../utils/format';
 import './StartScreen.css';
 
@@ -36,7 +35,7 @@ export function StartScreen({
   error,
   isOnline,
   settings,
-  onUpdateSettings,
+  onUpdateSettings: _onUpdateSettings,
   onStart,
   onStartComparison,
   onStartBeforeAfter,
@@ -47,131 +46,151 @@ export function StartScreen({
   onShowLastResult,
   onShowHistory,
 }: Props) {
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [mode, setMode] = useState<SpeedTestMode>('quick');
   const canStart = isOnline && !loading && !!server?.available && !!device;
   const unitLabel = settings.unit === 'gbps' ? 'Gbps' : 'Mbps';
 
+  const connectionLabel = (() => {
+    if (!device) return null;
+    const type = device.connectionType;
+    if (type === 'wifi') return 'Wi-Fi';
+    if (type === 'mobile') return 'Dados móveis';
+    return 'Cabo';
+  })();
+
+  const connectionSub = (() => {
+    if (!isOnline) return 'Sem conexão';
+    if (loading) return 'Detectando…';
+    return 'Conectado';
+  })();
+
+  const serverLabel = server?.name ?? 'Detectando servidor…';
+  const serverSub = server?.loc ? server.loc : 'Servidor mais próximo';
+
   return (
-    <div className="lk-start">
-      <Header theme={theme} onToggleTheme={onToggleTheme} />
+    <div className="lk-start" data-theme={theme}>
+      {/* Cabeçalho mínimo */}
+      <div className="lk-start__topbar">
+        <span className="lk-start__logo">
+          li<span style={{ color: 'var(--accent)' }}>n</span>ka
+        </span>
+        <button
+          className="lk-start__topbar-btn"
+          onClick={onShowHistory}
+          aria-label="Ver histórico"
+        >
+          <Icon name="history" size={20} color="var(--text-2)" />
+        </button>
+      </div>
 
-      <main className="lk-start__main">
-        {!isOnline ? (
-          <div className="lk-start__error" role="alert">
-            <span>Sem conexão. Conecte-se à internet para medir sua velocidade.</span>
-          </div>
-        ) : error ? (
-          <div className="lk-start__error" role="alert">
-            <span>⚠ {error}</span>
-            <button className="btn-text" onClick={onRetry}>Tentar novamente</button>
-          </div>
-        ) : null}
-
-        {/* Círculo centralizado */}
-        <div className="lk-start__hero">
-          <button
-            className={`lk-start__cta${canStart ? ' lk-start__cta--ready' : ''}`}
-            onClick={() => onStart(mode)}
-            disabled={!canStart}
-            aria-label={mode === 'quick' ? 'Iniciar teste rápido' : 'Iniciar teste completo'}
-          >
-            <span className="lk-start__cta-label">
-              {loading ? 'Aguardando…' : 'Iniciar'}
-            </span>
+      {/* Alerta de erro */}
+      {!isOnline && (
+        <div className="lk-start__alert" role="alert">
+          Sem conexão. Conecte-se à internet para medir.
+        </div>
+      )}
+      {isOnline && error && (
+        <div className="lk-start__alert" role="alert">
+          {error}
+          <button className="btn-text" style={{ fontSize: 12 }} onClick={onRetry}>
+            Tentar novamente
           </button>
         </div>
+      )}
 
-        {/* Controles inferiores */}
-        <div className="lk-start__controls">
-          {/* Toggle estilo iOS: label — switch — label */}
-          <div className="lk-start__toggle-row">
-            <span
-              className={`lk-start__toggle-label${mode === 'quick' ? ' lk-start__toggle-label--active' : ''}`}
-              onClick={() => setMode('quick')}
-            >
-              Teste rápido
-            </span>
-            <button
-              className={`lk-start__toggle-switch${mode === 'complete' ? ' lk-start__toggle-switch--on' : ''}`}
-              onClick={() => setMode(mode === 'quick' ? 'complete' : 'quick')}
-              role="switch"
-              aria-checked={mode === 'complete'}
-              aria-label="Alternar entre teste rápido e completo"
-            />
-            <span
-              className={`lk-start__toggle-label${mode === 'complete' ? ' lk-start__toggle-label--active' : ''}`}
-              onClick={() => setMode('complete')}
-            >
-              Teste completo
-            </span>
+      {/* Núcleo centralizado */}
+      <div className="lk-start__body">
+        {/* Orb pulsante */}
+        <button
+          className={`lk-start__orb${!canStart ? ' lk-start__orb--disabled' : ''}`}
+          onClick={() => onStart('complete')}
+          disabled={!canStart}
+          aria-label="Iniciar teste"
+        >
+          <span className="lk-start__orb-label">
+            {loading ? 'Aguardando' : 'Iniciar'}
+          </span>
+        </button>
+
+        {/* Linhas de info */}
+        <div className="lk-start__info">
+          <div>Teste completo · download, upload e latência</div>
+          <div>
+            Consumo estimado{' '}
+            <span style={{ color: 'var(--text)', fontWeight: 500 }}>~ 80 MB</span>
           </div>
-
-          {settings.gamingProfile !== 'off' && (
-            <p className="lk-start__data-hint lk-start__gamer-hint">
-              🎮 Modo Gamer ativo: {
-                settings.gamingProfile === 'casual' ? 'Casual'
-                : settings.gamingProfile === 'moba'  ? 'MOBA'
-                : settings.gamingProfile === 'fps'   ? 'FPS'
-                : 'Cloud Gaming'
-              }
-            </p>
+          {server && (
+            <div>{serverLabel}</div>
           )}
+        </div>
+      </div>
 
-          <button
-            className="btn-text lk-start__compare-link"
-            onClick={onStartComparison}
-            disabled={!canStart}
-          >
-            Comparar locais
-          </button>
+      {/* Lista iOS com conexão e servidor */}
+      {(device || server) && (
+        <div className="lk-start__list">
+          <IOSList
+            items={[
+              ...(device ? [{
+                icon: <Icon name={device.connectionType === 'wifi' ? 'wifi' : device.connectionType === 'mobile' ? 'ping' : 'router'} size={14} color="#fff" />,
+                iconBg: 'var(--info)',
+                title: connectionLabel ?? 'Conexão',
+                subtitle: connectionSub,
+              }] : []),
+              ...(server ? [{
+                icon: <Icon name="pin" size={14} color="var(--text-2)" />,
+                iconBg: 'var(--surface-3)',
+                title: serverLabel,
+                subtitle: serverSub,
+              }] : []),
+            ]}
+          />
+        </div>
+      )}
 
-          <button
-            className="btn-text lk-start__compare-link"
-            onClick={onStartBeforeAfter}
-            disabled={!canStart}
-          >
-            Antes e Depois
-          </button>
-
-          <button
-            className="btn-text lk-start__compare-link"
-            onClick={onStartProvaReal}
-            disabled={!canStart}
-          >
-            Prova Real (3×)
-          </button>
-
-          <button
-            className="btn-text lk-start__compare-link"
-            onClick={onStartRoomTest}
-            disabled={!canStart}
-          >
-            Teste por local
-          </button>
-
-          {lastRecord && (
-            <button className="btn-text lk-start__last-link" onClick={onShowLastResult}>
-              ↓ {formatMbps(lastRecord.dl, settings.unit)} ↑ {formatMbps(lastRecord.ul, settings.unit)} {unitLabel} · Ver último teste
-            </button>
-          )}
-
-          <button className="btn-text lk-start__history-link" onClick={onShowHistory}>
-            Ver histórico
+      {/* Último resultado */}
+      {lastRecord && (
+        <div className="lk-start__last">
+          <button className="btn-text lk-start__last-btn" onClick={onShowLastResult}>
+            Último: {formatMbps(lastRecord.dl, settings.unit)} ↓ · {formatMbps(lastRecord.ul, settings.unit)} ↑ {unitLabel}
           </button>
         </div>
-      </main>
+      )}
 
-      <BottomSheet
-        open={sheetOpen}
-        onToggle={() => setSheetOpen((o) => !o)}
-        onClose={() => setSheetOpen(false)}
-        device={device}
-        server={server}
-        loading={loading}
-        settings={settings}
-        onUpdateSettings={onUpdateSettings}
-      />
+      {/* Links secundários */}
+      <div className="lk-start__links">
+        <button className="btn-text lk-start__link" onClick={onStartComparison} disabled={!canStart}>
+          Comparar locais
+        </button>
+        <button className="btn-text lk-start__link" onClick={onStartBeforeAfter} disabled={!canStart}>
+          Antes e Depois
+        </button>
+        <button className="btn-text lk-start__link" onClick={onStartProvaReal} disabled={!canStart}>
+          Prova Real (3×)
+        </button>
+        <button className="btn-text lk-start__link" onClick={onStartRoomTest} disabled={!canStart}>
+          Teste por local
+        </button>
+      </div>
+
+      {/* Tema toggle */}
+      <div className="lk-start__theme">
+        <div className="lk-start__theme-toggle">
+          <button
+            className={`lk-start__theme-btn${theme === 'light' ? ' lk-start__theme-btn--active' : ''}`}
+            onClick={() => theme !== 'light' && onToggleTheme()}
+          >
+            Light
+          </button>
+          <button
+            className={`lk-start__theme-btn${theme === 'dark' ? ' lk-start__theme-btn--active' : ''}`}
+            onClick={() => theme !== 'dark' && onToggleTheme()}
+          >
+            Dark
+          </button>
+        </div>
+      </div>
+
+      {/* Dica de rodapé */}
+      <div className="lk-start__hint">Toque no círculo</div>
     </div>
   );
 }

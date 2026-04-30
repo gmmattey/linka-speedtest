@@ -1,0 +1,100 @@
+.lk-diag {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+.lk-diag__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 4px;
+  flex-shrink: 0;
+}
+
+.lk-diag__back {
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.lk-diag__head-label {
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.lk-diag__scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 16px 32px;
+}
+
+.lk-diag__hero {
+  padding: 4px 0 18px;
+}
+
+.lk-diag__hero-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--text);
+}
+
+.lk-diag__hero-sub {
+  font-size: 12px;
+  color: var(--text-2);
+  margin: 4px 0 0;
+}
+
+.lk-diag__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.lk-diag__card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+
+.lk-diag__card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.lk-diag__card-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lk-diag__card-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.02em;
+}
+
+.lk-diag__card-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.lk-diag__card-note {
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.4;
+}

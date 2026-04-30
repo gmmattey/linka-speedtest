@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Header } from '../components/Header';
+import { IOSList } from '../components/IOSList';
+import { Icon } from '../components/icons';
 import './RoomTestScreen.css';
 
 const ROOM_PRESETS = ['Sala', 'Quarto', 'Escritório', 'Cozinha', 'Varanda', 'Garagem'];
@@ -11,7 +12,7 @@ interface Props {
   onBack: () => void;
 }
 
-export function RoomTestScreen({ theme, onToggleTheme, onStart, onBack }: Props) {
+export function RoomTestScreen({ theme: _theme, onToggleTheme: _onToggleTheme, onStart, onBack }: Props) {
   const [custom, setCustom] = useState('');
 
   const handleCustomStart = () => {
@@ -21,27 +22,26 @@ export function RoomTestScreen({ theme, onToggleTheme, onStart, onBack }: Props)
 
   return (
     <div className="lk-room">
-      <Header theme={theme} onToggleTheme={onToggleTheme} />
-      <main className="lk-room__main fade-in">
-        <div className="lk-room__header">
-          <button className="btn-text lk-room__back" onClick={onBack}>← Voltar</button>
-          <h2 className="lk-room__title">Teste por local</h2>
-          <p className="lk-room__subtitle">
-            Selecione o cômodo onde você está. O resultado ficará salvo com essa etiqueta no histórico.
-          </p>
+      <div className="lk-room__head">
+        <button className="lk-room__back" onClick={onBack}>‹ Início</button>
+        <span className="lk-room__head-label">Teste por local</span>
+      </div>
+
+      <div className="lk-room__scroll">
+        <div className="lk-room__hero">
+          <div className="lk-room__title">Selecione o cômodo</div>
+          <p className="lk-room__sub">O resultado ficará salvo com essa etiqueta no histórico.</p>
         </div>
 
-        <div className="lk-room__grid">
-          {ROOM_PRESETS.map((room) => (
-            <button
-              key={room}
-              className="lk-room__opt"
-              onClick={() => onStart(room)}
-            >
-              {room}
-            </button>
-          ))}
-        </div>
+        <IOSList
+          items={ROOM_PRESETS.map((room) => ({
+            icon: <Icon name="pin" size={14} color="var(--accent)" />,
+            iconBg: 'var(--accent-tint)',
+            title: room,
+            showChevron: true,
+            onClick: () => onStart(room),
+          }))}
+        />
 
         <div className="lk-room__custom">
           <p className="lk-room__custom-label">Outro local</p>
@@ -49,7 +49,7 @@ export function RoomTestScreen({ theme, onToggleTheme, onStart, onBack }: Props)
             <input
               className="lk-room__input"
               type="text"
-              placeholder="Ex.: Terraço, Garagem…"
+              placeholder="Ex.: Terraço, Escritório 2…"
               value={custom}
               onChange={(e) => setCustom(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCustomStart()}
@@ -64,7 +64,7 @@ export function RoomTestScreen({ theme, onToggleTheme, onStart, onBack }: Props)
             </button>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

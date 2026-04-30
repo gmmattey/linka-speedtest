@@ -148,6 +148,48 @@ export function IconVideoCall({ size }: { size?: number }) {
   );
 }
 
+/* ── Inline icon primitive (design system) ───────── */
+
+interface IconProps { name: string; size?: number; stroke?: number; color?: string; }
+
+const ICON_PATHS: Record<string, React.ReactNode> = {
+  download:   <path d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />,
+  upload:     <path d="M12 20V8m0 0l-4 4m4-4l4 4M4 4h16" />,
+  ping:       <path d="M5 12h2l3-7 4 14 3-7h2" />,
+  jitter:     <path d="M3 12h3l2-4 4 8 2-4 3 0 4 0" />,
+  loss:       <><circle cx="12" cy="12" r="9" /><path d="M9 9l6 6m0-6l-6 6" /></>,
+  wifi:       <><path d="M2 8.5C5 5.5 8.5 4 12 4s7 1.5 10 4.5" /><path d="M5 12c2-2 4.5-3 7-3s5 1 7 3" /><path d="M8.5 15.5c1-1 2.2-1.5 3.5-1.5s2.5.5 3.5 1.5" /><circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none" /></>,
+  router:     <><rect x="3" y="13" width="18" height="6" rx="2" /><path d="M7 16h.01M11 16h.01" /><path d="M12 9V5m-3 0h6" /><path d="M6 9c0-3 2.5-5 6-5s6 2 6 5" /></>,
+  home:       <path d="M3 12l9-8 9 8M5 10v10h14V10" />,
+  history:    <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+  game:       <><rect x="2" y="7" width="20" height="10" rx="3" /><path d="M7 12h2m-1-1v2" /><circle cx="15" cy="11" r="0.8" fill="currentColor" stroke="none" /><circle cx="17" cy="13" r="0.8" fill="currentColor" stroke="none" /></>,
+  bolt:       <path d="M13 2L4 14h7l-1 8 10-12h-7l1-8z" />,
+  shield:     <path d="M12 2l8 3v7c0 5-3.5 8-8 10-4.5-2-8-5-8-10V5l8-3z" />,
+  bulb:       <path d="M9 18h6m-5 3h4M12 3a6 6 0 016 6c0 2.5-1.5 4.5-3 5.5V17H9v-2.5C7.5 13.5 6 11.5 6 9a6 6 0 016-6z" />,
+  cog:        <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.6 1.6 0 00-1-1.5 1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H3a2 2 0 110-4h.1a1.6 1.6 0 001.5-1 1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3h.1a1.6 1.6 0 001-1.5V3a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8v.1a1.6 1.6 0 001.5 1H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z" /></>,
+  refresh:    <path d="M4 12a8 8 0 0114-5.3L20 9M20 4v5h-5M20 12a8 8 0 01-14 5.3L4 15M4 20v-5h5" />,
+  share:      <><path d="M12 4v12" /><path d="M8 8l4-4 4 4" /><path d="M5 14v5a1 1 0 001 1h12a1 1 0 001-1v-5" /></>,
+  check:      <path d="M5 13l4 4 10-10" />,
+  close:      <path d="M6 6l12 12M18 6L6 18" />,
+  chevron:    <path d="M9 6l6 6-6 6" />,
+  arrowDown:  <path d="M6 9l6 6 6-6" />,
+  pin:        <><path d="M12 22s7-7.5 7-13a7 7 0 10-14 0c0 5.5 7 13 7 13z" /><circle cx="12" cy="9" r="2.5" /></>,
+};
+
+export function Icon({ name, size = 18, stroke = 1.6, color = 'currentColor' }: IconProps) {
+  const content = ICON_PATHS[name];
+  if (!content) return null;
+  return (
+    <svg
+      width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {content}
+    </svg>
+  );
+}
+
 /* ── Actions ──────────────────────────────────────── */
 
 export function IconPdf({ size }: { size?: number }) {

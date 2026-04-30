@@ -1,0 +1,105 @@
+.lk-gamer {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+.lk-gamer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 4px;
+  flex-shrink: 0;
+}
+
+.lk-gamer__back {
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.lk-gamer__head-label {
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.lk-gamer__scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 16px 32px;
+}
+
+.lk-gamer__hero {
+  padding: 4px 0 18px;
+}
+
+.lk-gamer__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-top: 10px;
+  color: var(--text);
+}
+
+.lk-gamer__sub {
+  font-size: 12px;
+  color: var(--text-2);
+  margin: 6px 0 0;
+}
+
+/* ── Stats 3-col ─────────────────────────────────── */
+
+.lk-gamer__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.lk-gamer__stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  text-align: center;
+}
+
+.lk-gamer__stat-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.lk-gamer__stat-value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  font-feature-settings: 'tnum' 1;
+}
+
+.lk-gamer__stat-unit {
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 500;
+  margin-left: 2px;
+}
+
+/* ── CTA ─────────────────────────────────────────── */
+
+.lk-gamer__cta {
+  margin-top: 16px;
+}
+
+.lk-gamer__retest {
+  width: 100%;
+  height: 50px;
+  font-size: 15px;
+  border-radius: var(--radius);
+}
