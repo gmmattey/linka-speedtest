@@ -1,0 +1,153 @@
+.lk-dns-guide {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+/* ── Header ──────────────────────────────────────── */
+
+.lk-dns-guide__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 4px;
+  flex-shrink: 0;
+}
+
+.lk-dns-guide__back {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.lk-dns-guide__back svg {
+  transform: rotate(180deg);
+}
+
+.lk-dns-guide__head-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ── Scroll area ─────────────────────────────────── */
+
+.lk-dns-guide__scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px 40px;
+}
+
+/* ── Hero ────────────────────────────────────────── */
+
+.lk-dns-guide__hero {
+  padding: 4px 0 20px;
+}
+
+.lk-dns-guide__hero-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin: 0 0 10px;
+}
+
+.lk-dns-guide__ips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lk-dns-guide__ip-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
+/* ── Platform tabs ───────────────────────────────── */
+
+.lk-dns-guide__tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.lk-dns-guide__tab {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+}
+
+.lk-dns-guide__tab--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* ── Steps ───────────────────────────────────────── */
+
+.lk-dns-guide__steps {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.lk-dns-guide__step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.lk-dns-guide__step-num {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-tint);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lk-dns-guide__step-text {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+  padding-top: 3px;
+}
+
+/* ── Note ────────────────────────────────────────── */
+
+.lk-dns-guide__note {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-3);
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  margin: 0;
+}

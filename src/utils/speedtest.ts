@@ -1,5 +1,7 @@
 import type { ConnectionType, SpeedTestMode, SpeedTestProgress, SpeedTestResult, TestPhase } from '../types';
 import { getDefaultServer } from './serverRegistry';
+import { runBufferbloatTest } from './bufferbloat';
+import { runDNSBenchmark } from './dnsBenchmark';
 
 interface Preset {
   latencySamples: number;
@@ -39,20 +41,36 @@ function presetFor(connectionType?: ConnectionType, mode?: SpeedTestMode): Prese
   return connectionType === 'mobile' ? PRESET_MOBILE : PRESET_DEFAULT;
 }
 
-const PHASE_RANGES: Record<Exclude<TestPhase, 'idle'>, [number, number]> = {
-  latency: [0.0, 0.15],
+// Normal mode: 3 phases
+const RANGES_NORMAL: Record<Exclude<TestPhase, 'idle'>, [number, number]> = {
+  latency:  [0.00, 0.15],
   download: [0.15, 0.70],
-  upload: [0.70, 1.0],
-  done: [1.0, 1.0],
-  error: [0, 0],
+  upload:   [0.70, 1.00],
+  load:     [1.00, 1.00], // unused
+  dns:      [1.00, 1.00], // unused
+  done:     [1.00, 1.00],
+  error:    [0.00, 0.00],
 };
 
-function p90(values: number[]): number {
+// Advanced mode: 5 phases (latency → download → upload → load → dns)
+const RANGES_ADVANCED: Record<Exclude<TestPhase, 'idle'>, [number, number]> = {
+  latency:  [0.00, 0.08],
+  download: [0.08, 0.48],
+  upload:   [0.48, 0.70],
+  load:     [0.70, 0.88],
+  dns:      [0.88, 1.00],
+  done:     [1.00, 1.00],
+  error:    [0.00, 0.00],
+};
+
+function percentile(values: number[], p: number): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
-  const idx = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.9));
+  const idx = Math.min(sorted.length - 1, Math.floor(sorted.length * p));
   return sorted[idx];
 }
+
+function p90(values: number[]): number { return percentile(values, 0.9); }
 
 function median(values: number[]): number {
   if (values.length === 0) return 0;
@@ -78,13 +96,18 @@ function makeRandomBuffer(size: number): Uint8Array {
   return buf;
 }
 
-function mapProgress(phase: Exclude<TestPhase, 'idle' | 'error'>, local: number): number {
-  const [a, b] = PHASE_RANGES[phase];
+function mapProgress(
+  ranges: Record<Exclude<TestPhase, 'idle'>, [number, number]>,
+  phase: Exclude<TestPhase, 'idle' | 'error'>,
+  local: number,
+): number {
+  const [a, b] = ranges[phase];
   return a + (b - a) * Math.max(0, Math.min(1, local));
 }
 
 async function measureLatency(
   samples: number,
+  ranges: Record<Exclude<TestPhase, 'idle'>, [number, number]>,
   signal: AbortSignal,
   onProgress: (p: SpeedTestProgress) => void,
 ): Promise<{ latency: number; jitter: number; loss: number }> {
@@ -114,7 +137,7 @@ async function measureLatency(
     onProgress({
       phase: 'latency',
       instantMbps: null,
-      overallProgress: mapProgress('latency', (i + 1) / samples),
+      overallProgress: mapProgress(ranges, 'latency', (i + 1) / samples),
     });
   }
 
@@ -219,23 +242,25 @@ export async function runSpeedTest(
   connectionType?: ConnectionType,
   mode?: SpeedTestMode,
 ): Promise<SpeedTestResult> {
+  const isAdvanced = mode === 'advanced';
+  const ranges = isAdvanced ? RANGES_ADVANCED : RANGES_NORMAL;
   const preset = presetFor(connectionType, mode);
 
   onProgress({ phase: 'latency', instantMbps: null, overallProgress: 0 });
-  const lat = await measureLatency(preset.latencySamples, signal, onProgress);
+  const lat = await measureLatency(preset.latencySamples, ranges, signal, onProgress);
 
-  let warmupRx = 0;
+  let _warmupRx = 0;
   const tWarm = performance.now();
   await downloadRound(
     preset.dlWarmup,
     signal,
     () => {
-      warmupRx += 1;
+      _warmupRx += 1;
       const local = Math.min(0.99, (performance.now() - tWarm) / 8000);
       onProgress({
         phase: 'download',
         instantMbps: null,
-        overallProgress: mapProgress('download', local * 0.1),
+        overallProgress: mapProgress(ranges, 'download', local * 0.1),
       });
     },
     20_000,
@@ -253,7 +278,7 @@ export async function runSpeedTest(
         onProgress({
           phase: 'download',
           instantMbps: instant,
-          overallProgress: mapProgress('download', local),
+          overallProgress: mapProgress(ranges, 'download', local),
         });
       },
       preset.dlTimeoutMs,
@@ -262,7 +287,7 @@ export async function runSpeedTest(
     onProgress({
       phase: 'download',
       instantMbps: null,
-      overallProgress: mapProgress('download', 0.1 + ((r + 1) / preset.dlRounds) * 0.9),
+      overallProgress: mapProgress(ranges, 'download', 0.1 + ((r + 1) / preset.dlRounds) * 0.9),
     });
   }
   const dl = p90(dlSamples);
@@ -277,7 +302,7 @@ export async function runSpeedTest(
       onProgress({
         phase: 'upload',
         instantMbps: null,
-        overallProgress: mapProgress('upload', local * 0.1),
+        overallProgress: mapProgress(ranges, 'upload', local * 0.1),
       });
     },
     preset.ulTimeoutMs,
@@ -295,7 +320,7 @@ export async function runSpeedTest(
         onProgress({
           phase: 'upload',
           instantMbps: instant,
-          overallProgress: mapProgress('upload', local),
+          overallProgress: mapProgress(ranges, 'upload', local),
         });
       },
       preset.ulTimeoutMs,
@@ -304,10 +329,57 @@ export async function runSpeedTest(
     onProgress({
       phase: 'upload',
       instantMbps: null,
-      overallProgress: mapProgress('upload', 0.1 + ((r + 1) / preset.ulRounds) * 0.9),
+      overallProgress: mapProgress(ranges, 'upload', 0.1 + ((r + 1) / preset.ulRounds) * 0.9),
     });
   }
   const ul = p90(ulSamples);
+
+  // ── Advanced mode: bufferbloat + DNS (DNS inicia em paralelo) ───────────
+  let bbResult: Awaited<ReturnType<typeof runBufferbloatTest>> | null = null;
+  let dnsPromise: ReturnType<typeof runDNSBenchmark> | null = null;
+
+  if (isAdvanced && !signal.aborted) {
+    // Inicia DNS antes do bufferbloat para sobrepor as durações
+    dnsPromise = runDNSBenchmark(signal);
+
+    onProgress({ phase: 'load', instantMbps: null, overallProgress: mapProgress(ranges, 'load', 0) });
+    bbResult = await runBufferbloatTest(
+      lat.latency,
+      signal,
+      ({ progress }) => {
+        onProgress({
+          phase: 'load',
+          instantMbps: null,
+          overallProgress: mapProgress(ranges, 'load', progress),
+        });
+      },
+    );
+  }
+
+  // Fase 'dns': aguarda a conclusão do DNS (geralmente já pronto)
+  let dnsResult: Awaited<ReturnType<typeof runDNSBenchmark>> | null = null;
+  if (isAdvanced && dnsPromise && !signal.aborted) {
+    let dnsDone = false;
+    onProgress({ phase: 'dns', instantMbps: null, overallProgress: mapProgress(ranges, 'dns', 0) });
+    dnsPromise.then(r => { dnsResult = r; dnsDone = true; }).catch(() => { dnsDone = true; });
+
+    // Espera com tick de progresso
+    const dnsStart = performance.now();
+    const DNS_TIMEOUT = 20_000;
+    while (!dnsDone && !signal.aborted && performance.now() - dnsStart < DNS_TIMEOUT) {
+      const elapsed = performance.now() - dnsStart;
+      onProgress({
+        phase: 'dns',
+        instantMbps: null,
+        overallProgress: mapProgress(ranges, 'dns', Math.min(0.99, elapsed / DNS_TIMEOUT)),
+      });
+      await new Promise<void>(resolve => setTimeout(resolve, 300));
+    }
+    if (!dnsResult) {
+      try { dnsResult = await Promise.race([dnsPromise, new Promise<never>((_, rej) => setTimeout(rej, 2000))]); }
+      catch { /* timeout — continua sem DNS */ }
+    }
+  }
 
   const result: SpeedTestResult = {
     dl,
@@ -316,7 +388,24 @@ export async function runSpeedTest(
     jitter: lat.jitter,
     packetLoss: lat.loss,
     timestamp: Date.now(),
+    mode,
+    ...(isAdvanced && dlSamples.length >= 2 && {
+      dlP25: percentile(dlSamples, 0.25),
+      dlP75: percentile(dlSamples, 0.75),
+    }),
+    ...(isAdvanced && ulSamples.length >= 2 && {
+      ulP25: percentile(ulSamples, 0.25),
+      ulP75: percentile(ulSamples, 0.75),
+    }),
+    ...(bbResult && {
+      latencyLoaded: bbResult.latencyLoaded,
+      jitterLoaded: bbResult.jitterLoaded,
+      bufferbloatGrade: bbResult.grade,
+      bufferbloatDeltaMs: bbResult.deltaMs,
+    }),
+    ...(dnsResult && { dns: dnsResult }),
   };
+
   onProgress({ phase: 'done', instantMbps: null, overallProgress: 1, partial: result });
   return result;
 }

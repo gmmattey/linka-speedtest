@@ -70,70 +70,61 @@ Ponto de entrada do app. Permite iniciar o teste no modo escolhido, acessar modo
 
 ```
 ┌──────────────────────────────────┐
-│  HEADER (logo + toggle tema)     │  ← logo: linka_lovo_v2.png
+│  HEADER (logo + botão histórico) │
 │                                  │
 │  [Sem conexão]                   │  ← erro offline (sem botão de retry)
 │  [⚠ erro + Tentar novamente]     │  ← só aparece se error != null
 │                                  │
 │         ╭─────────────╮          │  ← hero: flex:1, centralizado
 │         │             │          │
-│         │   Iniciar   │          │  ← círculo 196px, outlined accent
-│         │             │          │     animação de borda + anel pulsante
+│         │   Iniciar   │          │  ← círculo 200px, outlined accent
+│         │             │          │     animação anel pulsante
 │         ╰─────────────╯          │
 │                                  │
-│   Teste rápido [switch] Teste    │  ← toggle iOS: label · switch · label
-│               completo           │     switch 48×28px, knob deslizante
+│     [ Normal ] [ Avançado ]      │  ← pill segmentado (`.lk-start__mode-toggle`)
 │                                  │
-│  🎮 Modo Gamer ativo: FPS        │  ← hint accent, só se gamingProfile ≠ 'off'
+│  Download, upload e latência     │  ← muda conforme modo selecionado
+│  Consumo estimado ~ 75 MB        │
+│  Servidor: Cloudflare SP         │
 │                                  │
-│         Comparar locais          │  ← link de texto (btn-text)
-│         Antes e Depois           │  ← link de texto (btn-text)
-│         Prova Real (3×)          │  ← link de texto (btn-text)
-│         Teste por local          │  ← link de texto (btn-text)
+│  ↓ 87,3 ↑ 32,1 Mbps             │  ← card último resultado (só se há histórico)
 │                                  │
-│  ↓ 87,3 ↑ 32,1 Mbps · Ver       │  ← link inline, só se há histórico
-│  último teste                    │     sem card, sem borda
+│  [Conexão] [Servidor]            │  ← IOSList de contexto
 │                                  │
-│         Ver histórico            │  ← btn-text sempre visível
-│                                  │
-├──────────────────────────────────┤
-│  ── handle ──                    │  ← BottomSheet peek (110px fixo)
-│  [PC][WiFi][CF] PathRow          │
+│  [ Light ] [ Dark ]              │  ← toggle de tema
+│  Toque no círculo                │  ← hint de rodapé
 └──────────────────────────────────┘
 ```
 
 ### CTA circular
 
-Botão circular `196px × 196px`, `border-radius: 50%`, outlined (`border: 2px solid var(--accent)`), fundo transparente. Texto "Iniciar" em Space Grotesk 700 22px na cor accent.
+Botão circular `200px × 200px`, `border-radius: 50%`, outlined (`border: 1.5px solid var(--accent)`), fundo transparente. Texto "Iniciar" em Space Grotesk 600 20px na cor accent. Dois pseudo-elementos pulsantes (`::before`, `::after`) animam `lkOrbPulse` com offset de 1,2 s entre eles.
 
-Quando `canStart = true`:
-- Borda pulsa entre `var(--accent)` e `rgba(108,43,255,0.4)` em 2,5 s (keyframe `lkCtaBorder`)
-- Anel externo (`::after`, `inset: -14px`) expande de `scale(0.9) opacity 0.5` para `scale(1.14) opacity 0` em loop (keyframe `lkCtaRing`)
+Durante loading: texto "Aguardando", botão `disabled` (`opacity: 0.35`, animação suspensa).
 
-Durante loading: texto "Aguardando…", botão `disabled` (`opacity: 0.35`).
+Ao clicar: chama `onStart(selectedMode)` onde `selectedMode` é o estado interno do toggle de modo.
 
-Ao clicar: chama `onStart(mode)` onde `mode` é o estado interno do toggle (`'quick'` ou `'complete'`).
-
-### Toggle de modo (iOS-style)
-
-Três elementos alinhados horizontalmente:
+### Seletor de modo (pill segmentado)
 
 ```
-Teste rápido  [○        ]  Teste completo   ← modo quick (knob à esquerda)
-Teste rápido  [        ●]  Teste completo   ← modo complete (knob à direita)
+[ Normal ] [ Avançado ]   ← pill com dois botões, estilo .lk-start__mode-toggle
 ```
 
-- **Track:** `48×28px`, `border-radius: 14px`, fundo `var(--border)` → `var(--accent)` quando ativo
-- **Knob:** `::after` circular `22×22px`, branco, desliza `translateX(20px)` com `cubic-bezier(0.34,1.4,0,1)` em 250ms
-- **Labels:** clicáveis individualmente (`onClick → setMode`). Label do modo ativo em `var(--text) font-weight 500`; inativo em `var(--text-3)`
-- Estado gerenciado localmente em `StartScreen` via `useState<SpeedTestMode>('quick')`
+- Componente: `.lk-start__mode-toggle` (segmented pill, mesmo padrão do toggle de tema)
+- Estado gerenciado localmente em `StartScreen` via `useState<'normal' | 'advanced'>('normal')`
+- Botão ativo recebe `.lk-start__mode-btn--active` (fundo `var(--surface)`, texto `var(--text)`, peso 600)
+- Botão inativo: texto `var(--text-2)`, peso 500
 
 ### Seleção de modo
 
-| Modo | Preset | Acionamento |
-|---|---|---|
-| `'quick'` | PRESET_QUICK (~80 MB) | Toggle à esquerda (padrão) |
-| `'complete'` | PRESET_DEFAULT/MOBILE (~400/70 MB) | Toggle à direita |
+| Modo | `SpeedTestMode` | Consumo estimado | Descrição exibida |
+|---|---|---|---|
+| Normal (padrão) | `'normal'` | Wi-Fi: ~75 MB · Mobile: ~70 MB | Download, upload e latência |
+| Avançado | `'advanced'` | Wi-Fi: ~300 MB · Mobile: ~200 MB | Diagnóstico completo · bufferbloat, DNS e mais |
+
+O aviso "recomendamos Wi-Fi" aparece apenas no modo Avançado quando `device.connectionType === 'mobile'` ou incondicionalmente (pois o teste é pesado).
+
+> **Fase 2:** o modo `'advanced'` executará fases adicionais (bufferbloat, DNS). Atualmente usa o mesmo preset do modo Normal.
 
 ### Detecção de conectividade
 
@@ -280,6 +271,19 @@ sessionLabel?   // ex: "Teste 2 de 3 — Prova Real" — omitido em testes norma
 
 Exibe os resultados completos do teste, diagnóstico em linguagem leiga, utilidade prática da conexão e opções de ação (refazer, exportar PDF, compartilhar, ver histórico).
 
+### Lista de métricas (IOSList)
+
+A lista de métricas sempre exibe (em ordem):
+1. **Download** — Mbps, ícone azul `--dl`
+2. **Upload** — Mbps, ícone verde `--ul`
+3. **Latência** — ms, ícone cinza (ping)
+4. **Oscilação** — ms, ícone cinza (jitter)
+5. **Histórico** — chevron, navega para HistoryScreen
+6. *(expansível via "Mais")* Perda de pacotes · Operadora · Servidor
+7. **Mais / Menos** — toggle de expansão
+
+> Latência e Oscilação são sempre visíveis (não dependem do botão "Mais").
+
 ### Layout
 
 ```
@@ -414,15 +418,81 @@ O campo "Seu IP" na seção Detalhes exibe:
 
 Configurado no BottomSheet → seção Privacidade.
 
+### Seção Diagnóstico Avançado (modo `advanced`)
+
+Visível apenas quando `result.mode === 'advanced'` e há dados de bufferbloat ou p25/p75. IOSList com:
+
+| Item | Ícone | Valor |
+|---|---|---|
+| Bufferbloat | bolt | Nota A–F colorida (A/B = verde, C = amarelo, D/F = vermelho) + descrição |
+| Latência sob carga | ping | ms + delta em laranja se positivo |
+| Oscilação sob carga | jitter | ms |
+| Estabilidade download | download | intervalo p25–p75 em Mbps |
+| Perda de pacotes | loss | Baixo / Médio / Alto (com cor) |
+
+### Seção DNS (modo `advanced`)
+
+Visível quando `result.dns` está presente. IOSList com:
+
+- **Vencedor** — ícone bolt verde, badge ms em destaque, label "· vencedor"
+- **Demais servidores** com amostras — ordenados por p50 crescente, ms em cinza
+- **Como trocar o DNS** — ícone cog accent, subtitle com o nome do servidor vencedor, navega para `DNSGuideScreen`
+
+Nota de rodapé: "Medição inclui overhead HTTP/TLS — comparação relativa entre servidores."
+
 ### Serviços consumidos
 
-- Props: `result (SpeedTestResult)`, `server (ServerInfo | null)`, `previous (TestRecord | null)`, `unit`, `hideIpOnShare (boolean)`
+- Props: `result (SpeedTestResult)`, `server (ServerInfo | null)`, `previous (TestRecord | null)`, `unit`, `hideIpOnShare (boolean)`, `onShowDNSGuide?: (serverId: string) => void`
 - `classify(result)` → classificação
 - `buildShortPhrase(result, quality, scenarioContext)` → frase de diagnóstico única
 - `buildRecommendations(result, classification, history)` → recomendações
 - `stability(result)` → score numérico
 - `loadHistory()` → passado para buildRecommendations
 - `exportResultPdf()` → geração de PDF
+
+---
+
+## 3.bis DNSGuideScreen
+
+### Finalidade
+
+Tela modal (acessível via botão "Como trocar o DNS" na ResultScreen) que exibe instruções passo a passo para configurar o servidor DNS vencedor no dispositivo do usuário. Quatro plataformas cobertas via abas.
+
+### Layout
+
+```
+┌──────────────────────────────────┐
+│  ‹ Voltar   Como trocar o DNS    │
+│                                  │
+│  Cloudflare                      │  ← nome do servidor vencedor
+│  [1.1.1.1]  [1.0.0.1]           │  ← badges com IPs (primário e secundário)
+│                                  │
+│  [Android] [iPhone/iPad] [Windows] [Roteador]  ← abas pills
+│                                  │
+│  1 ─ Abra Configurações → ...    │
+│  2 ─ Toque em DNS privado.       │  ← lista numerada de passos
+│  ...                             │
+│                                  │
+│  ┌──────────────────────────────┐ │
+│  │ A troca de DNS não garante  │ │  ← nota explicativa
+│  │ mais velocidade, mas pode…  │ │
+│  └──────────────────────────────┘ │
+└──────────────────────────────────┘
+```
+
+### Plataformas
+
+| Aba | Instruções |
+|---|---|
+| Android | DNS privado ou configuração manual por Wi-Fi |
+| iPhone / iPad | Ajustes → Wi-Fi → DNS manual |
+| Windows | Configurações → Rede → DNS manual IPv4 |
+| Roteador | Painel admin → WAN/DNS → substituição nos campos |
+
+### Props
+
+- `serverId: string` — ID do servidor vencedor (cloudflare / google / adguard / quad9 / opendns)
+- `onBack: () => void` — volta para ResultScreen
 
 ---
 

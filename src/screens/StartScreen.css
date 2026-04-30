@@ -137,6 +137,32 @@
   z-index: 1;
 }
 
+/* ── Seletor de modo ─────────────────────────────── */
+
+.lk-start__mode-toggle {
+  display: inline-flex;
+  padding: 2px;
+  background: var(--surface-2);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+}
+
+.lk-start__mode-btn {
+  padding: 6px 18px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  border-radius: var(--radius-pill);
+  transition: all var(--t-fast);
+  letter-spacing: -0.01em;
+}
+
+.lk-start__mode-btn--active {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+}
+
 /* ── Info text ───────────────────────────────────── */
 
 .lk-start__info {

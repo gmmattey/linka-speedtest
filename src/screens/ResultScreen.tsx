@@ -27,6 +27,7 @@ interface Props {
   onStartBeforeAfter?: () => void;
   onStartProvaReal?: () => void;
   onStartRoomTest?: () => void;
+  onShowDNSGuide?: (serverId: string) => void;
   unit?: 'mbps' | 'gbps';
   hideIpOnShare?: boolean;
   gamingProfile?: GamingProfile;
@@ -70,6 +71,27 @@ function qualityBadgeLabel(q: Quality): string {
   return 'Sem conexão';
 }
 
+function bufferbloatGradeColor(grade: string): string {
+  if (grade === 'A') return 'var(--ul)';
+  if (grade === 'B') return 'var(--ul)';
+  if (grade === 'C') return 'var(--warn)';
+  return 'var(--error)';
+}
+
+function bufferbloatGradeLabel(grade: string): string {
+  if (grade === 'A') return 'Excelente';
+  if (grade === 'B') return 'Bom';
+  if (grade === 'C') return 'Moderado';
+  if (grade === 'D') return 'Ruim';
+  return 'Crítico';
+}
+
+function packetLossLabel(pct: number): { text: string; color: string } {
+  if (pct < 1)   return { text: 'Baixo', color: 'var(--ul)' };
+  if (pct < 2.5) return { text: 'Médio', color: 'var(--warn)' };
+  return { text: 'Alto', color: 'var(--error)' };
+}
+
 function useCaseLabel(id: UseCaseId): string {
   if (id === 'gaming')       return 'Jogos online';
   if (id === 'streaming_4k') return 'Vídeo 4K';
@@ -102,6 +124,7 @@ export function ResultScreen({
   onRetry, onShowHistory,
   onDiagnostic, onGamer, onRecommend,
   onStartComparison, onStartBeforeAfter, onStartProvaReal, onStartRoomTest,
+  onShowDNSGuide,
   unit = 'mbps', hideIpOnShare: _hideIpOnShare = true, gamingProfile: _gamingProfile = 'off',
 }: Props) {
   const history = useMemo(() => loadHistory(), []);
@@ -165,6 +188,18 @@ export function ResultScreen({
       trailing: <span className="lk-result__metric">{formatMbps(result.ul, unit)} {unitLabel}</span>,
     },
     {
+      icon: <Icon name="ping" size={14} color="var(--text-2)" />,
+      iconBg: 'var(--surface-3)',
+      title: 'Latência',
+      trailing: <span className="lk-result__metric-sub">{formatMs(result.latency)} ms</span>,
+    },
+    {
+      icon: <Icon name="jitter" size={14} color="var(--text-2)" />,
+      iconBg: 'var(--surface-3)',
+      title: 'Oscilação',
+      trailing: <span className="lk-result__metric-sub">{formatMs(result.jitter)} ms</span>,
+    },
+    {
       icon: <Icon name="history" size={14} color="var(--text-2)" />,
       iconBg: 'var(--surface-3)',
       title: 'Histórico',
@@ -172,12 +207,6 @@ export function ResultScreen({
       onClick: onShowHistory,
     },
     ...(maisExpanded ? [
-      {
-        icon: <Icon name="jitter" size={14} color="var(--text-2)" />,
-        iconBg: 'var(--surface-3)',
-        title: 'Oscilação',
-        trailing: <span className="lk-result__metric-sub">{formatMs(result.jitter)} ms</span>,
-      },
       {
         icon: <Icon name="loss" size={14} color="var(--text-2)" />,
         iconBg: 'var(--surface-3)',
@@ -198,7 +227,7 @@ export function ResultScreen({
       }] : []),
     ] : []),
     {
-      icon: <Icon name={maisExpanded ? 'chevron' : 'chevron'} size={14} color="var(--accent)" />,
+      icon: <Icon name="chevron" size={14} color="var(--accent)" />,
       iconBg: 'var(--accent-tint)',
       title: maisExpanded ? 'Menos' : 'Mais',
       onClick: () => setMaisExpanded(e => !e),
@@ -242,6 +271,126 @@ export function ResultScreen({
         <div className="lk-result__metrics">
           <IOSList items={metricsItems} />
         </div>
+
+        {/* Seção Avançado — visível apenas quando mode === 'advanced' */}
+        {result.mode === 'advanced' && (result.bufferbloatGrade || result.dlP25 != null) && (
+          <div className="lk-result__advanced">
+            <p className="lk-result__advanced-label">Diagnóstico avançado</p>
+            <IOSList
+              items={[
+                ...(result.bufferbloatGrade ? [{
+                  icon: <Icon name="bolt" size={14} color={bufferbloatGradeColor(result.bufferbloatGrade)} />,
+                  iconBg: 'var(--surface-3)',
+                  title: 'Bufferbloat',
+                  subtitle: bufferbloatGradeLabel(result.bufferbloatGrade),
+                  trailing: (
+                    <span
+                      className="lk-result__metric-sub"
+                      style={{ color: bufferbloatGradeColor(result.bufferbloatGrade), fontWeight: 700, fontSize: 16 }}
+                    >
+                      {result.bufferbloatGrade}
+                    </span>
+                  ),
+                }] : []),
+                ...(result.latencyLoaded != null ? [{
+                  icon: <Icon name="ping" size={14} color="var(--text-2)" />,
+                  iconBg: 'var(--surface-3)',
+                  title: 'Latência sob carga',
+                  trailing: (
+                    <span className="lk-result__metric-sub">
+                      {formatMs(result.latencyLoaded)} ms
+                      {result.bufferbloatDeltaMs != null && result.bufferbloatDeltaMs > 0 && (
+                        <span style={{ color: 'var(--warn)', fontSize: 11, marginLeft: 4 }}>
+                          +{formatMs(result.bufferbloatDeltaMs)} ms
+                        </span>
+                      )}
+                    </span>
+                  ),
+                }] : []),
+                ...(result.jitterLoaded != null ? [{
+                  icon: <Icon name="jitter" size={14} color="var(--text-2)" />,
+                  iconBg: 'var(--surface-3)',
+                  title: 'Oscilação sob carga',
+                  trailing: <span className="lk-result__metric-sub">{formatMs(result.jitterLoaded)} ms</span>,
+                }] : []),
+                ...(result.dlP25 != null && result.dlP75 != null ? [{
+                  icon: <Icon name="download" size={14} color="var(--dl)" />,
+                  iconBg: 'var(--dl-tint, rgba(58,182,255,0.12))',
+                  title: 'Estabilidade download',
+                  subtitle: 'Intervalo p25–p75',
+                  trailing: (
+                    <span className="lk-result__metric-sub">
+                      {formatMbps(result.dlP25, unit)}–{formatMbps(result.dlP75, unit)} {unitLabel}
+                    </span>
+                  ),
+                }] : []),
+                ...(result.packetLoss != null ? (() => {
+                  const pl = packetLossLabel(result.packetLoss);
+                  return [{
+                    icon: <Icon name="loss" size={14} color={pl.color} />,
+                    iconBg: 'var(--surface-3)',
+                    title: 'Perda de pacotes',
+                    trailing: (
+                      <span className="lk-result__metric-sub" style={{ color: pl.color }}>
+                        {pl.text}
+                      </span>
+                    ),
+                  }];
+                })() : []),
+              ]}
+            />
+          </div>
+        )}
+
+        {/* Seção DNS — visível apenas quando há resultado DNS */}
+        {result.dns && result.dns.servers.length > 0 && (
+          <div className="lk-result__advanced">
+            <p className="lk-result__advanced-label">DNS</p>
+            <IOSList
+              items={[
+                // Vencedor em destaque
+                {
+                  icon: <Icon name="bolt" size={14} color="var(--ul)" />,
+                  iconBg: 'var(--ul-tint)',
+                  title: `${result.dns.winner.name} · vencedor`,
+                  subtitle: result.dns.winner.ip,
+                  trailing: (
+                    <span className="lk-result__metric-sub" style={{ color: 'var(--ul)', fontWeight: 600 }}>
+                      {Math.round(result.dns.winner.p50)} ms
+                    </span>
+                  ),
+                },
+                // Demais servidores
+                ...result.dns.servers
+                  .filter(s => s.id !== result.dns!.winner.id && s.samples > 0)
+                  .sort((a, b) => a.p50 - b.p50)
+                  .map(s => ({
+                    icon: <Icon name="ping" size={14} color="var(--text-3)" />,
+                    iconBg: 'var(--surface-3)',
+                    title: s.name,
+                    subtitle: s.ip,
+                    trailing: (
+                      <span className="lk-result__metric-sub">
+                        {Math.round(s.p50)} ms
+                      </span>
+                    ),
+                  })),
+                // Botão "Como trocar"
+                ...(onShowDNSGuide ? [{
+                  icon: <Icon name="cog" size={14} color="#fff" />,
+                  iconBg: 'var(--accent)',
+                  title: 'Como trocar o DNS',
+                  subtitle: `Usar ${result.dns.winner.name} no seu dispositivo`,
+                  showChevron: true,
+                  onClick: () => onShowDNSGuide!(result.dns!.winner.id),
+                }] : []),
+              ]}
+            />
+            <p className="lk-result__dns-disclaimer">
+              Medição inclui overhead HTTP/TLS — comparação relativa entre servidores.
+            </p>
+          </div>
+        )}
 
         {/* Ferramentas — IOSList */}
         <div className="lk-result__tools">

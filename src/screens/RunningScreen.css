@@ -36,6 +36,59 @@
   align-items: center;
 }
 
+/* ── Indicador de fases ───────────────────────────── */
+
+.lk-running__steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: var(--space-lg);
+}
+
+.lk-running__step-item {
+  display: flex;
+  align-items: center;
+}
+
+.lk-running__step-pill {
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  background: transparent;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+}
+
+.lk-running__step-pill--active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.lk-running__step-pill--done {
+  border-color: var(--ul);
+  color: var(--ul);
+  background: var(--ul-tint);
+}
+
+.lk-running__step-sep {
+  display: block;
+  width: 16px;
+  height: 1px;
+  background: var(--border);
+  margin: 0 2px;
+  transition: background var(--t-fast);
+}
+
+.lk-running__step-sep--done {
+  background: var(--ul);
+}
+
+/* ── Phrase ───────────────────────────────────────── */
+
 .lk-running__phrase {
   text-align: center;
   font-size: 15px;

@@ -1,6 +1,6 @@
 import { Gauge } from '../components/Gauge';
 import { formatMbps } from '../utils/format';
-import type { TestPhase } from '../types';
+import type { SpeedTestMode, TestPhase } from '../types';
 import './RunningScreen.css';
 
 interface Props {
@@ -12,6 +12,7 @@ interface Props {
   onRetry: () => void;
   unit?: 'mbps' | 'gbps';
   sessionLabel?: string;
+  mode?: SpeedTestMode;
 }
 
 function phraseFor(phase: TestPhase): string {
@@ -19,9 +20,33 @@ function phraseFor(phase: TestPhase): string {
     case 'latency':  return 'Verificando a resposta do servidor…';
     case 'download': return 'Medindo a velocidade de download…';
     case 'upload':   return 'Medindo a velocidade de upload…';
+    case 'load':     return 'Medindo a estabilidade sob carga…';
+    case 'dns':      return 'Testando servidores DNS…';
     case 'done':     return 'Quase pronto…';
     default:         return 'Preparando o teste…';
   }
+}
+
+type PhaseStep = { id: TestPhase; label: string };
+
+const STEPS_NORMAL: PhaseStep[] = [
+  { id: 'latency',  label: 'LAT' },
+  { id: 'download', label: 'DOWN' },
+  { id: 'upload',   label: 'UP' },
+];
+
+const STEPS_ADVANCED: PhaseStep[] = [
+  { id: 'latency',  label: 'LAT' },
+  { id: 'download', label: 'DOWN' },
+  { id: 'upload',   label: 'UP' },
+  { id: 'load',     label: 'CARGA' },
+  { id: 'dns',      label: 'DNS' },
+];
+
+const PHASE_ORDER: TestPhase[] = ['latency', 'download', 'upload', 'load', 'dns', 'done'];
+
+function phaseIndex(phase: TestPhase): number {
+  return PHASE_ORDER.indexOf(phase);
 }
 
 function gaugePhaseLabel(phase: TestPhase): string {
@@ -61,7 +86,10 @@ export function RunningScreen({
   onRetry,
   unit = 'mbps',
   sessionLabel,
+  mode,
 }: Props) {
+  const steps = mode === 'advanced' ? STEPS_ADVANCED : STEPS_NORMAL;
+  const currentIdx = phaseIndex(phase);
   if (phase === 'error') {
     return (
       <div className="lk-running">
@@ -105,6 +133,31 @@ export function RunningScreen({
             color={gaugeColor(phase)}
           />
         </div>
+        {/* Indicador de fases (apenas durante o teste) */}
+        <div className="lk-running__steps" aria-hidden="true">
+          {steps.map((step, i) => {
+            const stepIdx = phaseIndex(step.id);
+            const isDone    = stepIdx < currentIdx;
+            const isActive  = stepIdx === currentIdx;
+            return (
+              <div key={step.id} className="lk-running__step-item">
+                <span
+                  className={[
+                    'lk-running__step-pill',
+                    isDone   ? 'lk-running__step-pill--done'   : '',
+                    isActive ? 'lk-running__step-pill--active' : '',
+                  ].join(' ').trim()}
+                >
+                  {step.label}
+                </span>
+                {i < steps.length - 1 && (
+                  <span className={`lk-running__step-sep${isDone ? ' lk-running__step-sep--done' : ''}`} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
         <p className="lk-running__phrase">{phraseFor(phase)}</p>
         {sessionLabel && <p className="lk-running__session-label">{sessionLabel}</p>}
         <div className="lk-running__footer">

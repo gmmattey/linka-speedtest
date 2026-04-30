@@ -9,6 +9,7 @@ import { RoomTestScreen } from './screens/RoomTestScreen';
 import { DiagnosticScreen } from './screens/DiagnosticScreen';
 import { GamerScreen } from './screens/GamerScreen';
 import { RecommendScreen } from './screens/RecommendScreen';
+import { DNSGuideScreen } from './screens/DNSGuideScreen';
 import { useDeviceInfo } from './hooks/useDeviceInfo';
 import { useSpeedTest } from './hooks/useSpeedTest';
 import { useSettings } from './hooks/useSettings';
@@ -17,7 +18,7 @@ import { averageSpeedResults } from './utils/provaReal';
 import { classify } from './utils/classifier';
 import type { SpeedTestMode, SpeedTestResult, TestRecord } from './types';
 
-type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter' | 'roomtest' | 'diagnostic' | 'gamer' | 'recommend';
+type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter' | 'roomtest' | 'diagnostic' | 'gamer' | 'recommend' | 'dnsguide';
 
 const THEME_KEY = 'linka.speedtest.theme';
 const SWIPE_THRESHOLD_PX = 80;
@@ -55,6 +56,8 @@ export default function App() {
   const runStartTimeRef = useRef<number>(0);
   const backStackRef = useRef<Screen[]>([]);
   const forwardStackRef = useRef<Screen[]>([]);
+
+  const [dnsGuideServerId, setDnsGuideServerId] = useState<string>('cloudflare');
 
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
 
@@ -337,6 +340,10 @@ export default function App() {
   const handleDiagnostic = useCallback(() => goTo('diagnostic'), [goTo]);
   const handleGamer = useCallback(() => goTo('gamer'), [goTo]);
   const handleRecommend = useCallback(() => goTo('recommend'), [goTo]);
+  const handleShowDNSGuide = useCallback((serverId: string) => {
+    setDnsGuideServerId(serverId);
+    goTo('dnsguide');
+  }, [goTo]);
 
   // ── Swipe lateral (back/forward) ─────────────────────────
   const swipeStartRef = useRef<{ x: number; y: number; valid: boolean } | null>(null);
@@ -380,6 +387,7 @@ export default function App() {
             onRetry={handleRetry}
             unit={settings.unit}
             sessionLabel={sessionLabel}
+            mode={testMode}
           />
         );
       }
@@ -404,9 +412,17 @@ export default function App() {
             onStartBeforeAfter={handleStartBeforeAfter}
             onStartProvaReal={handleStartProvaReal}
             onStartRoomTest={handleOpenRoomTest}
+            onShowDNSGuide={handleShowDNSGuide}
           />
         ) : null;
       }
+      case 'dnsguide':
+        return (
+          <DNSGuideScreen
+            serverId={dnsGuideServerId}
+            onBack={() => goTo('result')}
+          />
+        );
       case 'diagnostic': {
         const resultForDiag = provaRealOverride ?? test.result;
         return resultForDiag ? (
@@ -513,7 +529,8 @@ export default function App() {
     handleComparisonStartNear, handleComparisonStartFar, handleComparisonRetryNear,
     handleStartBeforeAfter, handleBAStartBefore, handleBAStartAfter, handleBARetry,
     handleStartProvaReal, handleOpenRoomTest, handleRoomStart,
-    handleDiagnostic, handleGamer, handleRecommend,
+    handleDiagnostic, handleGamer, handleRecommend, handleShowDNSGuide,
+    dnsGuideServerId,
     settings, updateSettings, testMode,
     comparisonStep, comparisonNear, comparisonFar,
     baStep, baBefore, baAfter,

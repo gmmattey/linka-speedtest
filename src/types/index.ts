@@ -4,9 +4,9 @@ export type DeviceType = 'mobile' | 'tablet' | 'desktop';
 export type ConnectionType = 'wifi' | 'mobile' | 'cable';
 export type ConnectionProfile = 'fixed_broadband' | 'mobile_broadband';
 export type RuleSetVersion = string; // semântica: 'v1', 'v2', etc.
-export type SpeedTestMode = 'quick' | 'complete';
+export type SpeedTestMode = 'quick' | 'complete' | 'normal' | 'advanced';
 export type GamingProfile = 'off' | 'casual' | 'moba' | 'fps' | 'cloud';
-export type TestPhase = 'idle' | 'latency' | 'download' | 'upload' | 'done' | 'error';
+export type TestPhase = 'idle' | 'latency' | 'download' | 'upload' | 'load' | 'dns' | 'done' | 'error';
 
 export interface SpeedTestResult {
   dl: number;
@@ -15,6 +15,17 @@ export interface SpeedTestResult {
   jitter: number;
   packetLoss: number;
   timestamp: number;
+  // Advanced mode extras
+  dlP25?: number;
+  dlP75?: number;
+  ulP25?: number;
+  ulP75?: number;
+  latencyLoaded?: number;
+  jitterLoaded?: number;
+  bufferbloatGrade?: 'A' | 'B' | 'C' | 'D' | 'F';
+  bufferbloatDeltaMs?: number;
+  mode?: SpeedTestMode;
+  dns?: import('../utils/dnsBenchmark').DnsBenchmarkResult;
 }
 
 export interface SpeedTestProgress {

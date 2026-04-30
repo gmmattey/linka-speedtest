@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { DeviceInfo, ServerInfo, SpeedTestMode, TestRecord } from '../types';
 import type { Settings } from '../hooks/useSettings';
 import { IOSList } from '../components/IOSList';
@@ -38,6 +39,8 @@ export function StartScreen({
   onShowLastResult,
   onShowHistory,
 }: Props) {
+  const [selectedMode, setSelectedMode] = useState<'normal' | 'advanced'>('normal');
+
   const canStart = isOnline && !loading && !!server?.available && !!device;
   const unitLabel = settings.unit === 'gbps' ? 'Gbps' : 'Mbps';
 
@@ -94,7 +97,7 @@ export function StartScreen({
         {/* Orb pulsante */}
         <button
           className={`lk-start__orb${!canStart ? ' lk-start__orb--disabled' : ''}`}
-          onClick={() => onStart('complete')}
+          onClick={() => onStart(selectedMode)}
           disabled={!canStart}
           aria-label="Iniciar teste"
         >
@@ -103,15 +106,46 @@ export function StartScreen({
           </span>
         </button>
 
+        {/* Seletor de modo */}
+        <div className="lk-start__mode-toggle">
+          <button
+            className={`lk-start__mode-btn${selectedMode === 'normal' ? ' lk-start__mode-btn--active' : ''}`}
+            onClick={() => setSelectedMode('normal')}
+          >
+            Normal
+          </button>
+          <button
+            className={`lk-start__mode-btn${selectedMode === 'advanced' ? ' lk-start__mode-btn--active' : ''}`}
+            onClick={() => setSelectedMode('advanced')}
+          >
+            Avançado
+          </button>
+        </div>
+
         {/* Linhas de info */}
         <div className="lk-start__info">
-          <div>Teste completo · download, upload e latência</div>
-          <div>
-            Consumo estimado{' '}
-            <span style={{ color: 'var(--text)', fontWeight: 500 }}>
-              {device?.connectionType === 'mobile' ? '~ 70 MB' : '~ 400 MB'}
-            </span>
-          </div>
+          {selectedMode === 'normal' ? (
+            <>
+              <div>Download, upload e latência</div>
+              <div>
+                Consumo estimado{' '}
+                <span style={{ color: 'var(--text)', fontWeight: 500 }}>
+                  {device?.connectionType === 'mobile' ? '~ 70 MB' : '~ 75 MB'}
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>Diagnóstico completo · bufferbloat, DNS e mais</div>
+              <div>
+                Consumo estimado{' '}
+                <span style={{ color: 'var(--text)', fontWeight: 500 }}>
+                  {device?.connectionType === 'mobile' ? '~ 200 MB' : '~ 300 MB'}
+                </span>
+                {' '}· recomendamos Wi-Fi
+              </div>
+            </>
+          )}
           {server && <div>{serverLabel}</div>}
         </div>
       </div>

@@ -32,8 +32,8 @@ type Quality = 'excellent' | 'good' | 'fair' | 'slow' | 'unavailable'
 type Tag = 'highLatency' | 'lowUpload' | 'unstable' | 'packetLoss' | 'veryUnstable'
 type DeviceType = 'mobile' | 'tablet' | 'desktop'
 type ConnectionType = 'wifi' | 'mobile' | 'cable'
-type TestPhase = 'idle' | 'latency' | 'download' | 'upload' | 'done' | 'error'
-type SpeedTestMode = 'quick' | 'complete'
+type TestPhase = 'idle' | 'latency' | 'download' | 'upload' | 'load' | 'done' | 'error'
+type SpeedTestMode = 'quick' | 'complete' | 'normal' | 'advanced'
 type GamingProfile = 'off' | 'casual' | 'moba' | 'fps' | 'cloud'
 type RecommendationAction =
   | 'repeat_test' | 'move_closer_router' | 'restart_router'
@@ -48,9 +48,17 @@ interface SpeedTestResult {
   dl: number          // Mbps download (P90 das rodadas)
   ul: number          // Mbps upload (P90 das rodadas)
   latency: number     // ms mediana das amostras
-  jitter: number      // ms desvio da latência
+  jitter: number      // ms MAD da latência idle
   packetLoss: number  // % perda de pacotes (0–100)
   timestamp: number   // Unix ms
+  mode?: SpeedTestMode
+  // ── Advanced mode (opcionais) ────────────────────────
+  dlP25?: number; dlP75?: number   // Mbps — intervalo de estabilidade DL
+  ulP25?: number; ulP75?: number   // Mbps — intervalo de estabilidade UL
+  latencyLoaded?: number           // ms — latência mediana sob carga
+  jitterLoaded?: number            // ms — MAD da latência sob carga
+  bufferbloatGrade?: 'A'|'B'|'C'|'D'|'F'
+  bufferbloatDeltaMs?: number      // ms de degradação (loaded − idle)
 }
 
 interface SpeedTestProgress {
@@ -121,46 +129,69 @@ interface Recommendation {
 
 Função principal: `runSpeedTest(onProgress, signal, connectionType?, mode?): Promise<SpeedTestResult>`
 
-Os parâmetros `connectionType?: ConnectionType` e `mode?: SpeedTestMode` selecionam um preset de payload via `presetFor(connectionType?, mode?)`. Atualmente:
+Os parâmetros `connectionType?: ConnectionType` e `mode?: SpeedTestMode` selecionam um preset de payload via `presetFor(connectionType?, mode?)`.
 
 | Preset | Trigger | Pings | DL warmup | DL round × n | UL warmup | UL round × n | Total |
 |---|---|---|---|---|---|---|---|
-| `PRESET_DEFAULT` | `'wifi'`/`'cable'`/`undefined` + `'complete'` | 20 | 25 MB | 100 MB × 3 | 10 MB | 50 MB × 3 | ~400 MB |
-| `PRESET_MOBILE`  | `'mobile'` + `'complete'` | 20 | 5 MB | 25 MB × 2 | 2 MB | 10 MB × 2 | ~70 MB |
-| `PRESET_QUICK`   | qualquer `connectionType` + `'quick'` | 8 | 5 MB | 50 MB × 1 | 2 MB | 20 MB × 1 | ~80 MB |
+| `PRESET_DEFAULT` | `'wifi'`/`'cable'`/`undefined` (non-quick) | 20 | 25 MB | 100 MB × 3 | 10 MB | 50 MB × 3 | ~400 MB |
+| `PRESET_MOBILE`  | `'mobile'` (non-quick) | 20 | 5 MB | 25 MB × 2 | 2 MB | 10 MB × 2 | ~70 MB |
+| `PRESET_QUICK`   | `mode === 'quick'` | 8 | 5 MB | 50 MB × 1 | 2 MB | 20 MB × 1 | ~80 MB |
 
-`PRESET_QUICK` é priorizado: se `mode === 'quick'`, ignora o `connectionType` e usa esse preset em todos os tipos de rede. Em rede móvel + `'complete'`, usa `PRESET_MOBILE` para preservar franquia.
+Modos `'normal'` e `'advanced'` usam `PRESET_DEFAULT`/`PRESET_MOBILE` (mesmo preset). A diferença está nas fases adicionais executadas após upload no modo avançado.
 
-A interface `Preset` inclui o campo `latencySamples: number` (era constante; agora configurável por preset).
+**Mapeamento de progresso por modo:**
+
+| Fase | Normal [from, to] | Advanced [from, to] |
+|---|---|---|
+| `latency` | [0.00, 0.15] | [0.00, 0.10] |
+| `download` | [0.15, 0.70] | [0.10, 0.52] |
+| `upload` | [0.70, 1.00] | [0.52, 0.76] |
+| `load` | não executada | [0.76, 1.00] |
 
 **Latência:**
-- `preset.latencySamples` pings (HEAD requests para `/__down?_cb=<ts>`) — 20 no default/mobile, 8 no quick
-- Descarta a primeira amostra (warm-up)
-- Mediana das amostras restantes = `latency`
-- `jitter = mean(|amostra_i - mediana|)`
+- 20 pings (HEAD requests para `/__down?_cb=<ts>`), descarta o primeiro
+- Mediana das amostras restantes = `latency`; jitter = MAD dos RTTs
 
 **Download:**
-- Warmup: 1 round com `preset.dlWarmup`
-- `preset.dlRounds` rounds com `preset.dlRound` cada
-- EMA α=0.3 aplicado ao throughput de cada chunk lido
-- P90 dos rounds = `dl`
-- AbortController por round; timeout `preset.dlTimeoutMs`
+- Warmup + `dlRounds` rounds; EMA α=0.3 por chunk
+- P90 dos rounds = `dl` (resultado final)
+- Advanced: p25 e p75 calculados de `dlSamples` → `dlP25`, `dlP75`
 
 **Upload:**
-- Buffer pré-gerado com `crypto.getRandomValues` em chunks de 65536 bytes
-- Warmup: 1 round com `preset.ulWarmup`
-- `preset.ulRounds` rounds com `preset.ulRound` cada (POST com Blob)
-- EMA α=0.3 + P90 = `ul`
-- AbortController por round; timeout `preset.ulTimeoutMs`
+- Buffer pré-gerado com `crypto.getRandomValues` (chunks de 65536 bytes)
+- Warmup + `ulRounds` rounds; P90 = `ul`
+- Advanced: `ulP25`, `ulP75`
+
+**Fase `load` (somente `mode === 'advanced'`):**
+- Chama `runBufferbloatTest(idleLatency, signal, onProgress)` — veja §3.x
+- Resultado adicionado ao `SpeedTestResult`: `latencyLoaded`, `jitterLoaded`, `bufferbloatGrade`, `bufferbloatDeltaMs`
 
 **Packet loss:**
-- Estimado por `packetLoss = (timeouts / totalPings) * 100`
-- Inclui pings extras durante DL/UL para detectar loss
-
-**Progresso:**
-- `overallProgress = 0.15 × latProgress + 0.45 × dlProgress + 0.40 × ulProgress`
+- Estimado por `packetLoss = (timeouts / totalPings) * 100` durante a fase de latência
 
 **CORS:** POSTs para `/__up` usam `Content-Type` simples (sem header customizado) para evitar preflight.
+
+### 3.1b `bufferbloat.ts` — Medição de latência sob carga
+
+Função: `runBufferbloatTest(idleLatency, signal, onProgress): Promise<BufferbloatResult>`
+
+**Algoritmo:**
+1. Abre `STREAM_COUNT` (4) downloads paralelos de 25 MB cada para saturar o link durante `DURATION_MS` (12 s)
+2. Enquanto streams correm, dispara pings a cada `PING_INTERVAL` (300 ms) e coleta RTTs
+3. Cancela streams ao final da duração
+4. Calcula mediana dos RTTs = `latencyLoaded`; MAD = `jitterLoaded`
+5. `deltaMs = max(0, latencyLoaded − idleLatency)`
+6. Grade por `deltaMs`:
+
+| Grade | deltaMs |
+|---|---|
+| A | ≤ 5 ms |
+| B | 5–30 ms |
+| C | 30–60 ms |
+| D | 60–200 ms |
+| F | > 200 ms |
+
+**`BufferbloatResult`:** `{ latencyLoaded, jitterLoaded, grade, deltaMs }`
 
 ### 3.2 `classifier.ts` — Classificador de qualidade
 
@@ -343,7 +374,34 @@ Regras de veredicto:
 
 Calcula a média aritmética de `dl`, `ul`, `latency`, `jitter` e `packetLoss` sobre N resultados. O `timestamp` do resultado médio é o do último teste. Lança erro se `results` for vazio. Usado pela Prova Real para produzir um resultado consolidado de 3 medições consecutivas.
 
-### 3.11 `shareCard.ts` — Geração de card para WhatsApp
+### 3.11 `dnsBenchmark.ts` — Benchmark de servidores DNS
+
+Mede a latência de 5 servidores DNS via DNS over HTTPS (DoH) e escolhe o mais rápido.
+
+**Servidores testados:** Cloudflare (1.1.1.1), Google (8.8.8.8), AdGuard (94.140.14.14), Quad9 (9.9.9.9), OpenDNS (208.67.222.222)
+
+**Domínios de teste:** google.com, youtube.com, facebook.com, amazon.com.br, netflix.com
+
+**Parâmetros:** `WARMUP_ROUNDS = 2`, `MEASURE_ROUNDS = 2` por domínio, `QUERY_TIMEOUT_MS = 5000`, `MIN_SERVER_PACING = 1500 ms`
+
+```ts
+runDNSBenchmark(signal: AbortSignal, onProgress?): Promise<DnsBenchmarkResult>
+loadLastDnsResult(): DnsBenchmarkResult | null  // lê localStorage 'linka.dns.result.v1'
+```
+
+**Tipos:**
+```ts
+interface DnsServerResult { id, name, ip, p50, p95, samples, grade: 'A'|'B'|'C'|'D' }
+interface DnsBenchmarkResult { servers, winner, testedAt }
+```
+
+**Grades:** A (≤15 ms), B (≤30 ms), C (≤60 ms), D (>60 ms)
+
+**Vencedor:** servidor com menor p50 entre os que têm `samples > 0`. Resultado salvo em `localStorage` na chave `linka.dns.result.v1`.
+
+**Integração no fluxo Advanced:** `runDNSBenchmark` é iniciado em paralelo ao `runBufferbloatTest` (fase `'load'`), aguardado na fase `'dns'` com tick de progresso a cada 300 ms. Timeout máximo: 20 s.
+
+### 3.12 `shareCard.ts` — Geração de card para WhatsApp
 
 **`generateShareCard(result, quality, unit?): Promise<Blob>`**
 
