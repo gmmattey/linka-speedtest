@@ -34,6 +34,7 @@ type DeviceType = 'mobile' | 'tablet' | 'desktop'
 type ConnectionType = 'wifi' | 'mobile' | 'cable'
 type TestPhase = 'idle' | 'latency' | 'download' | 'upload' | 'done' | 'error'
 type SpeedTestMode = 'quick' | 'complete'
+type GamingProfile = 'off' | 'casual' | 'moba' | 'fps' | 'cloud'
 type RecommendationAction =
   | 'repeat_test' | 'move_closer_router' | 'restart_router'
   | 'try_cable' | 'compare_location' | 'contact_operator'
@@ -81,10 +82,13 @@ interface TestRecord {
   quality: Quality
   tags: Tag[]
   serverName: string
-  isp?: string            // opcional para compatibilidade com registros antigos
+  isp?: string              // opcional — compatibilidade com registros antigos
   deviceType: DeviceType
   connectionType: ConnectionType
   testMode?: SpeedTestMode  // opcional — ausente em registros gravados antes desta versão
+  connectionProfile?: ConnectionProfile
+  ruleSetVersion?: RuleSetVersion
+  locationTag?: string      // etiqueta de cômodo/local (Teste por local)
 }
 
 interface Classification {
@@ -216,7 +220,9 @@ previousRecord(): TestRecord | null  // retorna o registro mais recente antes do
 clearHistory(): void
 ```
 
-`appendRecord` constrói `TestRecord` a partir de `SpeedTestResult + { serverName, isp?, deviceType, connectionType, testMode? }`. O campo `testMode` é opcional — registros gravados antes da versão com modos não o possuem e continuam compatíveis.
+`appendRecord` constrói `TestRecord` a partir de `SpeedTestResult + { serverName, isp?, deviceType, connectionType, testMode?, locationTag? }`. Os campos opcionais garantem backward-compatibility com registros gravados em versões anteriores.
+
+`locationTag` é preenchido pelo `locationTagRef` de `App.tsx` quando o teste foi iniciado via `RoomTestScreen` ou Prova Real com cômodo selecionado. Limpo (`null`) imediatamente após `appendRecord` ser chamado.
 
 ### 3.5 `pdfExport.ts` — Exportação de PDF
 
@@ -278,7 +284,7 @@ Retorna percentuais de variação de DL, UL e latência, mais mensagem interpret
 
 **`buildHistoryInsights(records: TestRecord[]): HistoryInsight[]`**
 
-Requer ≥ 3 registros. Retorna até 3 `HistoryInsight` em ordem de severidade:
+Requer ≥ 3 registros. Retorna até **4** `HistoryInsight` em ordem de avaliação (não re-ordenados por severidade):
 
 ```ts
 interface HistoryInsight {
@@ -301,8 +307,53 @@ Análises realizadas (em ordem de avaliação):
 | `low_upload` | Média de UL dos últimos 5 < 5 Mbps | warning |
 | `stable_period` | ≥ 4 dos últimos 5 com jitter ≤ 15 ms E loss ≤ 1% (apenas se nenhum outro insight gerado) | info |
 | `ul_drop` | UL recente < 70% da média histórica (com ≥ 6 registros, sem `low_upload`) | warning |
+| `week_drop` | DL desta semana < DL da semana anterior em > 20% (≥ 2 registros em cada janela, sem outro `drop`) | warning (>40% → critical) |
+| `week_improvement` | DL desta semana > DL da semana anterior em > 20% (sem outro `improvement`) | info |
+| `peak_hour` | DL do pior período do dia < DL do melhor em > 30% (≥ 2 registros por período, ≥ 6 total) | warning (>50% → critical) |
 
-### 3.9 `format.ts` — Formatação
+**Períodos do dia para análise de horário de pico:** madrugada (0–6h), manhã (6–12h), tarde (12–18h), noite (18–24h). Baseado em `new Date(record.timestamp).getHours()`.
+
+### 3.9 `beforeAfter.ts` — Comparação antes/depois
+
+**`calculateBeforeAfter(before, after): BeforeAfterResult`**
+
+```ts
+type BeforeAfterVerdict = 'improved' | 'no_change' | 'worse'
+
+interface BeforeAfterResult {
+  verdict: BeforeAfterVerdict
+  message: string                  // texto explicativo em pt-BR
+  dlDeltaPercent: number           // (after.dl − before.dl) / before.dl × 100
+  ulDeltaPercent: number
+  latencyDeltaPercent: number      // (before.latency − after.latency) / before.latency × 100 (positivo = melhora)
+}
+```
+
+Regras de veredicto:
+
+| Condição | Verdict |
+|---|---|
+| `dlDeltaPercent > 15` OU `latencyDeltaPercent > 20` | `'improved'` |
+| `dlDeltaPercent < -15` OU `latencyDeltaPercent < -20` | `'worse'` |
+| Nenhum dos acima | `'no_change'` |
+
+### 3.10 `provaReal.ts` — Média de múltiplos testes
+
+**`averageSpeedResults(results: SpeedTestResult[]): SpeedTestResult`**
+
+Calcula a média aritmética de `dl`, `ul`, `latency`, `jitter` e `packetLoss` sobre N resultados. O `timestamp` do resultado médio é o do último teste. Lança erro se `results` for vazio. Usado pela Prova Real para produzir um resultado consolidado de 3 medições consecutivas.
+
+### 3.11 `shareCard.ts` — Geração de card para WhatsApp
+
+**`generateShareCard(result, quality, unit?): Promise<Blob>`**
+
+Gera imagem PNG 1080×540 px via Canvas API:
+- Fundo: `#0E0E12`; barra decorativa esquerda: `#6C2BFF` (accent)
+- DL em azul `#3AB6FF`; UL em verde `#22C55E`
+- Aguarda `document.fonts.ready` antes de desenhar — garante que Space Grotesk e Inter estejam carregadas
+- Retorna `Blob` com `type: 'image/png'`
+
+### 3.12 `format.ts` — Formatação
 
 ```ts
 formatMbps(v: number, unit?: 'mbps'|'gbps'): string  // divide por 1000 se gbps
@@ -383,10 +434,28 @@ Atualmente: `'v1'`. Os thresholds de `fixed_broadband` têm paridade com o legad
 | Arquivo | Conteúdo |
 |---|---|
 | `src/core/types.ts` | `UseCaseId`, `UseCaseStatus`, `BlockingFactor`, `StabilityLevel`, `UseCaseVerdict`, `InterpretFlags`, `InterpretedResult`, `InterpretInput` |
-| `src/core/profiles.ts` | `QualityThresholds`, `FlagThresholds`, `UseCaseThresholds`, `ProfileRules`, `PROFILES: Record<ConnectionProfile, ProfileRules>` |
+| `src/core/profiles.ts` | `QualityThresholds`, `FlagThresholds`, `UseCaseThresholds`, `ProfileRules`, `PROFILES: Record<ConnectionProfile, ProfileRules>` + `GamingProfileId`, `GamingProfileThresholds`, `GamingProfileDef`, `GAMING_PROFILES` |
 | `src/core/copyDictionary.ts` | Map `chave → string pt-BR` + `resolveCopy(key, params?)` com interpolação `{name}` |
 | `src/core/interpret.ts` | `interpretSpeedTestResult(input)` — função principal |
 | `src/core/index.ts` | Reexporta o contrato público para uso externo (Fase 7 / Flutter embed) |
+
+**`GAMING_PROFILES`** — thresholds de desempenho por perfil de gamer:
+
+```ts
+type GamingProfileId = 'casual' | 'moba' | 'fps' | 'cloud'
+
+interface GamingProfileThresholds { dl: number; latency: number; jitter: number; packetLoss: number }
+interface GamingProfileDef { label: string; good: GamingProfileThresholds }
+
+GAMING_PROFILES: Record<GamingProfileId, GamingProfileDef> = {
+  casual: { label: 'Casual',       good: { dl: 3,  latency: 150, jitter: 50,  packetLoss: 3   } },
+  moba:   { label: 'MOBA',         good: { dl: 5,  latency: 50,  jitter: 20,  packetLoss: 1   } },
+  fps:    { label: 'FPS',          good: { dl: 15, latency: 30,  jitter: 10,  packetLoss: 0.5 } },
+  cloud:  { label: 'Cloud Gaming', good: { dl: 35, latency: 40,  jitter: 15,  packetLoss: 0.5 } },
+}
+```
+
+Usado por `GamingVerdict` na ResultScreen para avaliar se as métricas do teste atendem ao perfil selecionado.
 
 ---
 
@@ -441,8 +510,11 @@ interface Settings {
   scale: 'linear' | 'log'          // padrão: 'linear' — sem UI, mantido por compat de localStorage
   connectionOverride: 'auto' | 'wifi' | 'cable' | 'mobile'  // padrão: 'auto'
   hideIpOnShare: boolean            // padrão: true — oculta IP ao compartilhar resultado
+  gamingProfile: GamingProfile      // padrão: 'off' — perfil de gamer para veredicto na ResultScreen
 }
 ```
+
+`gamingProfile` controla o bloco `GamingVerdict` da ResultScreen e o hint da StartScreen. Quando `'off'`, nenhum desses elementos é exibido. Configurado no BottomSheet → seção Configurações via seletor segmentado `[Off] Casual MOBA FPS Cloud`.
 
 Chave localStorage: `linka.speedtest.settings.v1`  
 `update` faz merge com settings atual e persiste imediatamente.
@@ -524,6 +596,7 @@ Todos os ícones são SVGs inline stroke-based. Aceitam prop `size?: number` (de
 | `IconVideoCall` | Videochamada (ResultScreen use cases) |
 | `IconPdf` | FAB PDF |
 | `IconShare` | Compartilhar |
+| `IconWhatsApp` | WhatsApp (fill-based, não stroke) — botão de compartilhar na ResultScreen |
 
 ### 5.7 `InfoCards` (mantido, desativado)
 
@@ -538,7 +611,8 @@ Estado gerenciado em `App.tsx`:
 | State | Tipo | Descrição |
 |---|---|---|
 | `theme` | `'dark'\|'light'` | Tema atual, persiste em localStorage |
-| `screen` | `Screen` | Tela ativa: `'start'\|'running'\|'result'\|'history'\|'comparison'` |
+| `screen` | `Screen` | Tela ativa: `'start'\|'running'\|'result'\|'history'\|'comparison'\|'beforeafter'\|'roomtest'` |
+| `isOnline` | `boolean` | Conectividade detectada via eventos `online`/`offline` do browser |
 | `previous` | `TestRecord\|null` | Registro do teste anterior à sessão atual (para comparação na ResultScreen) |
 | `lastRecord` | `TestRecord\|null` | Último registro do histórico, exibido como card na StartScreen |
 | `historyInitialId` | `string\|undefined` | Id pré-selecionado quando se abre o HistoryScreen direto no detalhe |
@@ -546,10 +620,24 @@ Estado gerenciado em `App.tsx`:
 | `comparisonStep` | `ComparisonStep` | Passo da ComparisonScreen: `'near'\|'far'\|'done'` |
 | `comparisonNear` | `SpeedTestResult\|null` | Resultado do teste perto do roteador |
 | `comparisonFar` | `SpeedTestResult\|null` | Resultado do teste longe do roteador |
-| `comparisonModeRef` | `RefObject<'near'\|'far'\|null>` | Ref (não state) que intercepta o efeito `phase === 'done'` para rotear para ComparisonScreen em vez de ResultScreen |
-| `recordedRef` | `RefObject<boolean>` | Evita gravação duplicada no histórico |
-| `backStackRef` | `RefObject<Screen[]>` | Pilha de telas anteriores para swipe → |
-| `forwardStackRef` | `RefObject<Screen[]>` | Pilha de telas avançáveis para swipe ← |
+| `baStep` | `BeforeAfterStep` | Passo da BeforeAfterScreen: `'before'\|'after'\|'done'` |
+| `baBefore` | `SpeedTestResult\|null` | Resultado do teste "antes" |
+| `baAfter` | `SpeedTestResult\|null` | Resultado do teste "depois" |
+| `provaRealSession` | `number\|null` | Número do teste atual (1, 2 ou 3) durante Prova Real; `null` fora do modo |
+| `provaRealOverride` | `SpeedTestResult\|null` | Resultado médio calculado ao fim da Prova Real; passado para ResultScreen |
+
+Refs (não disparam re-render):
+
+| Ref | Tipo | Descrição |
+|---|---|---|
+| `comparisonModeRef` | `'near'\|'far'\|null` | Intercepta o done-effect para rotear para ComparisonScreen |
+| `baModeRef` | `'before'\|'after'\|null` | Intercepta o done-effect para rotear para BeforeAfterScreen |
+| `provaRealResultsRef` | `SpeedTestResult[]` | Acumula os 3 resultados intermediários da Prova Real |
+| `provaRealPendingRef` | `boolean` | Sinaliza que o próximo teste da Prova Real deve ser iniciado assim que `test.phase === 'idle'` |
+| `locationTagRef` | `string\|null` | Etiqueta de cômodo definida em RoomTestScreen; limpa após `appendRecord` |
+| `recordedRef` | `boolean` | Evita gravação duplicada no histórico |
+| `backStackRef` | `Screen[]` | Pilha de telas anteriores para swipe → |
+| `forwardStackRef` | `Screen[]` | Pilha de telas avançáveis para swipe ← |
 
 Hooks usados:
 - `useDeviceInfo('cloudflare')` → `deviceInfo`
@@ -574,30 +662,72 @@ Todas as transições internas (`handleStart`, `handleCancel`, `handleRetry`, `h
 
 ```
 test.phase === 'done' && test.result && !recordedRef.current
+  ─── Prova Real ativa (provaRealSession !== null): ───────────────────────────────
+  → provaRealResultsRef.push(result)
+  → se provaRealSession < 3:
+      setProvaRealSession(session + 1); recordedRef = false
+      provaRealPendingRef = true; test.reset()
+      [efeito idle]: provaRealPendingRef → test.start(effectiveConnection, 'complete')
+  → se provaRealSession === 3:
+      averaged = averageSpeedResults(provaRealResultsRef)
+      appendRecord(averaged, { ..., locationTag? })
+      locationTagRef = null; setProvaRealOverride(averaged) → goTo('result')
+
+  ─── Fluxo normal: ───────────────────────────────────────────────────────────────
   → previousRecord() → setPrevious(prev)
-  → appendRecord(test.result, { serverName, isp, deviceType, connectionType, testMode })
-  → setLastRecord(novoRegistro)
-  → comparisonModeRef.current === 'near' → setComparisonNear(result) → goTo('comparison')
-  → comparisonModeRef.current === 'far'  → setComparisonFar(result)  → goTo('comparison')
-  → else                                 → goTo('result')
+  → appendRecord(test.result, { serverName, isp, deviceType, connectionType, testMode, locationTag? })
+  → locationTagRef = null; setLastRecord(novoRegistro)
+  → comparisonModeRef === 'near' → setComparisonNear(result)    → goTo('comparison')
+  → comparisonModeRef === 'far'  → setComparisonFar(result)     → goTo('comparison')
+  → baModeRef === 'before'       → setBaBefore(result)          → goTo('beforeafter')
+  → baModeRef === 'after'        → setBaAfter(result)           → goTo('beforeafter')
+  → else                         → goTo('result')
 ```
 
 **Fluxo de comparação (ComparisonScreen):**
 
 ```
 handleStartComparison() → setStep('near') → goTo('comparison')
-  [ComparisonScreen: Passo 1] → handleComparisonStartNear()
-    → comparisonModeRef.current = 'near'
-    → goTo('running') → test.start(effectiveConnection, 'complete')
-    → [phase 'done'] → setComparisonNear(result) → setStep('far') → goTo('comparison')
-  [ComparisonScreen: Passo 2] → handleComparisonStartFar()
-    → comparisonModeRef.current = 'far'
-    → goTo('running') → test.start(effectiveConnection, 'complete')
-    → [phase 'done'] → setComparisonFar(result) → setStep('done') → goTo('comparison')
-  [ComparisonScreen: Resultado] → exibe ComparisonResult calculado por calculateComparison()
+  [Passo 1] → handleComparisonStartNear()
+    → comparisonModeRef = 'near'; goTo('running'); test.start(effectiveConnection, 'complete')
+    → [done] → setComparisonNear(result); setStep('far'); goTo('comparison')
+  [Passo 2] → handleComparisonStartFar()
+    → comparisonModeRef = 'far'; goTo('running'); test.start(effectiveConnection, 'complete')
+    → [done] → setComparisonFar(result); setStep('done'); goTo('comparison')
+  [Resultado] → calculateComparison(nearResult, farResult)
 ```
 
-`comparisonModeRef` é uma ref (não state) para não disparar re-render nem causar stale closure no efeito `phase === 'done'`.
+**Fluxo Antes e Depois (BeforeAfterScreen):**
+
+```
+handleStartBeforeAfter() → setBaStep('before'); goTo('beforeafter')
+  [Passo 1] → handleBAStartBefore()
+    → baModeRef = 'before'; goTo('running'); test.start(effectiveConnection, 'complete')
+    → [done] → setBaBefore(result); setBaStep('after'); goTo('beforeafter')
+  [Passo 2] → handleBAStartAfter()
+    → baModeRef = 'after'; goTo('running'); test.start(effectiveConnection, 'complete')
+    → [done] → setBaAfter(result); setBaStep('done'); goTo('beforeafter')
+  [Resultado] → calculateBeforeAfter(beforeResult, afterResult)
+```
+
+**Fluxo Prova Real:**
+
+```
+handleStartProvaReal()
+  → provaRealResultsRef = []; setProvaRealSession(1); setProvaRealOverride(null)
+  → goTo('running'); test.start(effectiveConnection, 'complete')
+  → [done × 3, automático] → averageSpeedResults → appendRecord → goTo('result')
+  RunningScreen recebe sessionLabel = "Teste X de 3 — Prova Real"
+```
+
+**Fluxo Teste por local (RoomTestScreen):**
+
+```
+handleOpenRoomTest() → goTo('roomtest')
+  [RoomTestScreen] → handleRoomStart(locationTag)
+    → locationTagRef = locationTag; goTo('running'); test.start(effectiveConnection, 'complete')
+    → [done] → appendRecord(result, { ..., locationTag }); locationTagRef = null; goTo('result')
+```
 
 **Carregamento inicial do último resultado:**
 
