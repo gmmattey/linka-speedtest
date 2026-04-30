@@ -127,33 +127,19 @@
   color: var(--text);
 }
 
-/* ── Secondary actions ───────────────────────────── */
+/* ── Tools list ──────────────────────────────────── */
 
-.lk-result__actions-secondary {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+.lk-result__tools {
   margin-bottom: 20px;
 }
 
-.lk-result__action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 40px;
-  padding: 0 14px;
-  background: var(--surface-2);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 500;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  transition: background var(--t-fast);
-}
-
-.lk-result__action-btn:hover {
-  background: var(--surface-3);
+.lk-result__tools-label {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
 }
 
 /* ── Footer ──────────────────────────────────────── */

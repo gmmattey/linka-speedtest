@@ -24,10 +24,9 @@ function detectDevice(): DeviceInfo {
   else if (t === 'cellular') connectionType = 'mobile';
   else if (t === 'ethernet' || t === 'wimax' || t === 'other') connectionType = 'cable';
   else if (!t && (eff === '2g' || eff === '3g' || eff === 'slow-2g')) connectionType = 'mobile';
-  // iOS Safari não expõe navigator.connection. Em celular sem essa API é mais
-  // provável que o usuário esteja em rede móvel do que em Wi-Fi — assumimos
-  // 'mobile' por padrão; o override manual no menu permite ajuste se errar.
-  else if (deviceType === 'mobile') connectionType = 'mobile';
+  // Sem API de conexão (iOS Safari, Firefox): assume Wi-Fi pois a maioria dos
+  // usuários domésticos está em Wi-Fi mesmo em dispositivos móveis.
+  else if (deviceType === 'mobile') connectionType = 'wifi';
   else connectionType = 'cable';
 
   return { deviceType, connectionType };

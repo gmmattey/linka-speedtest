@@ -23,6 +23,10 @@ interface Props {
   onDiagnostic?: () => void;
   onGamer?: () => void;
   onRecommend?: () => void;
+  onStartComparison?: () => void;
+  onStartBeforeAfter?: () => void;
+  onStartProvaReal?: () => void;
+  onStartRoomTest?: () => void;
   unit?: 'mbps' | 'gbps';
   hideIpOnShare?: boolean;
   gamingProfile?: GamingProfile;
@@ -84,6 +88,7 @@ export function ResultScreen({
   result, server, previous: _previous,
   onRetry, onShowHistory,
   onDiagnostic, onGamer, onRecommend,
+  onStartComparison, onStartBeforeAfter, onStartProvaReal, onStartRoomTest,
   unit = 'mbps', hideIpOnShare = true, gamingProfile: _gamingProfile = 'off',
 }: Props) {
   const history = useMemo(() => loadHistory(), []);
@@ -227,23 +232,69 @@ export function ResultScreen({
           </div>
         )}
 
-        {/* Ações secundárias */}
-        <div className="lk-result__actions-secondary">
-          {onDiagnostic && (
-            <button className="lk-result__action-btn" onClick={onDiagnostic}>
-              <Icon name="shield" size={15} />Diagnóstico
-            </button>
-          )}
-          {onGamer && (
-            <button className="lk-result__action-btn" onClick={onGamer}>
-              <Icon name="game" size={15} />Modo Gamer
-            </button>
-          )}
-          {onRecommend && (
-            <button className="lk-result__action-btn" onClick={onRecommend}>
-              <Icon name="bulb" size={15} />Recomendações
-            </button>
-          )}
+        {/* Ferramentas — IOSList */}
+        <div className="lk-result__tools">
+          <p className="lk-result__tools-label">Explorar</p>
+          <IOSList
+            items={[
+              ...(onDiagnostic ? [{
+                icon: <Icon name="shield" size={14} color="#fff" />,
+                iconBg: 'var(--accent)',
+                title: 'Diagnóstico',
+                subtitle: 'Análise detalhada por métrica',
+                showChevron: true,
+                onClick: onDiagnostic,
+              }] : []),
+              ...(onGamer ? [{
+                icon: <Icon name="game" size={14} color="#fff" />,
+                iconBg: 'var(--accent)',
+                title: 'Modo Gamer',
+                subtitle: 'Avaliação por jogo e categoria',
+                showChevron: true,
+                onClick: onGamer,
+              }] : []),
+              ...(onRecommend ? [{
+                icon: <Icon name="bulb" size={14} color="#fff" />,
+                iconBg: 'var(--accent)',
+                title: 'Recomendações',
+                subtitle: 'Como melhorar sua internet',
+                showChevron: true,
+                onClick: onRecommend,
+              }] : []),
+              ...(onStartComparison ? [{
+                icon: <Icon name="cmp" size={14} color="var(--text-2)" />,
+                iconBg: 'var(--surface-3)',
+                title: 'Comparar locais',
+                subtitle: 'Perto vs. longe do roteador',
+                showChevron: true,
+                onClick: onStartComparison,
+              }] : []),
+              ...(onStartBeforeAfter ? [{
+                icon: <Icon name="cmp" size={14} color="var(--text-2)" />,
+                iconBg: 'var(--surface-3)',
+                title: 'Antes e Depois',
+                subtitle: 'Meça o impacto de uma ação',
+                showChevron: true,
+                onClick: onStartBeforeAfter,
+              }] : []),
+              ...(onStartProvaReal ? [{
+                icon: <Icon name="refresh" size={14} color="var(--text-2)" />,
+                iconBg: 'var(--surface-3)',
+                title: 'Prova Real (3×)',
+                subtitle: 'Média de 3 testes consecutivos',
+                showChevron: true,
+                onClick: onStartProvaReal,
+              }] : []),
+              ...(onStartRoomTest ? [{
+                icon: <Icon name="pin" size={14} color="var(--text-2)" />,
+                iconBg: 'var(--surface-3)',
+                title: 'Teste por local',
+                subtitle: 'Associe um cômodo ao resultado',
+                showChevron: true,
+                onClick: onStartRoomTest,
+              }] : []),
+            ]}
+          />
         </div>
 
         {/* Footer de ações primárias */}

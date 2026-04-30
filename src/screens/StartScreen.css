@@ -149,52 +149,46 @@
   line-height: 1.45;
 }
 
-/* ── iOS-list de contexto ────────────────────────── */
-
-.lk-start__list {
-  margin-bottom: 14px;
-}
-
 /* ── Último resultado ────────────────────────────── */
 
 .lk-start__last {
-  text-align: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
-.lk-start__last-btn {
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-2);
-}
-
-.lk-start__last-btn:hover {
-  color: var(--accent);
-}
-
-/* ── Links secundários ───────────────────────────── */
-
-.lk-start__links {
+.lk-start__last-card {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 4px 16px;
-  margin-bottom: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--t-fast);
 }
 
-.lk-start__link {
+.lk-start__last-card:active {
+  background: var(--surface-2);
+}
+
+.lk-start__last-label {
   font-size: 12px;
   color: var(--text-3);
 }
 
-.lk-start__link:hover {
-  color: var(--accent);
+.lk-start__last-values {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
 }
 
-.lk-start__link:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+/* ── iOS-list de contexto ────────────────────────── */
+
+.lk-start__list {
+  margin-bottom: 14px;
 }
 
 /* ── Tema toggle ─────────────────────────────────── */

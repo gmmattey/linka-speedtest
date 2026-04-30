@@ -16,10 +16,6 @@ interface Props {
   settings: Settings;
   onUpdateSettings: (patch: Partial<Settings>) => void;
   onStart: (mode: SpeedTestMode) => void;
-  onStartComparison: () => void;
-  onStartBeforeAfter: () => void;
-  onStartProvaReal: () => void;
-  onStartRoomTest: () => void;
   onRetry: () => void;
   lastRecord: TestRecord | null;
   onShowLastResult: () => void;
@@ -37,10 +33,6 @@ export function StartScreen({
   settings,
   onUpdateSettings: _onUpdateSettings,
   onStart,
-  onStartComparison,
-  onStartBeforeAfter,
-  onStartProvaReal,
-  onStartRoomTest,
   onRetry,
   lastRecord,
   onShowLastResult,
@@ -116,13 +108,29 @@ export function StartScreen({
           <div>Teste completo · download, upload e latência</div>
           <div>
             Consumo estimado{' '}
-            <span style={{ color: 'var(--text)', fontWeight: 500 }}>~ 80 MB</span>
+            <span style={{ color: 'var(--text)', fontWeight: 500 }}>
+              {device?.connectionType === 'mobile' ? '~ 70 MB' : '~ 400 MB'}
+            </span>
           </div>
-          {server && (
-            <div>{serverLabel}</div>
-          )}
+          {server && <div>{serverLabel}</div>}
         </div>
       </div>
+
+      {/* Último resultado */}
+      {lastRecord && (
+        <div className="lk-start__last">
+          <button className="lk-start__last-card" onClick={onShowLastResult}>
+            <span className="lk-start__last-label">Último resultado</span>
+            <span className="lk-start__last-values">
+              <span style={{ color: 'var(--dl)' }}>↓ {formatMbps(lastRecord.dl, settings.unit)}</span>
+              {' · '}
+              <span style={{ color: 'var(--ul)' }}>↑ {formatMbps(lastRecord.ul, settings.unit)}</span>
+              {' '}
+              <span style={{ color: 'var(--text-2)' }}>{unitLabel}</span>
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* Lista iOS com conexão e servidor */}
       {(device || server) && (
@@ -145,31 +153,6 @@ export function StartScreen({
           />
         </div>
       )}
-
-      {/* Último resultado */}
-      {lastRecord && (
-        <div className="lk-start__last">
-          <button className="btn-text lk-start__last-btn" onClick={onShowLastResult}>
-            Último: {formatMbps(lastRecord.dl, settings.unit)} ↓ · {formatMbps(lastRecord.ul, settings.unit)} ↑ {unitLabel}
-          </button>
-        </div>
-      )}
-
-      {/* Links secundários */}
-      <div className="lk-start__links">
-        <button className="btn-text lk-start__link" onClick={onStartComparison} disabled={!canStart}>
-          Comparar locais
-        </button>
-        <button className="btn-text lk-start__link" onClick={onStartBeforeAfter} disabled={!canStart}>
-          Antes e Depois
-        </button>
-        <button className="btn-text lk-start__link" onClick={onStartProvaReal} disabled={!canStart}>
-          Prova Real (3×)
-        </button>
-        <button className="btn-text lk-start__link" onClick={onStartRoomTest} disabled={!canStart}>
-          Teste por local
-        </button>
-      </div>
 
       {/* Tema toggle */}
       <div className="lk-start__theme">

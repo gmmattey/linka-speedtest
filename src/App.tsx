@@ -379,6 +379,10 @@ export default function App() {
             onDiagnostic={handleDiagnostic}
             onGamer={handleGamer}
             onRecommend={handleRecommend}
+            onStartComparison={handleStartComparison}
+            onStartBeforeAfter={handleStartBeforeAfter}
+            onStartProvaReal={handleStartProvaReal}
+            onStartRoomTest={handleOpenRoomTest}
           />
         ) : null;
       }
@@ -472,10 +476,6 @@ export default function App() {
             settings={settings}
             onUpdateSettings={updateSettings}
             onStart={handleStart}
-            onStartComparison={handleStartComparison}
-            onStartBeforeAfter={handleStartBeforeAfter}
-            onStartProvaReal={handleStartProvaReal}
-            onStartRoomTest={handleOpenRoomTest}
             onRetry={deviceInfo.reload}
             lastRecord={lastRecord}
             onShowLastResult={handleShowLastResult}
