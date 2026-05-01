@@ -262,8 +262,8 @@ runSpeedTestV2(mode: 'fast' | 'complete', onProgress, signal, connectionType?): 
 **Sequência de execução:**
 
 1. **Latência** — `runLatencyPhase(15|25)` → emite `partial: { latency, jitter, packetLoss }`
-2. **Download + bufferbloat DL** — `Promise.all([runDownloadProbe, runPingLoop(300ms)])` → `latencyDownload`; emite `partial: { dl }`
-3. **Upload + bufferbloat UL** — `Promise.all([runUploadProbe, runPingLoop(300ms)])` → `latencyUpload`
+2. **Download + bufferbloat DL** — `runPingLoop(dlPingCtrl.signal)` em background; `await runDownloadProbe`; `dlPingCtrl.abort(); await dlPingPromise` → `latencyDownload`; emite `partial: { dl }`
+3. **Upload + bufferbloat UL** — mesmo padrão com `ulPingCtrl` → `latencyUpload`
 4. **Diagnóstico** — `dlDelta = max(0, latencyDownload − latencyUnloaded)`; `ulDelta` idem; `severity = classifyBufferbloatSeverity(max(dlDelta, ulDelta))`; `buildDiagnostics(partialResult)`
 5. Retorna `SpeedTestResult` completo com campos v2
 

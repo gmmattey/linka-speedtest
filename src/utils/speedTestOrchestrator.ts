@@ -135,29 +135,30 @@ export async function runSpeedTestV2(
   const abortDlPings = () => dlPingCtrl.abort();
   signal.addEventListener('abort', abortDlPings, { once: true });
 
+  const dlPingPromise = runPingLoop(dlPingCtrl.signal, 300, (rtt) => {
+    if (rtt !== null) dlPings.push(rtt);
+  });
+
   let dlResult;
   try {
-    [dlResult] = await Promise.all([
-      runDownloadProbe(dlConfig, signal, (instant) => {
-        const elapsed = performance.now();
-        const local = Math.min(0.98, (elapsed % dlConfig.durationMs) / dlConfig.durationMs);
-        onProgress({
-          phase: 'download',
-          instantMbps: instant,
-          overallProgress: mapProgress(ranges.download, 0.05 + local * 0.9),
-        });
-      }),
-      runPingLoop(dlPingCtrl.signal, 300, (rtt) => {
-        if (rtt !== null) dlPings.push(rtt);
-      }),
-    ]);
+    dlResult = await runDownloadProbe(dlConfig, signal, (instant) => {
+      const elapsed = performance.now();
+      const local = Math.min(0.98, (elapsed % dlConfig.durationMs) / dlConfig.durationMs);
+      onProgress({
+        phase: 'download',
+        instantMbps: instant,
+        overallProgress: mapProgress(ranges.download, 0.05 + local * 0.9),
+      });
+    });
   } catch (err) {
     dlPingCtrl.abort();
+    await dlPingPromise;
     signal.removeEventListener('abort', abortDlPings);
     if (err instanceof DOMException && err.name === 'AbortError') throw err;
     rethrowClassified(err, 'download_failed');
   }
   dlPingCtrl.abort();
+  await dlPingPromise;
   signal.removeEventListener('abort', abortDlPings);
 
   const dl = dlResult!.throughputMbps;
@@ -177,29 +178,30 @@ export async function runSpeedTestV2(
   const abortUlPings = () => ulPingCtrl.abort();
   signal.addEventListener('abort', abortUlPings, { once: true });
 
+  const ulPingPromise = runPingLoop(ulPingCtrl.signal, 300, (rtt) => {
+    if (rtt !== null) ulPings.push(rtt);
+  });
+
   let ulResult;
   try {
-    [ulResult] = await Promise.all([
-      runUploadProbe(ulConfig, signal, (instant) => {
-        const elapsed = performance.now();
-        const local = Math.min(0.98, (elapsed % ulConfig.durationMs) / ulConfig.durationMs);
-        onProgress({
-          phase: 'upload',
-          instantMbps: instant,
-          overallProgress: mapProgress(ranges.upload, 0.05 + local * 0.9),
-        });
-      }),
-      runPingLoop(ulPingCtrl.signal, 300, (rtt) => {
-        if (rtt !== null) ulPings.push(rtt);
-      }),
-    ]);
+    ulResult = await runUploadProbe(ulConfig, signal, (instant) => {
+      const elapsed = performance.now();
+      const local = Math.min(0.98, (elapsed % ulConfig.durationMs) / ulConfig.durationMs);
+      onProgress({
+        phase: 'upload',
+        instantMbps: instant,
+        overallProgress: mapProgress(ranges.upload, 0.05 + local * 0.9),
+      });
+    });
   } catch (err) {
     ulPingCtrl.abort();
+    await ulPingPromise;
     signal.removeEventListener('abort', abortUlPings);
     if (err instanceof DOMException && err.name === 'AbortError') throw err;
     rethrowClassified(err, 'upload_failed');
   }
   ulPingCtrl.abort();
+  await ulPingPromise;
   signal.removeEventListener('abort', abortUlPings);
 
   const ul = ulResult!.throughputMbps;
