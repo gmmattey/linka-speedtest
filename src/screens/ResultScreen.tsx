@@ -103,7 +103,7 @@ function dlGrade(dl: number): GradeTier {
 }
 
 function ulGrade(ul: number): GradeTier {
-  if (ul >= 50) return 'a';
+  if (ul >= 30) return 'a';
   if (ul >= 10) return 'b';
   if (ul >= 5)  return 'c';
   if (ul >= 1)  return 'd';

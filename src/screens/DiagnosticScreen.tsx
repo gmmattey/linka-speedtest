@@ -22,12 +22,12 @@ function buildCards(result: SpeedTestResult, connectionType: ConnectionType | nu
   const { dl, ul, latency, jitter, packetLoss } = result;
 
   const internetTone: Tone = dl >= 25 ? 'good' : dl >= 5 ? 'maybe' : 'bad';
-  const responseTone: Tone = latency <= 40 ? 'good' : latency <= 100 ? 'maybe' : 'bad';
+  const responseTone: Tone = latency <= 30 ? 'good' : latency <= 100 ? 'maybe' : 'bad';
   const jitterTone: Tone = jitter <= 5 ? 'good' : jitter <= 20 ? 'maybe' : 'bad';
   const lossTone: Tone = packetLoss === 0 ? 'good' : packetLoss <= 1 ? 'maybe' : 'bad';
   const wifiTone: Tone = connectionType !== 'wifi' ? 'good' : latency <= 30 ? 'good' : 'maybe';
 
-  const goodUseCases = [dl >= 25, ul >= 5, latency <= 80, jitter <= 10, packetLoss <= 0.5].filter(Boolean).length;
+  const goodUseCases = [dl >= 25, ul >= 5, latency <= 60, jitter <= 15, packetLoss <= 0.5].filter(Boolean).length;
   const useTone: Tone = goodUseCases >= 4 ? 'good' : goodUseCases >= 2 ? 'maybe' : 'bad';
 
   const verdict = (tone: Tone, g: string, m: string, b: string) => tone === 'good' ? g : tone === 'maybe' ? m : b;

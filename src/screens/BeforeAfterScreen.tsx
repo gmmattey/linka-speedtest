@@ -104,7 +104,7 @@ export function BeforeAfterScreen({
                 <span />
                 <span>Antes</span>
                 <span>Depois</span>
-                <span>Δ</span>
+                <span>Variação</span>
               </div>
               <div className="lk-ba__table-row">
                 <span>↓ Download</span>

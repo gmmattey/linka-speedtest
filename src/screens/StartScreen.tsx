@@ -130,7 +130,7 @@ export function StartScreen({
               <div>
                 Consumo estimado{' '}
                 <span style={{ color: 'var(--text)', fontWeight: 500 }}>
-                  {device?.connectionType === 'mobile' ? '~ 70 MB' : '~ 75 MB'}
+                  {device?.connectionType === 'mobile' ? '~ 70 MB' : '~ 400 MB'}
                 </span>
               </div>
             </>
@@ -140,7 +140,7 @@ export function StartScreen({
               <div>
                 Consumo estimado{' '}
                 <span style={{ color: 'var(--text)', fontWeight: 500 }}>
-                  {device?.connectionType === 'mobile' ? '~ 200 MB' : '~ 300 MB'}
+                  {device?.connectionType === 'mobile' ? '~ 200 MB' : '~ 500 MB'}
                 </span>
                 {' '}· recomendamos Wi-Fi
               </div>

@@ -23,7 +23,7 @@ interface GameRow {
 function evaluateGames(result: SpeedTestResult): GameRow[] {
   const { latency, jitter, packetLoss } = result;
 
-  const fpsTone: Tone  = latency <= 20 && jitter <= 3 && packetLoss === 0 ? 'good' : latency <= 40 ? 'maybe' : 'bad';
+  const fpsTone: Tone  = latency <= 20 && jitter <= 5 && packetLoss === 0 ? 'good' : latency <= 40 ? 'maybe' : 'bad';
   const mobaTone: Tone = latency <= 30 && jitter <= 5 ? 'good' : latency <= 60 ? 'maybe' : 'bad';
   const mmoTone: Tone  = latency <= 60 ? 'good' : latency <= 120 ? 'maybe' : 'bad';
   const cloudTone: Tone = result.dl >= 15 && latency <= 40 ? 'good' : result.dl >= 8 && latency <= 80 ? 'maybe' : 'bad';
@@ -34,7 +34,7 @@ function evaluateGames(result: SpeedTestResult): GameRow[] {
     { name: 'FPS competitivo', desc: 'Valorant, CS2, Apex', verdict: verdictLabel(fpsTone), tone: fpsTone },
     { name: 'MOBA', desc: 'LoL, Dota 2', verdict: verdictLabel(mobaTone), tone: mobaTone },
     { name: 'MMO', desc: 'WoW, FF14', verdict: verdictLabel(mmoTone), tone: mmoTone },
-    { name: 'Cloud Gaming', desc: 'Pode oscilar em 4K', verdict: verdictLabel(cloudTone), tone: cloudTone },
+    { name: 'Cloud Gaming', desc: 'GeForce Now, Xbox Cloud, PS Now', verdict: verdictLabel(cloudTone), tone: cloudTone },
   ];
 }
 
@@ -71,7 +71,7 @@ export function GamerScreen({ result, onBack, onRetest }: Props) {
         <div className="lk-gamer__stats">
           <StatCard label="Ping" value={`${formatMs(latency)}`} unit="ms" tone={latency <= 40 ? 'good' : latency <= 80 ? 'maybe' : 'bad'} />
           <StatCard label="Jitter" value={`${formatMs(jitter)}`} unit="ms" tone={jitter <= 5 ? 'good' : jitter <= 20 ? 'maybe' : 'bad'} />
-          <StatCard label="Loss" value={`${packetLoss.toFixed(1)}`} unit="%" tone={packetLoss === 0 ? 'good' : packetLoss <= 1 ? 'maybe' : 'bad'} />
+          <StatCard label="Perda" value={`${packetLoss.toFixed(1)}`} unit="%" tone={packetLoss === 0 ? 'good' : packetLoss <= 1 ? 'maybe' : 'bad'} />
         </div>
 
         {/* Game rows */}

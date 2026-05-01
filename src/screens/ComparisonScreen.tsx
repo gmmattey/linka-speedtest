@@ -126,7 +126,7 @@ export function ComparisonScreen({
               </div>
               {comparison.downloadDropPercent > 1 && (
                 <div className="lk-cmp__table-row lk-cmp__table-row--drop">
-                  <span>Queda DL</span>
+                  <span>Queda no download</span>
                   <span />
                   <span className="lk-cmp__drop">
                     -{comparison.downloadDropPercent.toFixed(0)}%

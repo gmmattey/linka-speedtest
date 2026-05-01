@@ -39,7 +39,7 @@ const STEPS_ADVANCED: PhaseStep[] = [
   { id: 'latency',  label: 'LAT' },
   { id: 'download', label: 'DOWN' },
   { id: 'upload',   label: 'UP' },
-  { id: 'load',     label: 'CARGA' },
+  { id: 'load',     label: 'LOAD' },
   { id: 'dns',      label: 'DNS' },
 ];
 
@@ -53,7 +53,7 @@ function gaugePhaseLabel(phase: TestPhase): string {
   switch (phase) {
     case 'download': return 'DOWNLOAD';
     case 'upload':   return 'UPLOAD';
-    case 'latency':  return 'PING';
+    case 'latency':  return 'LAT';
     case 'done':     return 'CONCLUÍDO';
     default:         return 'AGUARDANDO';
   }

@@ -34,7 +34,7 @@ const STATIC_RECS: StaticRec[] = [
     icon: 'bolt',
     title: 'Considere usar cabo',
     body: 'TV e desktop ganham 30%+ na velocidade se conectados via Ethernet.',
-    cta: 'Vale a pena?',
+    cta: 'Saiba mais',
   },
   {
     icon: 'home',
@@ -67,7 +67,7 @@ export function RecommendScreen({ result, quality, tags, onBack }: Props) {
         <div className="lk-rec-screen__hero">
           <div className="lk-rec-screen__title">
             {hasDynamic
-              ? `${dynamicRecs.length} ação${dynamicRecs.length > 1 ? 'ões' : ''} para melhorar sua conexão`
+              ? `${dynamicRecs.length} ${dynamicRecs.length > 1 ? 'ações' : 'ação'} para melhorar sua conexão`
               : '4 ações que podem melhorar seu Wi-Fi'}
           </div>
           <p className="lk-rec-screen__sub">Em ordem de impacto. Comece pela primeira.</p>
