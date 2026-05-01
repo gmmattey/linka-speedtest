@@ -55,41 +55,36 @@ export async function cfPing(signal: AbortSignal): Promise<number | null> {
 }
 
 /**
- * Faz upload de `buffer` via XHR POST.
- * `onProgress(loaded)` é chamado a cada evento de progresso.
+ * Faz upload de `buffer` via fetch com ReadableStream.
+ * Sem Content-Type explícito → simple CORS request → sem preflight.
+ * `onProgress(loaded)` é chamado a cada chunk de 64 KB enfileirado.
  */
 export function cfUploadChunk(
   buffer: Uint8Array,
   signal: AbortSignal,
   onProgress: (loaded: number) => void,
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const url = `${BASE}/__up?_cb=${cb()}`;
-    const xhr = new XMLHttpRequest();
+  const url = `${BASE}/__up?_cb=${cb()}`;
+  const CHUNK = 65_536;
+  let offset = 0;
 
-    const onAbort = () => xhr.abort();
-    signal.addEventListener('abort', onAbort, { once: true });
+  const stream = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (offset >= buffer.byteLength) {
+        controller.close();
+        return;
+      }
+      const end = Math.min(offset + CHUNK, buffer.byteLength);
+      controller.enqueue(buffer.subarray(offset, end));
+      offset = end;
+      onProgress(offset);
+    },
+  });
 
-    xhr.upload.onprogress = (e) => {
-      if (e.loaded > 0) onProgress(e.loaded);
-    };
+  const init: RequestInit = { method: 'POST', body: stream, signal };
+  (init as any).duplex = 'half'; // required in Chrome for streaming request bodies
 
-    xhr.onload = () => {
-      signal.removeEventListener('abort', onAbort);
-      resolve();
-    };
-
-    xhr.onerror = () => {
-      signal.removeEventListener('abort', onAbort);
-      reject(new Error('cfUploadChunk: XHR error'));
-    };
-
-    xhr.onabort = () => {
-      signal.removeEventListener('abort', onAbort);
-      reject(new DOMException('Aborted', 'AbortError'));
-    };
-
-    xhr.open('POST', url);
-    xhr.send(new Blob([buffer as unknown as BlobPart]));
+  return fetch(url, init).then(resp => {
+    if (!resp.ok) throw new Error(`cfUploadChunk: HTTP ${resp.status}`);
   });
 }
