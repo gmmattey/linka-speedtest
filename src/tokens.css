@@ -244,3 +244,11 @@ a {
 .fade-in {
   animation: fadeIn var(--transition-normal) both;
 }
+
+.screen-enter {
+  animation: fadeIn 220ms ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen-enter { animation: none; }
+}

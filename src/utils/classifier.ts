@@ -8,8 +8,8 @@ export function classify(r: SpeedTestResult): Classification {
   if (r.latency > 80) tags.add('highLatency');
   if (r.ul < 5) tags.add('lowUpload');
   if (r.jitter > 50) tags.add('unstable');
-  if (r.packetLoss > 2) tags.add('packetLoss');
-  if (r.packetLoss > 5 || r.jitter > 80) tags.add('veryUnstable');
+  if (r.packetLoss > 2) { tags.add('packetLoss'); tags.add('unstable'); }
+  if (r.packetLoss > 5 || r.jitter > 80) { tags.add('veryUnstable'); tags.add('unstable'); }
 
   let primary: Quality;
   if (r.dl === 0 && r.ul === 0) {

@@ -375,3 +375,12 @@
   color: var(--text-2);
   text-align: right;
 }
+
+.lk-hist-detail__detail-val--truncate {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: middle;
+}

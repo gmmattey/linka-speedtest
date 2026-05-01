@@ -32,7 +32,6 @@ export function StartScreen({
   error,
   isOnline,
   settings,
-  onUpdateSettings: _onUpdateSettings,
   onStart,
   onRetry,
   lastRecord,
@@ -130,7 +129,7 @@ export function StartScreen({
               <div>
                 Consumo estimado{' '}
                 <span style={{ color: 'var(--text)', fontWeight: 500 }}>
-                  {device?.connectionType === 'mobile' ? '~ 70 MB' : '~ 400 MB'}
+                  {device?.connectionType === 'mobile' ? '~ 70 MB' : '~ 500 MB'}
                 </span>
               </div>
             </>

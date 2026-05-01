@@ -19,6 +19,12 @@
   color: var(--accent);
   font-size: 14px;
   font-weight: 500;
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-sm);
+  margin-left: calc(-1 * var(--space-sm));
 }
 
 .lk-result__share-btn {
@@ -224,6 +230,15 @@
 .lk-result__metric-sub {
   font-size: 13px;
   color: var(--text-2);
+}
+
+.lk-result__metric-sub--truncate {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 /* ── Footer ──────────────────────────────────────── */

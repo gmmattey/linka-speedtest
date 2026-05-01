@@ -13,7 +13,7 @@ const DICTIONARY: Record<string, string> = {
   // --- Quality (paridade com qualityHeadline() legacy) ---
   'quality.excellent':   'Conexão excelente',
   'quality.good':        'Conexão boa',
-  'quality.fair':        'Conexão regular',
+  'quality.fair':        'Conexão aceitável',
   'quality.slow':        'Conexão lenta',
   'quality.unavailable': 'Sem conexão',
 

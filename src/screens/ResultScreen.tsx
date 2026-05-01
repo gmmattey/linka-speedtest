@@ -1,15 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IOSList } from '../components/IOSList';
 import { Chip } from '../components/Chip';
 import type { ChipVariant } from '../components/Chip';
 import { Icon } from '../components/icons';
+import { HamburgerMenu } from '../components/HamburgerMenu';
 import { generateShareCard } from '../utils/shareCard';
+import { buildShareText, shareResultText } from '../utils/share';
 import type { Quality, ServerInfo, SpeedTestResult, TestRecord } from '../types';
 import { interpretSpeedTestResult, resolveCopy } from '../core';
+
 import type { UseCaseId } from '../core';
 import { loadHistory } from '../utils/history';
 import { formatMbps, formatMs } from '../utils/format';
-import type { GamingProfile } from '../types';
+import type { ConnectionType, GamingProfile } from '../types';
 import './ResultScreen.css';
 
 interface Props {
@@ -31,31 +34,13 @@ interface Props {
   unit?: 'mbps' | 'gbps';
   hideIpOnShare?: boolean;
   gamingProfile?: GamingProfile;
+  connectionType?: ConnectionType | null;
+  contractedDown?: number | null;
+  contractedUp?: number | null;
+  onUpdateContracted?: (down: number | null, up: number | null) => void;
 }
 
 type ShareStatus = 'idle' | 'copied';
-
-export function buildShareText(result: SpeedTestResult, quality: Quality, unit: 'mbps' | 'gbps' = 'mbps'): string {
-  const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
-  return [
-    `linka SpeedTest — ${resolveCopy(`quality.${quality}`)}`,
-    `↓ ${formatMbps(result.dl, unit)} ${unitLabel} · ↑ ${formatMbps(result.ul, unit)} ${unitLabel}`,
-    `Resposta ${formatMs(result.latency)} ms · Oscilação ${formatMs(result.jitter)} ms`,
-    new Date(result.timestamp).toLocaleString('pt-BR'),
-  ].join('\n');
-}
-
-export async function shareResultText(text: string): Promise<'shared' | 'copied' | 'none'> {
-  if (navigator.share) {
-    try { await navigator.share({ title: 'linka SpeedTest', text }); return 'shared'; }
-    catch { return 'none'; }
-  }
-  if (navigator.clipboard) {
-    try { await navigator.clipboard.writeText(text); return 'copied'; }
-    catch { return 'none'; }
-  }
-  return 'none';
-}
 
 function qualityToChipVariant(q: Quality): ChipVariant {
   if (q === 'excellent' || q === 'good') return 'good';
@@ -138,46 +123,47 @@ function gradeStyle(g: GradeTier): { background: string; color: string } {
   return { background: bg, color: `var(--grade-${g})` };
 }
 
-function useCaseIcon(id: UseCaseId): string {
+function ucIcon(id: UseCaseId): string {
   if (id === 'gaming')       return 'game';
   if (id === 'streaming_4k') return 'bolt';
   if (id === 'home_office')  return 'home';
   return 'video';
 }
 
-function useCaseIconBg(status: string): string {
+function ucIconBg(status: string): string {
   if (status === 'good')  return 'var(--ul-tint)';
   if (status === 'maybe') return 'var(--color-warn-bg)';
   return 'var(--color-bad-bg)';
 }
 
-function useCaseIconColor(status: string): string {
+function ucIconColor(status: string): string {
   if (status === 'good')  return 'var(--ul)';
   if (status === 'maybe') return 'var(--warn)';
   return 'var(--error)';
 }
 
-function useCaseLabel(id: UseCaseId): string {
+function ucLabel(id: UseCaseId): string {
   if (id === 'gaming')       return 'Jogos';
   if (id === 'streaming_4k') return '4K';
   if (id === 'home_office')  return 'Office';
   return 'Vídeo';
 }
 
-function useCaseChipLabel(status: string): string {
+function ucChipLabel(status: string): string {
   if (status === 'good')  return 'Bom';
   if (status === 'maybe') return 'Atenção';
   return 'Ruim';
 }
 
 export function ResultScreen({
-  theme: _theme, onToggleTheme: _onToggleTheme,
-  result, server, previous: _previous,
+  theme, onToggleTheme,
+  result, server,
   onRetry, onShowHistory,
   onDiagnostic, onGamer, onRecommend,
-  onStartComparison, onStartBeforeAfter, onStartProvaReal, onStartRoomTest,
+  onStartComparison, onStartBeforeAfter, onStartProvaReal,
   onShowDNSGuide,
-  unit = 'mbps', hideIpOnShare: _hideIpOnShare = true, gamingProfile: _gamingProfile = 'off',
+  unit = 'mbps',
+  connectionType, contractedDown = null, contractedUp = null, onUpdateContracted,
 }: Props) {
   const history = useMemo(() => loadHistory(), []);
   const interpreted = useMemo(
@@ -186,7 +172,6 @@ export function ResultScreen({
   );
 
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
-  const [maisExpanded, setMaisExpanded] = useState(false);
   const [shareStatus, setShareStatus] = useState<ShareStatus>('idle');
   const [waGenerating, setWaGenerating] = useState(false);
   const shareResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -224,44 +209,47 @@ export function ResultScreen({
     finally { setWaGenerating(false); }
   };
 
+  const handleNativeShare = useCallback(async () => {
+    const blob = await generateShareCard(result, interpreted.quality, unit);
+    const file = new File([blob], 'linka-speedtest.png', { type: 'image/png' });
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'linka SpeedTest' });
+    } else {
+      const text = buildShareText(result, interpreted.quality, unit);
+      await shareResultText(text);
+    }
+  }, [result, interpreted.quality, unit]);
+
   const shortPhrase = resolveCopy(interpreted.copyKeys.shortPhraseKey);
 
   const detailItems = [
     {
       icon: <Icon name="loss" size={14} color="var(--text-2)" />,
       iconBg: 'var(--surface-3)',
-      title: 'Perda de pacotes',
+      title: 'Falhas na conexão',
       trailing: <span className="lk-result__metric-sub">{result.packetLoss?.toFixed(1) ?? '—'}%</span>,
     },
-    ...(maisExpanded ? [
-      ...(server?.isp && server.isp !== '—' ? [{
-        icon: <Icon name="signal" size={14} color="var(--text-2)" />,
-        iconBg: 'var(--surface-3)',
-        title: 'Operadora',
-        trailing: <span className="lk-result__metric-sub">{server.isp}</span>,
-      }] : []),
-      ...(server ? [{
-        icon: <Icon name="pin" size={14} color="var(--text-2)" />,
-        iconBg: 'var(--surface-3)',
-        title: 'Servidor',
-        trailing: <span className="lk-result__metric-sub">{server.name}{server.colo && server.colo !== '—' ? ` · ${server.colo}` : ''}</span>,
-      }] : []),
-    ] : []),
-    {
-      icon: <Icon name="chevron" size={14} color="var(--accent)" />,
-      iconBg: 'var(--accent-tint)',
-      title: maisExpanded ? 'Menos' : 'Mais',
-      onClick: () => setMaisExpanded(e => !e),
-    },
+    ...(server?.isp && server.isp !== '—' ? [{
+      icon: <Icon name="signal" size={14} color="var(--text-2)" />,
+      iconBg: 'var(--surface-3)',
+      title: 'Provedor',
+      trailing: <span className="lk-result__metric-sub lk-result__metric-sub--truncate">{server.isp}</span>,
+    }] : []),
   ];
 
   return (
     <div className="lk-result fade-in">
       <div className="lk-result__head">
-        <button className="lk-result__back" onClick={onShowHistory}>‹ Início</button>
-        <button className="lk-result__share-btn" onClick={handleShare} aria-label="Compartilhar">
-          <Icon name="share" size={18} />
-        </button>
+        <button className="lk-result__back" onClick={onShowHistory}>Histórico</button>
+        <HamburgerMenu
+          theme={theme}
+          onToggleTheme={onToggleTheme}
+          onShare={handleNativeShare}
+          contractedDown={contractedDown}
+          contractedUp={contractedUp}
+          onUpdateContracted={onUpdateContracted ?? (() => {})}
+          showContracted={connectionType !== 'mobile'}
+        />
       </div>
 
       <div className="lk-result__scroll">
@@ -324,16 +312,16 @@ export function ResultScreen({
               <div key={id} className="lk-result__use-item">
                 <div
                   className="lk-result__use-icon"
-                  style={{ background: useCaseIconBg(status), color: useCaseIconColor(status) }}
+                  style={{ background: ucIconBg(status), color: ucIconColor(status) }}
                 >
-                  <Icon name={useCaseIcon(id)} size={18} />
+                  <Icon name={ucIcon(id)} size={18} />
                 </div>
-                <span className="lk-result__use-lbl">{useCaseLabel(id)}</span>
+                <span className="lk-result__use-lbl">{ucLabel(id)}</span>
                 <span
                   className="lk-result__use-chip"
-                  style={{ background: useCaseIconBg(status), color: useCaseIconColor(status) }}
+                  style={{ background: ucIconBg(status), color: ucIconColor(status) }}
                 >
-                  {useCaseChipLabel(status)}
+                  {ucChipLabel(status)}
                 </span>
               </div>
             ))}
@@ -402,7 +390,7 @@ export function ResultScreen({
                   return [{
                     icon: <Icon name="loss" size={14} color={pl.color} />,
                     iconBg: 'var(--surface-3)',
-                    title: 'Perda de pacotes',
+                    title: 'Falhas na conexão',
                     trailing: (
                       <span className="lk-result__metric-sub" style={{ color: pl.color }}>
                         {pl.text}
@@ -416,51 +404,62 @@ export function ResultScreen({
         )}
 
         {/* DNS section */}
-        {result.dns && result.dns.servers.length > 0 && (
-          <div className="lk-result__advanced">
-            <p className="lk-result__advanced-label">DNS</p>
-            <IOSList
-              items={[
-                {
-                  icon: <Icon name="bolt" size={14} color="var(--ul)" />,
-                  iconBg: 'var(--ul-tint)',
-                  title: `${result.dns.winner.name} · vencedor`,
-                  subtitle: result.dns.winner.ip,
-                  trailing: (
-                    <span className="lk-result__metric-sub" style={{ color: 'var(--ul)', fontWeight: 600 }}>
-                      {Math.round(result.dns.winner.p50)} ms
-                    </span>
-                  ),
-                },
-                ...result.dns.servers
-                  .filter(s => s.id !== result.dns!.winner.id && s.samples > 0)
-                  .sort((a, b) => a.p50 - b.p50)
-                  .map(s => ({
-                    icon: <Icon name="ping" size={14} color="var(--text-3)" />,
+        {result.dns && result.dns.servers.length > 0 && (() => {
+          const winner = result.dns.winner;
+          const winnerMs = Math.round(winner.p50);
+          const dnsLabel = winnerMs < 20 ? 'Rápido' : winnerMs < 50 ? 'Aceitável' : 'Lento';
+          const dnsColor = winnerMs < 20 ? 'var(--success)' : winnerMs < 50 ? 'var(--warn)' : 'var(--error)';
+          const dnsRec = winnerMs < 50
+            ? `${winner.name} é o mais rápido na sua rede — mantenha o atual.`
+            : `Considere usar ${winner.name} para reduzir o tempo de resposta DNS.`;
+
+          return (
+            <div className="lk-result__advanced">
+              <p className="lk-result__advanced-label">DNS</p>
+              <IOSList
+                items={[
+                  {
+                    icon: <Icon name="bolt" size={14} color={dnsColor} />,
                     iconBg: 'var(--surface-3)',
-                    title: s.name,
-                    subtitle: s.ip,
+                    title: winner.name,
+                    subtitle: `Mais rápido · ${winner.ip}`,
                     trailing: (
-                      <span className="lk-result__metric-sub">
-                        {Math.round(s.p50)} ms
-                      </span>
+                      <div style={{ textAlign: 'right' }}>
+                        <div className="lk-result__metric-sub" style={{ color: dnsColor, fontWeight: 700 }}>
+                          {winnerMs} ms
+                        </div>
+                        <div style={{ fontSize: 10, color: dnsColor }}>{dnsLabel}</div>
+                      </div>
                     ),
-                  })),
-                ...(onShowDNSGuide ? [{
-                  icon: <Icon name="cog" size={14} color="#fff" />,
-                  iconBg: 'var(--accent)',
-                  title: 'Como trocar o DNS',
-                  subtitle: `Usar ${result.dns.winner.name} no seu dispositivo`,
-                  showChevron: true,
-                  onClick: () => onShowDNSGuide!(result.dns!.winner.id),
-                }] : []),
-              ]}
-            />
-            <p className="lk-result__dns-disclaimer">
-              Medição inclui overhead HTTP/TLS — comparação relativa entre servidores.
-            </p>
-          </div>
-        )}
+                  },
+                  ...result.dns.servers
+                    .filter(s => s.id !== result.dns!.winner.id && s.samples > 0)
+                    .sort((a, b) => a.p50 - b.p50)
+                    .map(s => ({
+                      icon: <Icon name="ping" size={14} color="var(--text-3)" />,
+                      iconBg: 'var(--surface-3)',
+                      title: s.name,
+                      subtitle: s.ip,
+                      trailing: (
+                        <span className="lk-result__metric-sub">
+                          {Math.round(s.p50)} ms
+                        </span>
+                      ),
+                    })),
+                  ...(onShowDNSGuide ? [{
+                    icon: <Icon name="cog" size={14} color="#fff" />,
+                    iconBg: 'var(--accent)',
+                    title: 'Como trocar o DNS',
+                    subtitle: `Usar ${winner.name} no seu dispositivo`,
+                    showChevron: true,
+                    onClick: () => onShowDNSGuide!(result.dns!.winner.id),
+                  }] : []),
+                ]}
+              />
+              <p className="lk-result__dns-disclaimer">{dnsRec}</p>
+            </div>
+          );
+        })()}
 
         {/* Ferramentas */}
         <div className="lk-result__tools">
@@ -503,25 +502,17 @@ export function ResultScreen({
                 icon: <Icon name="cmp" size={14} color="var(--text-2)" />,
                 iconBg: 'var(--surface-3)',
                 title: 'Antes e Depois',
-                subtitle: 'Meça o impacto de uma ação',
+                subtitle: 'Faça uma mudança e compare o resultado',
                 showChevron: true,
                 onClick: onStartBeforeAfter,
               }] : []),
               ...(onStartProvaReal ? [{
                 icon: <Icon name="refresh" size={14} color="var(--text-2)" />,
                 iconBg: 'var(--surface-3)',
-                title: 'Prova Real (3×)',
-                subtitle: 'Média de 3 testes consecutivos',
+                title: 'Confirmar resultado (3×)',
+                subtitle: 'Média de 3 testes seguidos para mais precisão',
                 showChevron: true,
                 onClick: onStartProvaReal,
-              }] : []),
-              ...(onStartRoomTest ? [{
-                icon: <Icon name="pin" size={14} color="var(--text-2)" />,
-                iconBg: 'var(--surface-3)',
-                title: 'Teste por local',
-                subtitle: 'Associe um cômodo ao resultado',
-                showChevron: true,
-                onClick: onStartRoomTest,
               }] : []),
             ]}
           />

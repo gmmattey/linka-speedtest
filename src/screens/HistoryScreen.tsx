@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Area, AreaChart, ResponsiveContainer, YAxis } from 'recharts';
 import { IOSList } from '../components/IOSList';
 import { Chip, type ChipVariant } from '../components/Chip';
@@ -27,27 +27,17 @@ function qualityToChipVariant(quality: string): ChipVariant {
 
 export function HistoryScreen({
   theme,
-  onToggleTheme: _onToggleTheme,
   unit = 'mbps',
   initialSelectedId,
   onBack,
 }: Props) {
   const dlColor = theme === 'dark' ? '#60A5FA' : '#2563EB';
   const ulColor = theme === 'dark' ? '#34D399' : '#16A34A';
-  const [items, setItems] = useState<TestRecord[]>([]);
-  const [selected, setSelected] = useState<TestRecord | null>(null);
+  const [items, setItems] = useState<TestRecord[]>(() => loadHistory());
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
+  const selected = items.find((r) => r.id === selectedId) ?? null;
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
-
-  useEffect(() => {
-    const loaded = loadHistory();
-    setItems(loaded);
-    if (initialSelectedId) {
-      const found = loaded.find((r) => r.id === initialSelectedId);
-      setSelected(found ?? null);
-    } else {
-      setSelected(null);
-    }
-  }, [initialSelectedId]);
+  const mountTime = useState(Date.now)[0];
 
   const handleClear = () => {
     if (!confirm('Apagar todo o histórico de testes?')) return;
@@ -90,7 +80,7 @@ export function HistoryScreen({
 
   const diagnosis = useMemo(() => {
     if (items.length === 0) return null;
-    const cutoff = Date.now() - 24 * 3600 * 1000;
+    const cutoff = mountTime - 24 * 3600 * 1000;
     const recent = items.filter((r) => r.timestamp >= cutoff);
     const sample = recent.length > 0 ? recent : items.slice(0, 5);
     const n = sample.length;
@@ -100,19 +90,19 @@ export function HistoryScreen({
       latency:    sample.reduce((s, r) => s + r.latency, 0) / n,
       jitter:     sample.reduce((s, r) => s + r.jitter, 0) / n,
       packetLoss: sample.reduce((s, r) => s + r.packetLoss, 0) / n,
-      timestamp:  Date.now(),
+      timestamp:  mountTime,
     };
     const interpreted = interpretSpeedTestResult({ metrics: avg, profile: 'fixed_broadband', history: sample });
     const lines = interpreted.copyKeys.diagnosisKeys.map((k) => resolveCopy(k));
     return { lines: lines.slice(0, 2), windowLabel: recent.length > 0 ? '24h' : 'recente' };
-  }, [items]);
+  }, [items, mountTime]);
 
   const handlePdf = async () => {
-    try { await exportHistoryPdf(items); } catch (e) { console.error(e); }
+    try { await exportHistoryPdf(items); } catch { /* silencioso */ }
   };
 
   if (selected) {
-    return <HistoryDetail record={selected} onBack={() => setSelected(null)} unit={unit} />;
+    return <HistoryDetail record={selected} onBack={() => setSelectedId(null)} unit={unit} />;
   }
 
   return (
@@ -199,7 +189,7 @@ export function HistoryScreen({
 
             <ul className="lk-history__list">
               {items.map((r) => (
-                <li key={r.id} className="lk-history__item" onClick={() => setSelected(r)}>
+                <li key={r.id} className="lk-history__item" onClick={() => setSelectedId(r.id)}>
                   <div className="lk-history__row1">
                     <span className="lk-history__date">{formatDate(r.timestamp)}</span>
                     <Chip variant={qualityToChipVariant(r.quality)}>
@@ -326,8 +316,8 @@ function HistoryDetail({ record, onBack, unit }: { record: TestRecord; onBack: (
               trailing: <span className="lk-hist-detail__detail-val">{record.serverName}</span>,
             },
             {
-              title: 'Operadora',
-              trailing: <span className="lk-hist-detail__detail-val">{record.isp && record.isp !== '—' ? record.isp : '—'}</span>,
+              title: 'Provedor',
+              trailing: <span className="lk-hist-detail__detail-val lk-hist-detail__detail-val--truncate">{record.isp && record.isp !== '—' ? record.isp : '—'}</span>,
             },
             {
               title: 'Dispositivo',

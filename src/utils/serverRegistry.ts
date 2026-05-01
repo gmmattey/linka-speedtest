@@ -23,6 +23,35 @@ function parseTrace(text: string): Record<string, string> {
   return out;
 }
 
+const IATA_TO_CITY: Record<string, string> = {
+  // Brasil
+  GIG: 'Rio de Janeiro', GRU: 'São Paulo', BSB: 'Brasília',
+  FOR: 'Fortaleza', SSA: 'Salvador', BEL: 'Belém', MAO: 'Manaus',
+  POA: 'Porto Alegre', CWB: 'Curitiba', REC: 'Recife',
+  CGB: 'Cuiabá', VCP: 'Campinas', NAT: 'Natal', MCZ: 'Maceió',
+  THE: 'Teresina', SLZ: 'São Luís', AJU: 'Aracaju',
+  // América do Sul
+  EZE: 'Buenos Aires', SCL: 'Santiago', BOG: 'Bogotá',
+  LIM: 'Lima', UIO: 'Quito', MVD: 'Montevidéu',
+  // América do Norte
+  MIA: 'Miami', JFK: 'Nova York', LAX: 'Los Angeles',
+  ORD: 'Chicago', EWR: 'Newark', IAD: 'Washington D.C.',
+  ATL: 'Atlanta', DFW: 'Dallas', SEA: 'Seattle', SFO: 'São Francisco',
+  YYZ: 'Toronto', YVR: 'Vancouver',
+  // Europa
+  LHR: 'Londres', CDG: 'Paris', AMS: 'Amsterdã', FRA: 'Frankfurt',
+  MAD: 'Madri', LIS: 'Lisboa', MXP: 'Milão', BCN: 'Barcelona',
+  ARN: 'Estocolmo', CPH: 'Copenhague', OSL: 'Oslo', HEL: 'Helsinque',
+  WAW: 'Varsóvia', PRG: 'Praga', VIE: 'Viena', ZRH: 'Zurique',
+  // Ásia / Oceania
+  NRT: 'Tóquio', SIN: 'Singapura', SYD: 'Sydney', HKG: 'Hong Kong',
+  ICN: 'Seul', BOM: 'Mumbai', DEL: 'Nova Délhi',
+};
+
+export function coloToCity(colo: string): string {
+  return IATA_TO_CITY[colo?.toUpperCase()] ?? colo;
+}
+
 // Cloudflare retorna o asOrganization da ASN, que costuma ser o nome corporativo
 // (ex.: "TELEFONICA BRASIL S.A."). Mapeamos para o nome comercial conhecido pelo
 // usuário final brasileiro.

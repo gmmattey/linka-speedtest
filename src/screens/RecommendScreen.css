@@ -105,12 +105,16 @@
   line-height: 1.45;
 }
 
-.lk-rec-screen__cta {
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--accent);
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.lk-rec-screen__card--dynamic {
+  border-color: var(--accent-border);
+  background: var(--accent-tint);
+}
+
+.lk-rec-screen__section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+  text-transform: uppercase;
+  margin: var(--space-xl) 0 var(--space-sm);
 }

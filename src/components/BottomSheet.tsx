@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import type { ConnectionType, DeviceInfo, GamingProfile, ServerInfo } from '../types';
 import type { Settings } from '../hooks/useSettings';
-import { SERVERS } from '../utils/serverRegistry';
+import { SERVERS, coloToCity } from '../utils/serverRegistry';
 import { PathRow } from './PathRow';
 import './BottomSheet.css';
 
@@ -127,8 +127,8 @@ export function BottomSheet({ open, onToggle, onClose, device, server, loading, 
         <div className="lk-sheet__body">
           {/* Info section */}
           <div className="lk-sheet__section">
-            <Row label="Servidor"    value={loading ? '…' : `${server?.name ?? '—'}${server?.colo && server.colo !== '—' ? ' · ' + server.colo : ''}`} />
-            <Row label="Operadora"   value={loading ? '…' : (server?.isp ?? '—')} />
+            <Row label="Servidor"    value={loading ? '…' : (server?.colo && server.colo !== '—' ? coloToCity(server.colo) : (server?.name ?? '—'))} />
+            <Row label="Provedor"    value={loading ? '…' : (server?.isp ?? '—')} />
             <Row label="Localização" value={loading ? '…' : (server?.loc && server.colo ? `${server.loc} · ${server.colo}` : (server?.loc ?? '—'))} />
             <Row label="Seu IP"      value={loading ? '…' : (server?.ip ?? '—')} />
             <Row label="Dispositivo" value={loading ? '…' : `${device?.deviceType === 'mobile' ? 'Celular' : device?.deviceType === 'tablet' ? 'Tablet' : 'PC'} · ${effectiveConnection === 'wifi' ? 'Wi-Fi' : effectiveConnection === 'mobile' ? 'Dados móveis' : 'Cabo'}`} />

@@ -73,6 +73,7 @@ Linka SpeedTest/
 │   │   ├── history.ts            ← CRUD do histórico em localStorage
 │   │   ├── pdfExport.ts          ← Geração de PDF (resultado + histórico)
 │   │   ├── serverRegistry.ts     ← ServerProvider interface + CloudflareProvider
+│   │   ├── share.ts              ← buildShareText + shareResultText (texto de compartilhamento)
 │   │   └── speedtest.ts          ← Algoritmo de medição DL/UL/lat/jitter/packetLoss
 │   │
 │   └── core/                     ← Motor de decisão único (puro, sem React/DOM/localStorage)

@@ -78,8 +78,6 @@ function gaugeColor(phase: TestPhase): string {
 }
 
 export function RunningScreen({
-  theme: _theme,
-  onToggleTheme: _onToggleTheme,
   phase,
   instantMbps,
   onCancel,

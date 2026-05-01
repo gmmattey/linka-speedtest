@@ -4,22 +4,6 @@ import type { SpeedTestResult, TestRecord } from '../types';
 import { interpretSpeedTestResult, resolveCopy } from '../core';
 import { formatMbps, formatMs, formatDate, formatDateIsoLike } from './format';
 
-async function loadLogoBase64(): Promise<string | null> {
-  try {
-    const resp = await fetch('/logo.png');
-    if (!resp.ok) return null;
-    const blob = await resp.blob();
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
-}
-
 const COLORS = {
   accent: '#6C2BFF',
   dl: '#3AB6FF',
@@ -30,20 +14,17 @@ const COLORS = {
   bg: '#F6F7F9',
 };
 
+const LOGO_HTML = `<span style="font-family:'Space Grotesk',system-ui,sans-serif;font-weight:700;font-size:20px;letter-spacing:-0.03em;color:${COLORS.accent};">linka</span>`;
+
 export async function exportResultPdf(result: SpeedTestResult, serverName: string, isp?: string) {
   const interpreted = interpretSpeedTestResult({ metrics: result, profile: 'fixed_broadband' });
-  const logoB64 = await loadLogoBase64();
 
   const node = document.createElement('div');
   node.style.cssText = 'position:fixed;left:-9999px;top:0;width:720px;padding:40px;background:#FFFFFF;color:#0D0D1A;font-family:Geist,system-ui,sans-serif;font-size:14px;';
 
-  const logoHtml = logoB64
-    ? `<img src="${logoB64}" style="height:28px;width:auto;" alt="linka" />`
-    : `<div style="font-family:'Geist',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.5px;color:${COLORS.accent}">linka SpeedTest</div>`;
-
   node.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
-      ${logoHtml}
+      ${LOGO_HTML}
       <div style="color:${COLORS.muted};font-size:12px;">${formatDate(result.timestamp)}</div>
     </div>
     <div style="background:${COLORS.bg};border-left:4px solid ${COLORS.accent};padding:16px 20px;border-radius:8px;margin-bottom:24px;">
@@ -92,7 +73,6 @@ export async function exportResultPdf(result: SpeedTestResult, serverName: strin
 
 export async function exportHistoryPdf(items: TestRecord[]) {
   if (items.length === 0) return;
-  const logoB64 = await loadLogoBase64();
 
   const n = items.length;
   const avgDl  = items.reduce((s, r) => s + r.dl, 0)         / n;
@@ -114,15 +94,11 @@ export async function exportHistoryPdf(items: TestRecord[]) {
       <td>${r.isp && r.isp !== '—' ? r.isp : '—'}</td>
     </tr>`).join('');
 
-  const logoHtml = logoB64
-    ? `<img src="${logoB64}" style="height:28px;width:auto;" alt="linka" />`
-    : `<div style="font-family:'Geist',sans-serif;font-weight:700;font-size:22px;color:${COLORS.accent}">linka SpeedTest</div>`;
-
   const node = document.createElement('div');
   node.style.cssText = 'position:fixed;left:-9999px;top:0;width:960px;padding:40px;background:#FFFFFF;color:#0D0D1A;font-family:Geist,system-ui,sans-serif;font-size:12px;';
   node.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
-      ${logoHtml}
+      ${LOGO_HTML}
       <div style="color:${COLORS.muted};font-size:12px;">Histórico de testes · ${n} registro${n > 1 ? 's' : ''}</div>
     </div>
     <div style="background:${COLORS.bg};border-left:4px solid ${COLORS.accent};padding:14px 18px;border-radius:8px;margin-bottom:24px;">

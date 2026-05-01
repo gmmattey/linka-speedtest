@@ -194,44 +194,57 @@ async function downloadRound(
   return (totalRx * 8) / seconds / 1_000_000;
 }
 
-async function uploadRound(
+function uploadRound(
   buf: Uint8Array,
   signal: AbortSignal,
   onInstant: (mbps: number | null) => void,
   timeoutMs: number,
 ): Promise<number> {
   const server = getDefaultServer();
-  const ctrl = new AbortController();
-  const onAbort = () => ctrl.abort();
-  signal.addEventListener('abort', onAbort);
-  const tid = setTimeout(() => ctrl.abort(), timeoutMs);
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const t0 = performance.now();
+    let lastLoaded = 0;
+    let lastTs = t0;
 
-  const t0 = performance.now();
-  try {
-    const blob = new Blob([buf as unknown as BlobPart]);
-    // Fetch não expõe progresso de upload — omitimos estimativa falsa.
-    // O valor real é retornado ao final do round via (buf.length * 8) / seconds.
-    const tickId = setInterval(() => {
-      onInstant(null);
-    }, 500);
-    try {
-      await fetch(server.uploadUrl(), {
-        method: 'POST',
-        body: blob,
-        signal: ctrl.signal,
-        cache: 'no-store',
-      });
-    } finally {
-      clearInterval(tickId);
-    }
-  } finally {
-    clearTimeout(tid);
-    signal.removeEventListener('abort', onAbort);
-  }
+    const tid = setTimeout(() => { xhr.abort(); }, timeoutMs);
+    const onAbort = () => xhr.abort();
+    signal.addEventListener('abort', onAbort);
 
-  const seconds = (performance.now() - t0) / 1000;
-  if (seconds <= 0) return 0;
-  return (buf.length * 8) / seconds / 1_000_000;
+    xhr.upload.onprogress = (e) => {
+      const now = performance.now();
+      const elapsed = (now - lastTs) / 1000;
+      if (elapsed > 0.05 && e.loaded > lastLoaded) {
+        const instantMbps = ((e.loaded - lastLoaded) * 8) / elapsed / 1_000_000;
+        onInstant(instantMbps);
+        lastLoaded = e.loaded;
+        lastTs = now;
+      }
+    };
+
+    xhr.onload = () => {
+      clearTimeout(tid);
+      signal.removeEventListener('abort', onAbort);
+      const seconds = (performance.now() - t0) / 1000;
+      resolve(seconds > 0 ? (buf.length * 8) / seconds / 1_000_000 : 0);
+    };
+
+    xhr.onerror = () => {
+      clearTimeout(tid);
+      signal.removeEventListener('abort', onAbort);
+      reject(new Error('upload xhr error'));
+    };
+
+    xhr.onabort = () => {
+      clearTimeout(tid);
+      signal.removeEventListener('abort', onAbort);
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+
+    xhr.open('POST', server.uploadUrl());
+    xhr.setRequestHeader('Cache-Control', 'no-store');
+    xhr.send(new Blob([buf as unknown as BlobPart]));
+  });
 }
 
 export async function runSpeedTest(
@@ -247,13 +260,11 @@ export async function runSpeedTest(
   onProgress({ phase: 'latency', instantMbps: null, overallProgress: 0 });
   const lat = await measureLatency(preset.latencySamples, ranges, signal, onProgress);
 
-  let _warmupRx = 0;
   const tWarm = performance.now();
   await downloadRound(
     preset.dlWarmup,
     signal,
     () => {
-      _warmupRx += 1;
       const local = Math.min(0.99, (performance.now() - tWarm) / 8000);
       onProgress({
         phase: 'download',

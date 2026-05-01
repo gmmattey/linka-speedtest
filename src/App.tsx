@@ -13,7 +13,7 @@ import { DNSGuideScreen } from './screens/DNSGuideScreen';
 import { useDeviceInfo } from './hooks/useDeviceInfo';
 import { useSpeedTest } from './hooks/useSpeedTest';
 import { useSettings } from './hooks/useSettings';
-import { appendRecord, previousRecord } from './utils/history';
+import { appendRecord, previousRecord, recordToResult } from './utils/history';
 import { averageSpeedResults } from './utils/provaReal';
 import { classify } from './utils/classifier';
 import type { SpeedTestMode, SpeedTestResult, TestRecord } from './types';
@@ -34,9 +34,9 @@ function readInitialTheme(): 'dark' | 'light' {
 
 export default function App() {
   const [theme, setTheme] = useState<'dark' | 'light'>(readInitialTheme);
-  const [screen, setScreen] = useState<Screen>('start');
+  const [screen, setScreen] = useState<Screen>(() => previousRecord() ? 'result' : 'start');
   const [previous, setPrevious] = useState<TestRecord | null>(null);
-  const [lastRecord, setLastRecord] = useState<TestRecord | null>(null);
+  const [lastRecord, setLastRecord] = useState<TestRecord | null>(() => previousRecord());
   const [historyInitialId, setHistoryInitialId] = useState<string | undefined>(undefined);
   const [testMode, setTestMode] = useState<SpeedTestMode>('complete');
   const [comparisonStep, setComparisonStep] = useState<ComparisonStep>('near');
@@ -80,11 +80,6 @@ export default function App() {
     document.documentElement.dataset.theme = theme;
     try { localStorage.setItem(THEME_KEY, theme); } catch { /* ignore */ }
   }, [theme]);
-
-  // Ao abrir o PWA, carrega o último registro para exibir o card na StartScreen.
-  useEffect(() => {
-    setLastRecord(previousRecord());
-  }, []);
 
   const onToggleTheme = useCallback(() => {
     setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
@@ -242,8 +237,8 @@ export default function App() {
     setProvaRealSession(null);
     test.cancel();
     test.reset();
-    goTo('start');
-  }, [test, goTo]);
+    goTo(lastRecord ? 'result' : 'start');
+  }, [test, goTo, lastRecord]);
 
   const handleRetry = useCallback(() => {
     // Cancela Prova Real se ativa e recomeça como teste normal
@@ -392,19 +387,28 @@ export default function App() {
         );
       }
       case 'result': {
-        const resultToShow = provaRealOverride ?? test.result;
+        const resultToShow = provaRealOverride ?? test.result ?? (lastRecord ? recordToResult(lastRecord) : null);
+        const serverForResult: typeof deviceInfo.server = (test.result || provaRealOverride)
+          ? deviceInfo.server
+          : lastRecord
+          ? { id: 'cloudflare', name: lastRecord.serverName, ip: '—', colo: '—', loc: '—', isp: lastRecord.isp ?? '—', available: true }
+          : deviceInfo.server;
         return resultToShow ? (
           <ResultScreen
             theme={theme}
             onToggleTheme={onToggleTheme}
             result={resultToShow}
-            server={deviceInfo.server}
+            server={serverForResult}
             previous={previous}
             onRetry={handleRetry}
             onShowHistory={handleShowHistory}
             unit={settings.unit}
             hideIpOnShare={settings.hideIpOnShare}
             gamingProfile={settings.gamingProfile}
+            connectionType={deviceInfo.device?.connectionType ?? null}
+            contractedDown={settings.contractedDown}
+            contractedUp={settings.contractedUp}
+            onUpdateContracted={(down, up) => updateSettings({ contractedDown: down, contractedUp: up })}
             onDiagnostic={handleDiagnostic}
             onGamer={handleGamer}
             onRecommend={handleRecommend}
@@ -430,6 +434,7 @@ export default function App() {
             result={resultForDiag}
             connectionType={deviceInfo.device?.connectionType ?? null}
             onBack={() => goTo('result')}
+            onRecommend={handleRecommend}
           />
         ) : null;
       }
@@ -465,7 +470,7 @@ export default function App() {
             farResult={comparisonFar}
             onStartNear={handleComparisonStartNear}
             onStartFar={handleComparisonStartFar}
-            onBack={() => goTo('start')}
+            onBack={() => goTo('result')}
             onRetryNear={handleComparisonRetryNear}
             unit={settings.unit}
           />
@@ -476,7 +481,7 @@ export default function App() {
             theme={theme} onToggleTheme={onToggleTheme}
             step={baStep} beforeResult={baBefore} afterResult={baAfter}
             onStartBefore={handleBAStartBefore} onStartAfter={handleBAStartAfter}
-            onBack={() => goTo('start')} onRetry={handleBARetry}
+            onBack={() => goTo('result')} onRetry={handleBARetry}
             unit={settings.unit}
           />
         );
@@ -486,7 +491,7 @@ export default function App() {
             theme={theme}
             onToggleTheme={onToggleTheme}
             onStart={handleRoomStart}
-            onBack={() => goTo('start')}
+            onBack={() => goTo('result')}
           />
         );
       case 'history':
@@ -496,7 +501,7 @@ export default function App() {
             onToggleTheme={onToggleTheme}
             unit={settings.unit}
             initialSelectedId={historyInitialId}
-            onBack={() => goTo('start')}
+            onBack={() => goTo(lastRecord ? 'result' : 'start')}
           />
         );
       case 'start':
@@ -539,7 +544,9 @@ export default function App() {
 
   return (
     <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-      {view}
+      <div key={screen} className="screen-enter">
+        {view}
+      </div>
     </div>
   );
 }

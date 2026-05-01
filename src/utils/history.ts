@@ -78,6 +78,18 @@ export function clearHistory() {
   }
 }
 
+export function recordToResult(r: TestRecord): import('../types').SpeedTestResult {
+  return {
+    dl: r.dl,
+    ul: r.ul,
+    latency: r.latency,
+    jitter: r.jitter,
+    packetLoss: r.packetLoss,
+    timestamp: r.timestamp,
+    mode: r.testMode,
+  };
+}
+
 export function previousRecord(currentId?: string): TestRecord | null {
   const all = loadHistory();
   if (currentId) {

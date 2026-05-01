@@ -55,11 +55,12 @@ export function RecommendScreen({ result, quality, tags, onBack }: Props) {
   })();
 
   const hasDynamic = dynamicRecs.length > 0;
+  const isGoodConnection = !result || quality === 'excellent' || quality === 'good';
 
   return (
     <div className="lk-rec-screen fade-in">
       <div className="lk-rec-screen__head">
-        <button className="lk-rec-screen__back" onClick={onBack}>‹ Início</button>
+        <button className="lk-rec-screen__back" onClick={onBack}>‹ Resultados</button>
         <span className="lk-rec-screen__head-label">Recomendações</span>
       </div>
 
@@ -67,43 +68,50 @@ export function RecommendScreen({ result, quality, tags, onBack }: Props) {
         <div className="lk-rec-screen__hero">
           <div className="lk-rec-screen__title">
             {hasDynamic
-              ? `${dynamicRecs.length} ${dynamicRecs.length > 1 ? 'ações' : 'ação'} para melhorar sua conexão`
-              : '4 ações que podem melhorar seu Wi-Fi'}
+              ? `${dynamicRecs.length} ${dynamicRecs.length > 1 ? 'melhorias' : 'melhoria'} identificada${dynamicRecs.length > 1 ? 's' : ''}`
+              : isGoodConnection
+                ? 'Sua conexão está em bom estado'
+                : 'Dicas gerais de otimização'}
           </div>
-          <p className="lk-rec-screen__sub">Em ordem de impacto. Comece pela primeira.</p>
+          <p className="lk-rec-screen__sub">
+            {hasDynamic
+              ? 'Com base no resultado do seu teste. Em ordem de impacto.'
+              : isGoodConnection
+                ? 'Não encontramos problemas no diagnóstico. Continue assim!'
+                : 'Ações que geralmente melhoram a qualidade da conexão em casa.'}
+          </p>
         </div>
 
         {/* Recomendações dinâmicas (baseadas no resultado) */}
-        {hasDynamic && dynamicRecs.map((rec, i) => (
-          <div key={rec.id} className="lk-rec-screen__card">
-            <div className="lk-rec-screen__card-icon">
-              <Icon name="bulb" size={16} color="var(--accent)" />
-            </div>
-            <div className="lk-rec-screen__card-body">
-              <div className="lk-rec-screen__card-meta">
-                <div className="lk-rec-screen__card-title">{rec.title}</div>
-                <span className="lk-rec-screen__card-num">{i + 1} / {dynamicRecs.length}</span>
+        {hasDynamic && (
+          <>
+            {dynamicRecs.map((rec, i) => (
+              <div key={rec.id} className="lk-rec-screen__card lk-rec-screen__card--dynamic">
+                <div className="lk-rec-screen__card-icon">
+                  <Icon name="bulb" size={16} color="var(--accent)" />
+                </div>
+                <div className="lk-rec-screen__card-body">
+                  <div className="lk-rec-screen__card-meta">
+                    <div className="lk-rec-screen__card-title">{rec.title}</div>
+                    <span className="lk-rec-screen__card-num">{i + 1}</span>
+                  </div>
+                  <div className="lk-rec-screen__card-desc">{rec.description}</div>
+                </div>
               </div>
-              <div className="lk-rec-screen__card-desc">{rec.description}</div>
-            </div>
-          </div>
-        ))}
+            ))}
+            <p className="lk-rec-screen__section-label">Dicas gerais</p>
+          </>
+        )}
 
-        {/* Recomendações estáticas gerais */}
-        {!hasDynamic && STATIC_RECS.map((rec, i) => (
+        {/* Recomendações estáticas — sempre visíveis como dicas secundárias */}
+        {(!isGoodConnection || hasDynamic) && STATIC_RECS.map((rec) => (
           <div key={rec.title} className="lk-rec-screen__card">
             <div className="lk-rec-screen__card-icon">
-              <Icon name={rec.icon} size={16} color="var(--accent)" />
+              <Icon name={rec.icon} size={16} color="var(--text-3)" />
             </div>
             <div className="lk-rec-screen__card-body">
-              <div className="lk-rec-screen__card-meta">
-                <div className="lk-rec-screen__card-title">{rec.title}</div>
-                <span className="lk-rec-screen__card-num">{i + 1} / {STATIC_RECS.length}</span>
-              </div>
+              <div className="lk-rec-screen__card-title">{rec.title}</div>
               <div className="lk-rec-screen__card-desc">{rec.body}</div>
-              <button className="btn-text lk-rec-screen__cta">
-                {rec.cta} <Icon name="chevron" size={12} />
-              </button>
             </div>
           </div>
         ))}

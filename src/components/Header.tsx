@@ -9,7 +9,7 @@ export function Header({ theme, onToggleTheme }: Props) {
   return (
     <header className="lk-header">
       <div className="lk-header__left">
-        <img src="/linka_lovo_v2.png" alt="linka" className="lk-header__logo" />
+        <span className="lk-header__logo-text">linka</span>
       </div>
       <button
         className="lk-header__icon-btn"

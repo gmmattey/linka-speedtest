@@ -1,5 +1,6 @@
 import type { ConnectionType, DeviceInfo, ServerInfo } from '../types';
 import { deviceLabel, truncateIp } from '../utils/format';
+import { coloToCity } from '../utils/serverRegistry';
 import './InfoCards.css';
 
 interface Props {
@@ -79,13 +80,13 @@ export function InfoCards({ server, device, loading }: Props) {
     <div className="lk-info-grid">
       <Card
         label="Servidor"
-        value={server ? `${server.name}${server.colo !== '—' ? ` · ${server.colo}` : ''}` : '—'}
+        value={server ? `${server.colo && server.colo !== '—' ? coloToCity(server.colo) : server.name}` : '—'}
         loading={loading}
         icon={ICON_CLOUD}
       />
       <Card
         label="Localização"
-        value={server && server.loc !== '—' ? `${server.loc}${server.colo !== '—' ? ` · ${server.colo}` : ''}` : '—'}
+        value={server && server.loc !== '—' ? server.loc : '—'}
         loading={loading}
         icon={ICON_PIN}
       />

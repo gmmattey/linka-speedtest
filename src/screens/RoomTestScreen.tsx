@@ -12,7 +12,7 @@ interface Props {
   onBack: () => void;
 }
 
-export function RoomTestScreen({ theme: _theme, onToggleTheme: _onToggleTheme, onStart, onBack }: Props) {
+export function RoomTestScreen({ onStart, onBack }: Props) {
   const [custom, setCustom] = useState('');
 
   const handleCustomStart = () => {

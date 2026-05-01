@@ -35,9 +35,10 @@ export function useSpeedTest() {
   const rafRef = useRef<number | null>(null);
   const lastPushRef = useRef<number>(0);
   const liveRef = useRef<LivePoint[]>([]);
+  const tickRef = useRef<(() => void) | null>(null);
 
   const tick = useCallback(() => {
-    rafRef.current = requestAnimationFrame(tick);
+    rafRef.current = requestAnimationFrame(() => tickRef.current?.());
     const target = targetMbpsRef.current;
     const rendered = renderedMbpsRef.current;
     if (target === 0 && rendered === 0) return;
@@ -45,6 +46,10 @@ export function useSpeedTest() {
     renderedMbpsRef.current = next;
     setState((s) => (s.instantMbps === next ? s : { ...s, instantMbps: next }));
   }, []);
+
+  useEffect(() => {
+    tickRef.current = tick;
+  });
 
   useEffect(() => {
     return () => {

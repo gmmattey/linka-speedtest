@@ -174,6 +174,8 @@ const ICON_PATHS: Record<string, React.ReactNode> = {
   chevron:    <path d="M9 6l6 6-6 6" />,
   arrowDown:  <path d="M6 9l6 6 6-6" />,
   pin:        <><path d="M12 22s7-7.5 7-13a7 7 0 10-14 0c0 5.5 7 13 7 13z" /><circle cx="12" cy="9" r="2.5" /></>,
+  cmp:        <><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" /></>,
+  menu:       <><path d="M4 6h16M4 12h16M4 18h16" /></>,
 };
 
 export function Icon({ name, size = 18, stroke = 1.6, color = 'currentColor' }: IconProps) {

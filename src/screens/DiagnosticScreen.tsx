@@ -6,6 +6,7 @@ interface Props {
   result: SpeedTestResult;
   connectionType: ConnectionType | null;
   onBack: () => void;
+  onRecommend?: () => void;
 }
 
 type Tone = 'good' | 'maybe' | 'bad';
@@ -71,10 +72,10 @@ function buildCards(result: SpeedTestResult, connectionType: ConnectionType | nu
       title: 'Oscilação',
       verdict: verdict(jitterTone, 'Aprovado', 'Atenção', 'Falha'),
       note: jitterTone === 'good'
-        ? `Jitter ${jitter.toFixed(1)} ms — variação dentro do esperado.`
+        ? `Oscilação ${jitter.toFixed(1)} ms — variação dentro do esperado.`
         : jitterTone === 'maybe'
-          ? `Jitter ${jitter.toFixed(1)} ms — oscilação perceptível em chamadas.`
-          : `Jitter ${jitter.toFixed(1)} ms — conexão instável.`,
+          ? `Oscilação ${jitter.toFixed(1)} ms — perceptível em chamadas.`
+          : `Oscilação ${jitter.toFixed(1)} ms — conexão instável.`,
       tone: jitterTone,
     },
     {
@@ -114,14 +115,15 @@ const TONE_BG: Record<Tone, string> = {
   bad:   'var(--color-bad-bg)',
 };
 
-export function DiagnosticScreen({ result, connectionType, onBack }: Props) {
+export function DiagnosticScreen({ result, connectionType, onBack, onRecommend }: Props) {
   const cards = buildCards(result, connectionType);
   const approvedCount = cards.filter((c) => c.tone === 'good').length;
+  const hasProblems = approvedCount < cards.length;
 
   return (
     <div className="lk-diag fade-in">
       <div className="lk-diag__head">
-        <button className="lk-diag__back" onClick={onBack}>‹ Início</button>
+        <button className="lk-diag__back" onClick={onBack}>‹ Resultados</button>
         <span className="lk-diag__head-label">Diagnóstico</span>
       </div>
 
@@ -162,6 +164,17 @@ export function DiagnosticScreen({ result, connectionType, onBack }: Props) {
             </div>
           ))}
         </div>
+
+        {hasProblems && onRecommend && (
+          <div className="lk-diag__recommend-cta">
+            <p className="lk-diag__recommend-text">
+              Encontramos pontos de melhoria. Veja como resolver.
+            </p>
+            <button className="btn-primary lk-diag__recommend-btn" onClick={onRecommend}>
+              <Icon name="bulb" size={16} />Ver recomendações
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

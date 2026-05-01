@@ -5,6 +5,8 @@ import { getDefaultServer, getServer } from '../utils/serverRegistry';
 interface NetworkInformation {
   type?: string;
   effectiveType?: string;
+  addEventListener(type: string, listener: EventListenerOrEventListenerObject): void;
+  removeEventListener(type: string, listener: EventListenerOrEventListenerObject): void;
 }
 
 function detectDevice(): DeviceInfo {
@@ -46,18 +48,29 @@ interface State {
 
 export function useDeviceInfo(serverId = 'cloudflare'): State & { reload: () => void } {
   const [state, setState] = useState<State>({
-    device: null,
+    device: detectDevice(),
     server: null,
     loading: true,
     error: null,
   });
   const [reloadKey, setReloadKey] = useState(0);
 
+  // Re-detecta tipo de conexão quando o usuário alterna entre WiFi e dados móveis
+  useEffect(() => {
+    const conn = (navigator as Navigator & { connection?: NetworkInformation }).connection;
+    if (!conn) return;
+    const handleChange = () => {
+      setState((s) => ({ ...s, device: detectDevice() }));
+    };
+    conn.addEventListener('change', handleChange);
+    return () => conn.removeEventListener('change', handleChange);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
-    setState((s) => ({ ...s, loading: true, error: null }));
 
     (async () => {
+      if (!cancelled) setState((s) => (!s.loading ? { ...s, loading: true, error: null } : s));
       const device = detectDevice();
       const provider = serverId ? getServer(serverId) : getDefaultServer();
       try {

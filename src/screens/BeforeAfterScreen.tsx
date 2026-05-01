@@ -34,8 +34,6 @@ function deltaClass(percent: number, higherIsBetter: boolean): string {
 }
 
 export function BeforeAfterScreen({
-  theme: _theme,
-  onToggleTheme: _onToggleTheme,
   step,
   beforeResult,
   afterResult,

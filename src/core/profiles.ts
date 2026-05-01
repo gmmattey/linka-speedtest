@@ -86,9 +86,8 @@ const FIXED_BROADBAND: ProfileRules = {
     veryUnstable: 80,
   },
   useCases: {
-    // Paridade com USE_CASES.games em ResultScreen.tsx (legacy)
     gaming: {
-      good:  { dl: 10, latency: 40, jitter: 20, packetLoss: 0.5 },
+      good:  { dl: 10, latency: 45, jitter: 20, packetLoss: 0.5 },
       maybe: { dl: 5,  latency: 80, jitter: 40, packetLoss: 2 },
     },
     // Paridade legacy + jitter/loss adicionados (achado #3): 4K com perda alta cai

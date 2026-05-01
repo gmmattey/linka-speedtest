@@ -20,8 +20,6 @@ interface Props {
 }
 
 export function ComparisonScreen({
-  theme: _theme,
-  onToggleTheme: _onToggleTheme,
   step,
   nearResult,
   farResult,

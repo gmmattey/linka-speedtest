@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import type { SpeedTestResult } from '../types';
-import { buildShareText, shareResultText } from '../screens/ResultScreen';
+import { buildShareText, shareResultText } from '../utils/share';
 
 const baseResult: SpeedTestResult = {
   dl: 87.3,

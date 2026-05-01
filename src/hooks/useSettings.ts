@@ -7,6 +7,8 @@ export interface Settings {
   connectionOverride: 'auto' | 'wifi' | 'cable' | 'mobile';
   hideIpOnShare: boolean;
   gamingProfile: GamingProfile;
+  contractedDown: number | null;
+  contractedUp: number | null;
 }
 
 const KEY = 'linka.speedtest.settings.v1';
@@ -16,6 +18,8 @@ const DEFAULTS: Settings = {
   connectionOverride: 'auto',
   hideIpOnShare: true,
   gamingProfile: 'off',
+  contractedDown: null,
+  contractedUp: null,
 };
 
 function load(): Settings {
