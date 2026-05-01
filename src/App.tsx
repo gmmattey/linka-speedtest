@@ -458,7 +458,7 @@ export default function App() {
           />
         );
       case 'diagnostic': {
-        const resultForDiag = provaRealOverride ?? test.result;
+        const resultForDiag = provaRealOverride ?? test.result ?? (lastRecord ? recordToResult(lastRecord) : null);
         return resultForDiag ? (
           <DiagnosticScreen
             result={resultForDiag}
@@ -469,7 +469,7 @@ export default function App() {
         ) : null;
       }
       case 'gamer': {
-        const resultForGamer = provaRealOverride ?? test.result;
+        const resultForGamer = provaRealOverride ?? test.result ?? (lastRecord ? recordToResult(lastRecord) : null);
         return resultForGamer ? (
           <GamerScreen
             result={resultForGamer}
