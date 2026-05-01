@@ -23,7 +23,6 @@ export async function cfDownloadStream(
   const resp = await fetch(url, {
     signal,
     cache: 'no-store',
-    headers: { 'Cache-Control': 'no-store' },
   });
   if (!resp.ok || !resp.body) throw new Error(`cfDownloadStream: HTTP ${resp.status}`);
   return resp.body.getReader();
@@ -44,7 +43,6 @@ export async function cfPing(signal: AbortSignal): Promise<number | null> {
     const resp = await fetch(url, {
       signal: ctrl.signal,
       cache: 'no-store',
-      headers: { 'Cache-Control': 'no-store' },
     });
     await resp.arrayBuffer();
     return performance.now() - t0;
@@ -92,7 +90,6 @@ export function cfUploadChunk(
     };
 
     xhr.open('POST', url);
-    xhr.setRequestHeader('Cache-Control', 'no-store');
     xhr.send(new Blob([buffer as unknown as BlobPart]));
   });
 }
