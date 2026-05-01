@@ -93,8 +93,8 @@ function ulGrade(ul: number): GradeTier {
 }
 
 function latGrade(ms: number): GradeTier {
-  if (ms <= 20)  return 'a';
-  if (ms <= 50)  return 'b';
+  if (ms <= 30)  return 'a';
+  if (ms <= 60)  return 'b';
   if (ms <= 100) return 'c';
   if (ms <= 200) return 'd';
   return 'f';
