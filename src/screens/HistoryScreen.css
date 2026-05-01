@@ -18,12 +18,18 @@
 
 .lk-history__back {
   color: var(--accent);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-sm);
+  margin-left: calc(-1 * var(--space-sm));
 }
 
 .lk-history__head-label {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--text-3);
 }
 
@@ -327,8 +333,14 @@
 
 .lk-hist-detail__back {
   color: var(--accent);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-sm);
+  margin-left: calc(-1 * var(--space-sm));
 }
 
 .lk-hist-detail__date {

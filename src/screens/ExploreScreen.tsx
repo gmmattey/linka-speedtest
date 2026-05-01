@@ -20,6 +20,7 @@ interface Props {
   onStartBeforeAfter?: () => void;
   onShowDNSBenchmark?: () => void;
   onShowDNSGuide?: () => void;
+  onShowLocalWifiDiagnostics?: () => void;
 }
 
 export function ExploreScreen({
@@ -39,6 +40,7 @@ export function ExploreScreen({
   onStartBeforeAfter,
   onShowDNSBenchmark,
   onShowDNSGuide,
+  onShowLocalWifiDiagnostics,
 }: Props) {
   const showResultSection = hasResult && (onDiagnostic || onRecommend || onGamer);
   const showAdvancedSection = onStartProvaReal || onStartRoomTest || onStartComparison || onStartBeforeAfter;
@@ -146,14 +148,24 @@ export function ExploreScreen({
           <div className="lk-explore__section">
             <p className="lk-explore__section-label">Ferramentas de rede</p>
             <IOSList
-              items={[{
-                icon: <Icon name="bolt" size={14} color="#fff" />,
-                iconBg: 'var(--accent)',
-                title: dnsLabel,
-                subtitle: dnsSubtitle,
-                showChevron: true,
-                onClick: dnsHandler,
-              }]}
+              items={[
+                ...(onShowLocalWifiDiagnostics ? [{
+                  icon: <Icon name="wifi" size={14} color="#fff" />,
+                  iconBg: 'var(--accent)',
+                  title: 'Diagnóstico Wi-Fi',
+                  subtitle: 'Sinal local, banda e qualidade do link',
+                  showChevron: true,
+                  onClick: onShowLocalWifiDiagnostics,
+                }] : []),
+                {
+                  icon: <Icon name="ping" size={14} color="#fff" />,
+                  iconBg: 'var(--accent)',
+                  title: dnsLabel,
+                  subtitle: dnsSubtitle,
+                  showChevron: true,
+                  onClick: dnsHandler,
+                },
+              ]}
             />
           </div>
         )}

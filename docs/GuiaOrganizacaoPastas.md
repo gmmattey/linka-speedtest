@@ -82,6 +82,7 @@ Linka SpeedTest/
 │   │   ├── serverRegistry.ts     ← ServerProvider interface + CloudflareProvider
 │   │   ├── share.ts              ← buildShareText + shareResultText (texto de compartilhamento)
 │   │   ├── speedTestOrchestrator.ts ← runSpeedTestV2(); coordena latência+DL+UL com bufferbloat integrado
+│   │   ├── combinedDiagnosis.ts  ← combineDiagnostics(); cruza SpeedTestResult + dados opcionais Wi-Fi/móvel → diagnóstico unificado
 │   │   └── uploadProbe.ts        ← Motor de upload time-based com XHR onprogress (Motor v2)
 │   │
 │   └── core/                     ← Motor de decisão único (puro, sem React/DOM/localStorage)
@@ -94,6 +95,7 @@ Linka SpeedTest/
 │
 ├── __tests__/                    ← Testes Vitest (ficam dentro de src/)
 │   ├── classifier.test.ts
+│   ├── combinedDiagnosis.test.ts
 │   ├── connectionProfile.test.ts
 │   ├── interpret.test.ts
 │   └── share.test.ts
@@ -176,3 +178,29 @@ Os ícones PNG (`icon-*.png`) são cópias dos ícones oficiais do app LINKA Flu
 - **Não editar** — sincronizar a partir da fonte sempre que o branding mudar.
 
 O logo (`logo.png`) vem de `D:\Users\luizg\Downloads\linka_logo.png` — logo oficial da marca.
+
+## Extensões autorizadas de estrutura
+
+Para recursos isolados por domínio (sem acoplar em `screens`/`utils` existentes), está autorizado o uso de:
+
+- `src/platform/` para capability e detecção de ambiente
+- `src/features/<feature>/` para módulo completo da feature (tipos, serviço, hook, UI isolada)
+
+### Estrutura adicionada — Diagnóstico Wi-Fi nativo
+
+```txt
+src/
+├── platform/
+│   └── capabilities.ts
+├── features/
+│   └── local-wifi/
+│       ├── types.ts
+│       ├── LocalWifiBridge.ts
+│       ├── LocalWifiUnavailable.ts
+│       ├── LocalWifiService.ts
+│       ├── useLocalWifi.ts
+│       ├── LocalWifiScreen.tsx
+│       └── LocalWifiScreen.css
+└── __tests__/
+    └── LocalWifiService.test.ts
+```

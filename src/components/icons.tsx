@@ -176,6 +176,10 @@ const ICON_PATHS: Record<string, React.ReactNode> = {
   pin:        <><path d="M12 22s7-7.5 7-13a7 7 0 10-14 0c0 5.5 7 13 7 13z" /><circle cx="12" cy="9" r="2.5" /></>,
   cmp:        <><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" /></>,
   menu:       <><path d="M4 6h16M4 12h16M4 18h16" /></>,
+  stream:     <><rect x="2" y="4" width="20" height="14" rx="2" /><path d="M10 9l5 3-5 3V9z" /><path d="M8 20h8" /></>,
+  work:       <><rect x="2" y="6" width="20" height="14" rx="2" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M12 12v4M10 14h4" /></>,
+  videoCall:  <><path d="M15 10l4.553-2.276A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14" /><rect x="3" y="7" width="12" height="12" rx="2" /></>,
+  cellular:   <path d="M4 20h2v-3H4zM10 20h2v-7h-2zM16 20h2V8h-2z" />,
 };
 
 export function Icon({ name, size = 18, stroke = 1.6, color = 'currentColor' }: IconProps) {

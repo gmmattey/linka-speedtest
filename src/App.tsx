@@ -12,6 +12,7 @@ import { RecommendScreen } from './screens/RecommendScreen';
 import { DNSGuideScreen } from './screens/DNSGuideScreen';
 import { DNSBenchmarkScreen } from './screens/DNSBenchmarkScreen';
 import { ExploreScreen } from './screens/ExploreScreen';
+import { LocalWifiScreen } from './features/local-wifi/LocalWifiScreen';
 import { useDeviceInfo } from './hooks/useDeviceInfo';
 import { useSpeedTest } from './hooks/useSpeedTest';
 import { useSettings } from './hooks/useSettings';
@@ -20,7 +21,7 @@ import { averageSpeedResults } from './utils/provaReal';
 import { classify } from './utils/classifier';
 import type { SpeedTestResult, TestRecord } from './types';
 
-type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter' | 'roomtest' | 'diagnostic' | 'gamer' | 'recommend' | 'dnsguide' | 'dnsbenchmark' | 'explore';
+type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter' | 'roomtest' | 'diagnostic' | 'gamer' | 'recommend' | 'dnsguide' | 'dnsbenchmark' | 'explore' | 'localwifi';
 
 const THEME_KEY = 'linka.speedtest.theme';
 const SWIPE_THRESHOLD_PX = 80;
@@ -364,6 +365,7 @@ export default function App() {
   }, [goTo]);
 
   const handleExplore = useCallback(() => goTo('explore'), [goTo]);
+  const handleShowLocalWifiDiagnostics = useCallback(() => goTo('localwifi'), [goTo]);
 
   // ── Swipe lateral (back/forward) ─────────────────────────
   const swipeStartRef = useRef<{ x: number; y: number; valid: boolean } | null>(null);
@@ -542,9 +544,12 @@ export default function App() {
             onStartBeforeAfter={handleStartBeforeAfter}
             onShowDNSBenchmark={handleShowDNSBenchmark}
             onShowDNSGuide={() => handleShowDNSGuide('cloudflare')}
+            onShowLocalWifiDiagnostics={handleShowLocalWifiDiagnostics}
           />
         );
       }
+      case 'localwifi':
+        return <LocalWifiScreen />;
       case 'history':
         return (
           <HistoryScreen
@@ -586,7 +591,7 @@ export default function App() {
     handleComparisonStartNear, handleComparisonStartFar, handleComparisonRetryNear,
     handleStartBeforeAfter, handleBAStartBefore, handleBAStartAfter, handleBARetry,
     handleStartProvaReal, handleOpenRoomTest, handleRoomStart,
-    handleDiagnostic, handleGamer, handleRecommend, handleShowDNSBenchmark, handleShowDNSGuide, handleExplore,
+    handleDiagnostic, handleGamer, handleRecommend, handleShowDNSBenchmark, handleShowDNSGuide, handleExplore, handleShowLocalWifiDiagnostics,
     dnsGuideServerId,
     settings, updateSettings, testMode,
     comparisonStep, comparisonNear, comparisonFar,

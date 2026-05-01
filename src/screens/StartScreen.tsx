@@ -164,7 +164,7 @@ export function StartScreen({
       {onExplore && (
         <div className="lk-start__explore">
           <button className="lk-start__explore-btn btn-text" onClick={onExplore}>
-            <Icon name="bolt" size={14} color="var(--accent)" />
+            <Icon name="cog" size={14} color="var(--accent)" />
             <span>Explorar ferramentas</span>
             <Icon name="chevron" size={12} color="var(--text-3)" />
           </button>
@@ -177,7 +177,7 @@ export function StartScreen({
           <IOSList
             items={[
               ...(device ? [{
-                icon: <Icon name={device.connectionType === 'wifi' ? 'wifi' : device.connectionType === 'mobile' ? 'ping' : 'router'} size={14} color="#fff" />,
+                icon: <Icon name={device.connectionType === 'wifi' ? 'wifi' : device.connectionType === 'mobile' ? 'cellular' : 'router'} size={14} color="#fff" />,
                 iconBg: 'var(--info)',
                 title: connectionLabel ?? 'Conexão',
                 subtitle: connectionSub,

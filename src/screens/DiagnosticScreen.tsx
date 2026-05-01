@@ -23,10 +23,10 @@ function buildCards(result: SpeedTestResult, connectionType: ConnectionType | nu
   const { dl, ul, latency, jitter, packetLoss } = result;
 
   const internetTone: Tone = dl >= 25 ? 'good' : dl >= 5 ? 'maybe' : 'bad';
-  const responseTone: Tone = latency <= 30 ? 'good' : latency <= 100 ? 'maybe' : 'bad';
-  const jitterTone: Tone = jitter <= 5 ? 'good' : jitter <= 20 ? 'maybe' : 'bad';
+  const responseTone: Tone = latency <= 60 ? 'good' : latency <= 100 ? 'maybe' : 'bad';
+  const jitterTone: Tone = jitter <= 15 ? 'good' : jitter <= 30 ? 'maybe' : 'bad';
   const lossTone: Tone = packetLoss === 0 ? 'good' : packetLoss <= 1 ? 'maybe' : 'bad';
-  const wifiTone: Tone = connectionType !== 'wifi' ? 'good' : latency <= 30 ? 'good' : 'maybe';
+  const wifiTone: Tone = connectionType !== 'wifi' ? 'good' : latency <= 60 ? 'good' : 'maybe';
 
   const goodUseCases = [dl >= 25, ul >= 5, latency <= 60, jitter <= 15, packetLoss <= 0.5].filter(Boolean).length;
   const useTone: Tone = goodUseCases >= 4 ? 'good' : goodUseCases >= 2 ? 'maybe' : 'bad';
@@ -61,10 +61,10 @@ function buildCards(result: SpeedTestResult, connectionType: ConnectionType | nu
       title: 'Resposta',
       verdict: verdict(responseTone, 'Aprovado', 'Atenção', 'Falha'),
       note: responseTone === 'good'
-        ? `${latency} ms — excelente para jogos e chamadas.`
+        ? `${Math.round(latency)} ms — dentro do esperado para uso diário.`
         : responseTone === 'maybe'
-          ? `${latency} ms — aceitável, mas pode afetar jogos competitivos.`
-          : `${latency} ms — latência alta compromete chamadas e jogos.`,
+          ? `${Math.round(latency)} ms — aceitável, mas pode afetar jogos competitivos.`
+          : `${Math.round(latency)} ms — latência alta compromete chamadas e jogos.`,
       tone: responseTone,
     },
     {
@@ -125,6 +125,7 @@ export function DiagnosticScreen({ result, connectionType, onBack, onRecommend }
       <div className="lk-diag__head">
         <button className="lk-diag__back" onClick={onBack}>‹ Resultados</button>
         <span className="lk-diag__head-label">Diagnóstico</span>
+        <span aria-hidden="true" />
       </div>
 
       <div className="lk-diag__scroll">

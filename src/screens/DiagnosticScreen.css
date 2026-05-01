@@ -6,9 +6,9 @@
 }
 
 .lk-diag__head {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   padding: 14px 16px 4px;
   padding-top: max(14px, var(--safe-top));
   flex-shrink: 0;
@@ -16,13 +16,20 @@
 
 .lk-diag__back {
   color: var(--accent);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-sm);
+  margin-left: calc(-1 * var(--space-sm));
 }
 
 .lk-diag__head-label {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--text-3);
+  text-align: center;
 }
 
 .lk-diag__scroll {

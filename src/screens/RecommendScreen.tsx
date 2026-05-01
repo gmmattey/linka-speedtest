@@ -62,6 +62,7 @@ export function RecommendScreen({ result, quality, tags, onBack }: Props) {
       <div className="lk-rec-screen__head">
         <button className="lk-rec-screen__back" onClick={onBack}>‹ Resultados</button>
         <span className="lk-rec-screen__head-label">Recomendações</span>
+        <span aria-hidden="true" />
       </div>
 
       <div className="lk-rec-screen__scroll">

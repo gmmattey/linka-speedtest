@@ -1,0 +1,103 @@
+.lk-local-wifi {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+  padding: var(--space-xl) var(--space-lg);
+}
+
+.lk-local-wifi__card {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.lk-local-wifi__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.lk-local-wifi__subtitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.lk-local-wifi__text {
+  margin: 0;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.lk-local-wifi__error {
+  margin: 0;
+  color: var(--error);
+  font-size: 14px;
+}
+
+.lk-local-wifi__result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.lk-local-wifi__list {
+  margin: 0;
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.lk-local-wifi__list div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.lk-local-wifi__list dt {
+  color: var(--text-3);
+}
+
+.lk-local-wifi__list dd {
+  margin: 0;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.lk-local-wifi__limitations {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-2);
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.lk-local-wifi__channel {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.lk-local-wifi__channel-value {
+  font-weight: 600;
+}
+
+.lk-local-wifi__channel-value--good {
+  color: var(--ul);
+}
+
+.lk-local-wifi__channel-value--medium {
+  color: var(--warn);
+}
+
+.lk-local-wifi__channel-value--bad {
+  color: var(--error);
+}

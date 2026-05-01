@@ -14,6 +14,7 @@ import { loadHistory } from '../utils/history';
 import { formatMbps, formatMs } from '../utils/format';
 import type { ConnectionType, GamingProfile } from '../types';
 import './ResultScreen.css';
+import { combineDiagnostics } from '../utils/combinedDiagnosis';
 
 interface Props {
   theme: 'dark' | 'light';
@@ -121,9 +122,9 @@ function gradeStyle(g: GradeTier): { background: string; color: string } {
 
 function ucIcon(id: UseCaseId): string {
   if (id === 'gaming')       return 'game';
-  if (id === 'streaming_4k') return 'bolt';
-  if (id === 'home_office')  return 'home';
-  return 'video';
+  if (id === 'streaming_4k') return 'stream';
+  if (id === 'home_office')  return 'work';
+  return 'videoCall';
 }
 
 function ucIconBg(status: string): string {
@@ -163,6 +164,17 @@ export function ResultScreen({
   const interpreted = useMemo(
     () => interpretSpeedTestResult({ metrics: result, profile: 'fixed_broadband', history }),
     [result, history],
+  );
+
+  const combined = useMemo(
+    () =>
+      combineDiagnostics({
+        speed: result,
+        connectionType: connectionType ?? 'unknown',
+        wifi: undefined,
+        mobile: undefined,
+      }),
+    [result, connectionType],
   );
 
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
@@ -224,7 +236,7 @@ export function ResultScreen({
       trailing: <span className="lk-result__metric-sub">{result.packetLoss?.toFixed(1) ?? '—'}%</span>,
     },
     ...(server?.isp && server.isp !== '—' ? [{
-      icon: <Icon name="signal" size={14} color="var(--text-2)" />,
+      icon: <Icon name="router" size={14} color="var(--text-2)" />,
       iconBg: 'var(--surface-3)',
       title: 'Provedor',
       trailing: <span className="lk-result__metric-sub lk-result__metric-sub--truncate">{server.isp}</span>,
@@ -321,6 +333,21 @@ export function ResultScreen({
             ))}
           </div>
         )}
+
+        {/* Combined Diagnosis */}
+        <div className="lk-result__combined">
+          <p className="lk-result__combined-kicker">Diagnóstico da conexão</p>
+          <p className="lk-result__combined-title">{combined.title}</p>
+          <p className="lk-result__combined-desc">{combined.explanation}</p>
+          <div className="lk-result__combined-action">
+            <span>O que fazer agora:</span>
+            <strong>{combined.primaryAction}</strong>
+          </div>
+          <p className="lk-result__combined-confidence">
+            Confiança:{' '}
+            {combined.confidence === 'high' ? 'alta' : combined.confidence === 'medium' ? 'média' : 'baixa'}
+          </p>
+        </div>
 
         {/* Secondary details */}
         <div className="lk-result__details">
@@ -426,7 +453,7 @@ export function ResultScreen({
                 onClick: onDiagnostic,
               }] : []),
               ...(onExplore ? [{
-                icon: <Icon name="bolt" size={14} color="#fff" />,
+                icon: <Icon name="cog" size={14} color="#fff" />,
                 iconBg: 'var(--surface-3)',
                 title: 'Explorar ferramentas',
                 subtitle: 'Modo Gamer, DNS e testes avançados',

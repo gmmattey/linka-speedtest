@@ -1,7 +1,7 @@
 export type Quality = 'excellent' | 'good' | 'fair' | 'slow' | 'unavailable';
 export type Tag = 'highLatency' | 'lowUpload' | 'unstable' | 'packetLoss' | 'veryUnstable';
 export type DeviceType = 'mobile' | 'tablet' | 'desktop';
-export type ConnectionType = 'wifi' | 'mobile' | 'cable';
+export type ConnectionType = 'wifi' | 'mobile' | 'cable' | 'unknown';
 export type ConnectionProfile = 'fixed_broadband' | 'mobile_broadband';
 export type RuleSetVersion = string; // semântica: 'v1', 'v2', etc.
 export type SpeedTestMode = 'quick' | 'fast' | 'complete' | 'normal' | 'advanced';
@@ -132,4 +132,49 @@ export interface Recommendation {
   description: string;
   priority: 'low' | 'medium' | 'high';
   actionType: RecommendationAction;
+}
+
+// ── Combined Diagnosis ──────────────────────────────────────────────────────
+
+export type CombinedDiagnosisCause =
+  | 'healthy'
+  | 'wifi_bottleneck'
+  | 'operator_or_wan_issue'
+  | 'local_wifi_risk'
+  | 'mobile_network_issue'
+  | 'mobile_signal_risk'
+  | 'internet_issue'
+  | 'inconclusive';
+
+export interface CombinedDiagnosis {
+  cause: CombinedDiagnosisCause;
+  title: string;
+  explanation: string;
+  primaryAction: string;
+  confidence: 'low' | 'medium' | 'high';
+}
+
+export interface WifiDiagnosticResult {
+  available: boolean;
+  rssiDbm?: number;
+  linkSpeedMbps?: number;
+  band?: '2.4GHz' | '5GHz' | '6GHz';
+  quality?: 'excellent' | 'good' | 'fair' | 'weak' | 'critical';
+}
+
+export interface MobileDiagnosticResult {
+  available: boolean;
+  carrierName?: string;
+  radioType?: '3G' | '4G' | '5G' | 'unknown';
+  signalLevel?: 'excellent' | 'good' | 'regular' | 'weak' | 'critical';
+  rsrpDbm?: number;
+  rsrqDb?: number;
+  sinrDb?: number;
+}
+
+export interface CombineDiagnosticsInput {
+  speed: SpeedTestResult;
+  connectionType: ConnectionType;
+  wifi?: WifiDiagnosticResult;
+  mobile?: MobileDiagnosticResult;
 }

@@ -31,7 +31,7 @@ Todos os tipos compartilhados do projeto vivem em um único arquivo.
 type Quality = 'excellent' | 'good' | 'fair' | 'slow' | 'unavailable'
 type Tag = 'highLatency' | 'lowUpload' | 'unstable' | 'packetLoss' | 'veryUnstable'
 type DeviceType = 'mobile' | 'tablet' | 'desktop'
-type ConnectionType = 'wifi' | 'mobile' | 'cable'
+type ConnectionType = 'wifi' | 'mobile' | 'cable' | 'unknown'
 type TestPhase = 'idle' | 'latency' | 'download' | 'upload' | 'load' | 'done' | 'error'
 type SpeedTestMode = 'quick' | 'fast' | 'complete' | 'normal' | 'advanced'
 type BufferbloatSeverity = 'low' | 'moderate' | 'high' | 'critical'
@@ -492,6 +492,38 @@ Gera imagem PNG 1080×540 px via Canvas API:
 - DL em azul `#3AB6FF`; UL em verde `#22C55E`
 - Aguarda `document.fonts.ready` antes de desenhar — garante que Space Grotesk e Inter estejam carregadas
 - Retorna `Blob` com `type: 'image/png'`
+
+### 3.13 `combinedDiagnosis.ts` — Diagnóstico combinado
+
+Função pura que cruza `SpeedTestResult` com dados opcionais de sinal Wi-Fi ou rede móvel para produzir um diagnóstico único em linguagem leiga.
+
+```ts
+combineDiagnostics(input: CombineDiagnosticsInput): CombinedDiagnosis
+```
+
+**Limiar `speedBad`:** `dl < 50 OR ul < 10 OR latency > 80 OR jitter > 30 OR packetLoss > 2 OR bufferbloatDeltaMs > 100`
+
+**Fluxos de decisão:**
+
+| `connectionType` | Dados | Causa | Confiança |
+|---|---|---|---|
+| `wifi` | sem `wifi` + speed ruim | `inconclusive` | low |
+| `wifi` | sem `wifi` + speed bom | `healthy` | medium |
+| `wifi` | speed ruim + wifi ruim | `wifi_bottleneck` | high |
+| `wifi` | speed ruim + wifi bom | `operator_or_wan_issue` | high/medium |
+| `wifi` | speed bom + wifi bom | `healthy` | high |
+| `wifi` | speed bom + wifi ruim | `local_wifi_risk` | medium |
+| `mobile` | sem `mobile` + speed ruim | `mobile_network_issue` | medium |
+| `mobile` | sem `mobile` + speed bom | `healthy` | medium |
+| `mobile` | speed ruim + sinal ruim | `mobile_signal_risk` | high |
+| `mobile` | speed ruim + sinal bom | `mobile_network_issue` | medium |
+| `mobile` | speed bom + sinal ruim | `mobile_signal_risk` | medium |
+| `cable` / `unknown` | speed ruim | `internet_issue` | low |
+| `cable` / `unknown` | speed bom | `healthy` | medium |
+
+No PWA, `wifi` e `mobile` são sempre `undefined` — a função degrada graciosamente. Os tipos `WifiDiagnosticResult` e `MobileDiagnosticResult` são o contrato para integração nativa futura.
+
+---
 
 ### 3.12 `format.ts` — Formatação
 
@@ -1051,3 +1083,70 @@ npx wrangler pages deploy dist --project-name linka-speedtest --branch main
 **Comando:** `npm test`
 
 **Regra:** os testes **nunca podem ser quebrados** sem justificativa documentada e plano de substituição. Mudanças em `classifier.ts` ou `src/core/` exigem atualização dos testes correspondentes.
+
+---
+
+## 11. Diagnóstico Wi-Fi nativo (`src/features/local-wifi/`)
+
+Feature isolada para estimar qualidade do link Wi-Fi local no app nativo, sem alterar o SpeedTest v2 e sem dependência de `combinedDiagnosis.ts`.
+
+### Capability (`src/platform/capabilities.ts`)
+
+```ts
+interface AppCapabilities { localWifiDiagnostics: boolean }
+getCapabilities(): AppCapabilities
+isNativeApp(): boolean
+```
+
+Detecção atual: `window.Capacitor`, `window.ReactNativeWebView` ou userAgent contendo `LinkaNative`.
+
+### Serviço (`LocalWifiService.ts`)
+
+Exports públicos:
+- `bandFromFrequency`
+- `channelFromFrequency`
+- `classifyWifiQuality`
+- `classifyWifiChannel`
+- `buildWifiCopy`
+- `toCombinedWifiInput`
+- `runLocalWifiDiagnostics`
+
+Comportamento:
+- PWA/web (`localWifiDiagnostics === false`) → indisponível
+- nativo (`true`) → tenta bridge `window.LinkaWifiDiagnostics.getWifiInfo()`
+- falha/ausência de bridge → indisponível (fallback seguro)
+- avaliação de canal (MVP heurístico) por banda:
+  - `2.4GHz`: bom `1/6/11`; médio adjacentes; ruim demais canais; sugestão do mais próximo em `1/6/11` quando ruim
+  - `5GHz`: bom não-DFS comuns `36/40/44/48/149/153/157/161`; médio outros válidos; ruim inválido/desconhecido com sugestão não-DFS mais próxima
+  - `6GHz`: médio por padrão; bom quando canal válido conhecido; sem sugestão agressiva
+
+### Bridge (`LocalWifiBridge.ts`)
+
+Normaliza payload do bridge para `LocalWifiRawInfo` e valida tipos de número/texto.
+
+### Adaptador para diagnóstico combinado
+
+`toCombinedWifiInput(result)` retorna shape mínimo compatível com `WifiDiagnosticResult` global (`src/types/index.ts`) sem alterar o contrato existente.
+
+Regras de normalização:
+- `band: 'unknown'` => `undefined`
+- `quality: 'unknown'` => `undefined`
+
+### Hook (`useLocalWifi.ts`)
+
+Estado padrão:
+
+```ts
+{ loading: boolean; result: WifiDiagnosticResult | null; error: string | null }
+```
+
+API: `run()` executa diagnóstico e devolve resultado/null.
+
+### Tela (`LocalWifiScreen.tsx`)
+
+Conectada em `App.tsx` via rota interna `screen: 'localwifi'`, acessada por item na `ExploreScreen`.
+No PWA comum, a própria tela mantém fallback de indisponibilidade sem tocar bridge nativa.
+Quando o diagnóstico retorna canal, a tela exibe:
+- `Canal atual: X`
+- `Qualidade do canal: bom/médio/ruim` com cor semântica (`--ul`/`--warn`/`--error`)
+- `Canal sugerido: Y` somente quando a qualidade do canal é ruim

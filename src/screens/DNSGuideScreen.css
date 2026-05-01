@@ -17,12 +17,16 @@
 }
 
 .lk-dns-guide__back {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 2px;
   color: var(--accent);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 var(--space-sm);
+  margin-left: calc(-1 * var(--space-sm));
 }
 
 .lk-dns-guide__back svg {
@@ -30,7 +34,7 @@
 }
 
 .lk-dns-guide__head-label {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text);
 }

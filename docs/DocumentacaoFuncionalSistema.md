@@ -373,6 +373,32 @@ Thresholds de avaliação:
 
 Abaixo de "Atenção" → "Ruim" (games: "Pode falhar").
 
+### Bloco Combined Diagnosis (`lk-result__combined`)
+
+Exibido logo após a linha de cenários (use cases) e antes dos detalhes secundários. Sempre visível quando há resultado de teste — gerado por `combineDiagnostics()` em `src/utils/combinedDiagnosis.ts`.
+
+Campos exibidos:
+- **Kicker** — "Diagnóstico da conexão" (uppercase, `--text-3`)
+- **Título** — causa em linguagem leiga (ex.: "Wi-Fi limitando a conexão")
+- **Explicação** — frase descritiva sem jargão técnico
+- **O que fazer agora** — ação imediata recomendada (fundo `--accent-tint`)
+- **Confiança** — "alta" / "média" / "baixa" — reflete a quantidade de dados disponíveis
+
+A confiança é `high` quando há dados de sinal confirmando ou refutando a hipótese; `medium` quando o diagnóstico é baseado apenas na velocidade; `low` quando dados são insuficientes (ex.: Wi-Fi sem dados nativos de sinal).
+
+**Comportamento por tipo de conexão (PWA):**
+
+| `connectionType` | Dados nativos | Causa possível | Confiança |
+|---|---|---|---|
+| `wifi` + speed ruim | — (PWA não tem) | `inconclusive` | baixa |
+| `wifi` + speed bom | — (PWA não tem) | `healthy` | média |
+| `mobile` + speed ruim | — | `mobile_network_issue` | média |
+| `mobile` + speed bom | — | `healthy` | média |
+| `cable` / `unknown` + speed ruim | — | `internet_issue` | baixa |
+| `cable` / `unknown` + speed bom | — | `healthy` | média |
+
+Quando portado para app nativo: `WifiDiagnosticResult` e `MobileDiagnosticResult` fornecem dados reais de sinal, elevando a confiança para `high` nos cenários confirmados.
+
 ### FAB PDF
 
 Botão circular 52px, `position:fixed; bottom:20px; right:20px`, fundo `var(--accent)`.  
@@ -589,9 +615,9 @@ Analisa o resultado do último teste em 6 áreas (Internet, Wi-Fi, Resposta, Osc
 | Área | Critério "Aprovado" | Critério "Atenção" | Critério "Falha" |
 |---|---|---|---|
 | Internet | DL ≥ 25 Mbps | DL ≥ 5 Mbps | DL < 5 Mbps |
-| Wi-Fi | cabo ou lat ≤ 30 ms | lat > 30 ms em Wi-Fi | — |
-| Resposta | lat ≤ 40 ms | lat ≤ 100 ms | lat > 100 ms |
-| Oscilação | jitter ≤ 5 ms | jitter ≤ 20 ms | jitter > 20 ms |
+| Wi-Fi | cabo ou lat ≤ 60 ms | lat > 60 ms em Wi-Fi | — |
+| Resposta | lat ≤ 60 ms | lat ≤ 100 ms | lat > 100 ms |
+| Oscilação | jitter ≤ 15 ms | jitter ≤ 30 ms | jitter > 30 ms |
 | Falhas | packetLoss = 0 | packetLoss ≤ 1% | packetLoss > 1% |
 | Qualidade por uso | 4–5 critérios OK | 2–3 critérios OK | 0–1 critério OK |
 
@@ -618,24 +644,33 @@ Exibe as métricas relevantes para jogos online (ping, jitter, perda de pacotes)
 │  ‹ Início          Modo Gamer    │
 │                                  │
 │  [Otimizado p/ jogos]            │  ← Chip accent
-│  "Ótima para FPS competitivo."   │  ← título com avaliação geral
-│  "Latência, jitter e perda…"     │
+│  "Boa para jogos online."        │  ← título com avaliação geral
 │                                  │
 │  ┌──────┐  ┌──────┐  ┌──────┐   │  ← stat grid 3-col
-│  │ Ping │  │Jitter│  │ Loss │   │
+│  │Resp. │  │Oscil.│  │Falhas│   │
 │  │ 18ms │  │ 3ms  │  │ 0,0% │   │
 │  └──────┘  └──────┘  └──────┘   │
 │                                  │
 │  ┌────────────────────────────┐  │  ← IOSList
 │  │ 🎮 FPS competitivo   Excelente│  │
-│  │ 🎮 MOBA              Excelente│  │
-│  │ 🎮 MMO               Excelente│  │
-│  │ 🎮 Cloud Gaming      Atenção  │  │
+│  │ 🎮 MOBA / Battle Royale  Bom │  │
+│  │ 🎮 MMO / RPG Online     Bom  │  │
+│  │ 🎮 Cloud Gaming      Atenção │  │
 │  └────────────────────────────┘  │
+│                                  │
+│  "Para melhorar: use cabo..."    │  ← orientação curta, só quando necessário
 │                                  │
 │  [Refazer teste]                 │  ← btn-primary, volta para RunningScreen
 └──────────────────────────────────┘
 ```
+
+### Simplificação visual
+
+- O hero traz apenas `Chip` + título curto. Não há subtítulo explicativo.
+- O grid de métricas é a leitura principal da tela, com labels em linguagem humana: `Resposta`, `Oscilação` e `Falhas`.
+- A lista de categorias mostra apenas nome da categoria + veredito. Exemplos de jogos não aparecem na UI.
+- O bloco de `Requisitos mínimos` foi removido por redundância.
+- Quando há alerta, a orientação aparece em uma única linha curta acima do CTA.
 
 ### Thresholds por jogo
 
@@ -1101,3 +1136,48 @@ Em `App.tsx`, `effectiveConnection` respeita o override manual em `settings.conn
 - Erro: `role="alert"`
 - FAB PDF: `aria-label="Exportar PDF"` / `aria-label="Exportar histórico em PDF"`
 - Ícones SVG decorativos: `aria-hidden="true"`
+
+---
+
+## 11. LocalWifiScreen (conectada via ExploreScreen)
+
+### Finalidade
+
+Tela dedicada ao **Diagnóstico Wi-Fi** com acesso em `ExploreScreen` na seção **Ferramentas de rede**.
+
+### Conteúdo da tela
+
+- Título: `Diagnóstico Wi-Fi`
+- Aviso obrigatório:
+  - `Este diagnóstico não mede a velocidade real entre o aparelho e o roteador.`
+  - `Ele avalia o sinal e os dados da conexão Wi-Fi para identificar possíveis problemas locais.`
+- Botão: `Executar diagnóstico`
+- Resultado:
+  - qualidade
+  - SSID (se disponível)
+  - sinal (dBm)
+  - velocidade negociada
+  - banda
+  - canal
+  - bloco de canal:
+    - `Canal atual: X`
+    - `Qualidade do canal: bom/médio/ruim` (verde/amarelo/vermelho)
+    - `Canal sugerido: Y` somente quando o canal estiver ruim
+  - gateway
+  - IP local
+- Blocos textuais:
+  - explicação
+  - o que fazer agora
+  - limitações
+
+### Comportamento no PWA
+
+Quando aberto fora do nativo, a tela mostra:
+- `Diagnóstico Wi-Fi indisponível no PWA.`
+- `Este recurso usa dados do sistema disponíveis apenas no app nativo.`
+
+### Integração atual
+
+- `ExploreScreen` exibe o item **Diagnóstico Wi-Fi**
+- `App.tsx` roteia para `screen === 'localwifi'`
+- No PWA comum, a própria tela mostra indisponibilidade segura (sem bridge nativa)
