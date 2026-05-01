@@ -25,3 +25,6 @@ dist-ssr
 
 # Claude Code worktrees (embedded git repos — não commitar)
 .claude/worktrees/
+
+# Capacitor / Android toolchain local (não versionado)
+_android-toolchain/
