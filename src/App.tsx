@@ -96,6 +96,8 @@ export default function App() {
     try { localStorage.setItem(THEME_KEY, theme); } catch { /* ignore */ }
   }, [theme]);
 
+  useEffect(() => { screenRef.current = screen; }, [screen]);
+
   const onToggleTheme = useCallback(() => {
     setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
   }, []);
@@ -549,7 +551,7 @@ export default function App() {
         );
       }
       case 'localwifi':
-        return <LocalWifiScreen />;
+        return <LocalWifiScreen onBack={goBack} />;
       case 'history':
         return (
           <HistoryScreen
