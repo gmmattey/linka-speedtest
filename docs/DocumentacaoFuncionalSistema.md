@@ -11,9 +11,11 @@ App (estado global)
 ├── StartScreen         ← tela inicial (padrão)
 ├── RunningScreen       ← durante o teste (todos os modos)
 ├── ResultScreen        ← resultado do teste
-│   ├── DiagnosticScreen  ← diagnóstico de 6 áreas (acesso via ResultScreen)
-│   ├── GamerScreen       ← avaliação gamer: ping/jitter/loss + rows por jogo
-│   └── RecommendScreen   ← 4 ações para melhorar o Wi-Fi
+│   ├── DiagnosticScreen    ← diagnóstico de 6 áreas (acesso via ResultScreen)
+│   ├── GamerScreen         ← avaliação gamer: ping/jitter/loss + rows por jogo
+│   ├── RecommendScreen     ← 4 ações para melhorar o Wi-Fi
+│   ├── DNSBenchmarkScreen  ← verificação on-demand de DNS (feature Explorar)
+│   │   └── DNSGuideScreen  ← guia de configuração de DNS no dispositivo
 ├── HistoryScreen       ← histórico de testes
 ├── ComparisonScreen    ← comparativo perto vs longe do roteador
 ├── BeforeAfterScreen   ← comparação antes/depois de uma ação
@@ -46,10 +48,12 @@ StartScreen → [Prova Real (3×)] → RunningScreen (Teste 1 de 3)
 StartScreen → [Teste por local] → RoomTestScreen → [seleciona cômodo]
    → RunningScreen → ResultScreen (com locationTag)
 
-ResultScreen → [Diagnóstico] → DiagnosticScreen → [‹ Início] → ResultScreen
-ResultScreen → [Modo Gamer]  → GamerScreen      → [‹ Início] → ResultScreen
-                                                  → [Refazer teste] → RunningScreen
-ResultScreen → [Recomendações] → RecommendScreen → [‹ Início] → ResultScreen
+ResultScreen → [Diagnóstico]   → DiagnosticScreen    → [‹ Início] → ResultScreen
+ResultScreen → [Modo Gamer]   → GamerScreen         → [‹ Início] → ResultScreen
+                                                      → [Refazer teste] → RunningScreen
+ResultScreen → [Recomendações] → RecommendScreen     → [‹ Início] → ResultScreen
+ResultScreen → [Verificar DNS] → DNSBenchmarkScreen  → [‹ Voltar] → ResultScreen
+                                                      → [Como trocar o DNS] → DNSGuideScreen
 ```
 
 ### Navegação por gestos
@@ -107,24 +111,23 @@ Ao clicar: chama `onStart(selectedMode)` onde `selectedMode` é o estado interno
 ### Seletor de modo (pill segmentado)
 
 ```
-[ Normal ] [ Avançado ]   ← pill com dois botões, estilo .lk-start__mode-toggle
+[ Rápido ] [ Completo ]   ← pill com dois botões, estilo .lk-start__mode-toggle
 ```
 
 - Componente: `.lk-start__mode-toggle` (segmented pill, mesmo padrão do toggle de tema)
-- Estado gerenciado localmente em `StartScreen` via `useState<'normal' | 'advanced'>('normal')`
+- Estado gerenciado localmente em `StartScreen` via `useState<'fast' | 'complete'>(settings.defaultMode ?? 'complete')`
 - Botão ativo recebe `.lk-start__mode-btn--active` (fundo `var(--surface)`, texto `var(--text)`, peso 600)
 - Botão inativo: texto `var(--text-2)`, peso 500
+- Ao alterar o modo, chama `onUpdateSettings({ defaultMode: mode })` → persiste em localStorage
 
 ### Seleção de modo
 
-| Modo | `SpeedTestMode` | Consumo estimado | Descrição exibida |
+| Modo | `SpeedTestMode` | Duração aprox. | Descrição exibida |
 |---|---|---|---|
-| Normal (padrão) | `'normal'` | Wi-Fi: ~75 MB · Mobile: ~70 MB | Download, upload e latência |
-| Avançado | `'advanced'` | Wi-Fi: ~300 MB · Mobile: ~200 MB | Diagnóstico completo · bufferbloat, DNS e mais |
+| Rápido (padrão) | `'fast'` | ~30 s | "Download, upload e ping · ~30s · bufferbloat integrado" |
+| Completo | `'complete'` | ~60 s | "Diagnóstico detalhado com paralelismo progressivo · ~60s · recomendamos Wi-Fi" |
 
-O aviso "recomendamos Wi-Fi" aparece apenas no modo Avançado quando `device.connectionType === 'mobile'` ou incondicionalmente (pois o teste é pesado).
-
-> **Fase 2:** o modo `'advanced'` executará fases adicionais (bufferbloat, DNS). Atualmente usa o mesmo preset do modo Normal.
+O aviso "recomendamos Wi-Fi" aparece no modo Completo quando `device.connectionType === 'mobile'`.
 
 ### Detecção de conectividade
 
@@ -229,6 +232,8 @@ Exibe o progresso do teste em tempo real de forma minimalista: número grande de
 
 ### Fases do teste e frases exibidas
 
+O Motor v2 executa 3 fases (PING → DOWN → UP), com bufferbloat integrado durante DL e UL. Não há fase separada de `load` ou `dns`.
+
 | Phase | Frase exibida |
 |---|---|
 | `latency` | "Verificando a resposta do servidor…" |
@@ -237,6 +242,10 @@ Exibe o progresso do teste em tempo real de forma minimalista: número grande de
 | `done` | "Quase pronto…" (transição automática para ResultScreen) |
 | `error` | Tela substituída pelo bloco de falha com retry |
 | `idle`/outros | "Preparando o teste…" |
+
+Steps exibidos no indicador de progresso: `[PING] [DOWN] [UP]` — sempre iguais nos modos Rápido e Completo.
+
+**Parciais progressivos:** após a fase de latência, o número de latência pode ser exibido no rodapé enquanto o download corre. Após o download, o valor de Mbps pode ser exibido enquanto o upload corre (`SpeedTestProgress.partial`).
 
 ### Gauge
 
@@ -418,31 +427,36 @@ O campo "Seu IP" na seção Detalhes exibe:
 
 Configurado no BottomSheet → seção Privacidade.
 
-### Seção Diagnóstico Avançado (modo `advanced`)
+### Seção Diagnóstico Avançado (v2)
 
-Visível apenas quando `result.mode === 'advanced'` e há dados de bufferbloat ou p25/p75. IOSList com:
+Visível quando `result.bufferbloatGrade || result.bufferbloatSeverity` (independente do modo). IOSList com:
 
 | Item | Ícone | Valor |
 |---|---|---|
-| Bufferbloat | bolt | Nota A–F colorida (A/B = verde, C = amarelo, D/F = vermelho) + descrição |
+| Bufferbloat | bolt | Severidade (Baixo/Moderado/Alto/Crítico) + nota A–F colorida |
 | Latência sob carga | ping | ms + delta em laranja se positivo |
-| Oscilação sob carga | jitter | ms |
-| Estabilidade download | download | intervalo p25–p75 em Mbps |
+| Estabilidade | download | score 0–100 quando `stabilityScore` presente |
 | Perda de pacotes | loss | Baixo / Médio / Alto (com cor) |
 
-### Seção DNS (modo `advanced`)
+Quando `result.diagnostics?.summaryText` está presente, exibe a frase de diagnóstico do Motor v2 (complementa o `lk-diagnosis`).
 
-Visível quando `result.dns` está presente. IOSList com:
+### Seção Explorar
 
-- **Vencedor** — ícone bolt verde, badge ms em destaque, label "· vencedor"
-- **Demais servidores** com amostras — ordenados por p50 crescente, ms em cinza
-- **Como trocar o DNS** — ícone cog accent, subtitle com o nome do servidor vencedor, navega para `DNSGuideScreen`
+A seção Explorar na ResultScreen contém (itens sempre visíveis):
 
-Nota de rodapé: "Medição inclui overhead HTTP/TLS — comparação relativa entre servidores."
+| Item | Condição | Ação |
+|---|---|---|
+| Diagnóstico | sempre | `onShowDiagnostic()` |
+| Modo Gamer | sempre | `onShowGamer()` |
+| Recomendações | sempre | `onShowRecommend()` |
+| Verificar DNS | sempre | `onShowDNSBenchmark()` → `DNSBenchmarkScreen` |
+
+Os itens "Comparar locais", "Antes e Depois" e "Prova Real (3×)" foram removidos da ResultScreen.
 
 ### Serviços consumidos
 
-- Props: `result (SpeedTestResult)`, `server (ServerInfo | null)`, `previous (TestRecord | null)`, `unit`, `hideIpOnShare (boolean)`, `onShowDNSGuide?: (serverId: string) => void`
+- Props: `result`, `server`, `previous`, `unit`, `hideIpOnShare`, `onShowDNSBenchmark?: () => void`
+- Removidos: `onStartComparison?`, `onStartBeforeAfter?`, `onStartProvaReal?`, `onShowDNSGuide?`
 - `classify(result)` → classificação
 - `buildShortPhrase(result, quality, scenarioContext)` → frase de diagnóstico única
 - `buildRecommendations(result, classification, history)` → recomendações
@@ -493,6 +507,55 @@ Tela modal (acessível via botão "Como trocar o DNS" na ResultScreen) que exibe
 
 - `serverId: string` — ID do servidor vencedor (cloudflare / google / adguard / quad9 / opendns)
 - `onBack: () => void` — volta para ResultScreen
+
+---
+
+## 3.ter DNSBenchmarkScreen
+
+### Finalidade
+
+Feature standalone de Explorar (acessível via ResultScreen → Explorar → "Verificar DNS"). Executa o benchmark de DNS on-demand e exibe o ranking de servidores. Não faz parte do fluxo de speed test.
+
+### Layout
+
+```
+┌──────────────────────────────────┐
+│  ‹ Voltar   Verificar DNS        │
+│                                  │
+│  ── idle ────────────────────── │
+│  [Iniciar verificação]           │  ← btn-primary
+│  "Testa qual servidor DNS…"      │
+│                                  │
+│  ── running ─────────────────── │
+│  ████░░░░░░░░░  35%              │  ← barra de progresso
+│  "Verificando Cloudflare…"       │
+│                                  │
+│  ── done ────────────────────── │
+│  🏆 Cloudflare · 1.1.1.1         │  ← vencedor destacado
+│     12 ms                        │
+│  ┌────────────────────────────┐  │  ← ranking dos demais
+│  │ Google    8.8.8.8  · 18 ms │  │
+│  │ AdGuard   …        · 25 ms │  │
+│  │ Quad9     …        · 30 ms │  │
+│  └────────────────────────────┘  │
+│  [Como trocar o DNS]             │  ← leva para DNSGuideScreen
+└──────────────────────────────────┘
+```
+
+### Estados
+
+| Estado | Descrição |
+|---|---|
+| `idle` | Exibe resultado do último benchmark (se houver via `loadLastDnsResult()`) ou botão de iniciar |
+| `running` | Barra de progresso com servidor atual sendo testado |
+| `done` | Ranking completo com vencedor destacado e link para DNSGuideScreen |
+| `error` | Mensagem de erro com botão de retry |
+
+### Props
+
+```ts
+{ onBack: () => void; onShowDNSGuide?: (serverId: string) => void }
+```
 
 ---
 
@@ -1003,14 +1066,21 @@ Na primeira renderização de `App.tsx`, um `useEffect` chama `previousRecord()`
 - `useDeviceInfo` lê `navigator.connection.type` quando disponível. Quando ausente (iOS Safari), assume `'mobile'` em dispositivos móveis (em vez de `'wifi'`). O usuário pode sobrescrever em **Configurações → Conexão**.
 - `serverRegistry.getInfo` normaliza o `asOrganization` da API `/meta` Cloudflare para nomes comerciais brasileiros: TELEFONICA → Vivo, AMERICA MOVIL/NET SERVICOS/CLARO → Claro, TIM → TIM, OI/TELEMAR → Oi, ALGAR → Algar.
 
-### Presets de teste por modo e tipo de conexão
+### Presets de teste por modo (Motor v2)
 
-`runSpeedTest` aceita `connectionType` e `mode` (via `useSpeedTest.start(connectionType, mode)`):
-- **Teste rápido** (`mode = 'quick'`): 8 pings + 5 MB warmup + 1 × 50 MB download + 2 MB warmup + 1 × 20 MB upload (~80 MB total). Válido para Wi-Fi, cabo e mobile.
-- **Teste completo — Wi-Fi/cabo** (`mode = 'complete'`): 20 pings + 25 MB warmup + 3 × 100 MB DL + 10 MB warmup + 3 × 50 MB UL (~400 MB).
-- **Teste completo — Móvel** (`mode = 'complete'` + `connectionType = 'mobile'`): 20 pings + 5 MB warmup + 2 × 25 MB DL + 2 MB warmup + 2 × 10 MB UL (~70 MB).
+`runSpeedTestV2` é chamado com `mode: 'fast' | 'complete'` (via `useSpeedTest.start(connectionType, mode)`):
 
-Em `App.tsx`, `effectiveConnection` respeita o override manual em `settings.connectionOverride`. O `testMode` é definido no momento em que o usuário toca um dos botões da StartScreen e é preservado ao repetir o teste (Retry).
+**Modo Rápido (`'fast'`, ~30 s total):**
+- Latência: 15 pings; DL: 7 s, streams 2→4, arquivos de 10 MB; UL: 7 s, streams 2→3, arquivos de 1 MB
+- Bufferbloat medido em paralelo durante DL e UL (pings a cada 300 ms)
+
+**Modo Completo (`'complete'`, ~60 s total):**
+- Latência: 25 pings; DL: 18 s, streams 2→8, arquivos de 25 MB (progressivo até 100 MB); UL: 18 s, streams 2→6, arquivos de 5 MB (progressivo até 10 MB)
+- Paralelismo progressivo: a cada 4 s, se ganho ≥ 10%, abre +2 streams
+
+O Motor v2 não tem presets por `connectionType` — o throughput medido adapta automaticamente os tamanhos de arquivo (fluxo contínuo via `_cb` anti-cache) sem depender de rounds fixos.
+
+Em `App.tsx`, `effectiveConnection` respeita o override manual em `settings.connectionOverride`. O `testMode` é inicializado a partir de `settings.defaultMode` e persiste entre sessões.
 
 ### PWA / Instalação
 

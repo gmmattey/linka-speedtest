@@ -29,18 +29,10 @@ function phraseFor(phase: TestPhase): string {
 
 type PhaseStep = { id: TestPhase; label: string };
 
-const STEPS_NORMAL: PhaseStep[] = [
-  { id: 'latency',  label: 'LAT' },
+const STEPS_V2: PhaseStep[] = [
+  { id: 'latency',  label: 'PING' },
   { id: 'download', label: 'DOWN' },
   { id: 'upload',   label: 'UP' },
-];
-
-const STEPS_ADVANCED: PhaseStep[] = [
-  { id: 'latency',  label: 'LAT' },
-  { id: 'download', label: 'DOWN' },
-  { id: 'upload',   label: 'UP' },
-  { id: 'load',     label: 'LOAD' },
-  { id: 'dns',      label: 'DNS' },
 ];
 
 const PHASE_ORDER: TestPhase[] = ['latency', 'download', 'upload', 'load', 'dns', 'done'];
@@ -84,9 +76,8 @@ export function RunningScreen({
   onRetry,
   unit = 'mbps',
   sessionLabel,
-  mode,
 }: Props) {
-  const steps = mode === 'advanced' ? STEPS_ADVANCED : STEPS_NORMAL;
+  const steps = STEPS_V2;
   const currentIdx = phaseIndex(phase);
   if (phase === 'error') {
     return (

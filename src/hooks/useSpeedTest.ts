@@ -1,6 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConnectionType, SpeedTestMode, SpeedTestProgress, SpeedTestResult, TestPhase } from '../types';
-import { runSpeedTest } from '../utils/speedtest';
+import { runSpeedTestV2, SpeedTestError } from '../utils/speedTestOrchestrator';
+
+import type { SpeedTestErrorCode } from '../utils/speedTestOrchestrator';
+
+function errorMessageFor(code: SpeedTestErrorCode): string {
+  switch (code) {
+    case 'network_offline':     return 'Sem conexão com a internet. Verifique sua rede e tente novamente.';
+    case 'server_unavailable':  return 'Servidor indisponível. Tente novamente em alguns instantes.';
+    case 'download_failed':     return 'Falha na medição de download. Tente novamente.';
+    case 'upload_failed':       return 'Falha na medição de upload. Tente novamente.';
+    case 'latency_failed':      return 'Falha ao medir a latência. Verifique sua conexão e tente novamente.';
+  }
+}
 
 export interface LivePoint {
   t: number;
@@ -105,8 +117,14 @@ export function useSpeedTest() {
       }));
     };
 
+    // Mapeia modos legados para fast | complete
+    const v2Mode: 'fast' | 'complete' =
+      mode === 'fast' || mode === 'complete' ? mode
+      : mode === 'advanced' ? 'complete'
+      : 'fast';
+
     try {
-      const result = await runSpeedTest(onProgress, ctrl.signal, connectionType, mode);
+      const result = await runSpeedTestV2(v2Mode, onProgress, ctrl.signal, connectionType);
       setState((s) => ({
         ...s,
         phase: 'done',
@@ -119,11 +137,15 @@ export function useSpeedTest() {
       renderedMbpsRef.current = 0;
     } catch (e) {
       const aborted = e instanceof DOMException && e.name === 'AbortError';
-      setState((s) => ({
-        ...s,
-        phase: aborted ? 'idle' : 'error',
-        error: aborted ? null : 'Falha ao executar o teste. Tente novamente.',
-      }));
+      if (aborted) {
+        setState((s) => ({ ...s, phase: 'idle', error: null }));
+        return;
+      }
+      const errorMessage =
+        e instanceof SpeedTestError
+          ? errorMessageFor(e.code)
+          : 'Falha ao executar o teste. Tente novamente.';
+      setState((s) => ({ ...s, phase: 'error', error: errorMessage }));
     }
   }, [tick]);
 

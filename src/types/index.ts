@@ -4,9 +4,24 @@ export type DeviceType = 'mobile' | 'tablet' | 'desktop';
 export type ConnectionType = 'wifi' | 'mobile' | 'cable';
 export type ConnectionProfile = 'fixed_broadband' | 'mobile_broadband';
 export type RuleSetVersion = string; // semântica: 'v1', 'v2', etc.
-export type SpeedTestMode = 'quick' | 'complete' | 'normal' | 'advanced';
+export type SpeedTestMode = 'quick' | 'fast' | 'complete' | 'normal' | 'advanced';
+export type BufferbloatSeverity = 'low' | 'moderate' | 'high' | 'critical';
 export type GamingProfile = 'off' | 'casual' | 'moba' | 'fps' | 'cloud';
 export type TestPhase = 'idle' | 'latency' | 'download' | 'upload' | 'load' | 'dns' | 'done' | 'error';
+
+export interface SpeedTestSample {
+  tMs: number;
+  mbps: number;
+  phase: 'download' | 'upload';
+}
+
+export interface SpeedTestDiagnostics {
+  streamingVerdict: 'good' | 'acceptable' | 'poor';
+  gamingVerdict:    'good' | 'acceptable' | 'poor';
+  videoCallVerdict: 'good' | 'acceptable' | 'poor';
+  primaryBottleneck: 'none' | 'latency' | 'upload' | 'bufferbloat' | 'packetLoss';
+  summaryText: string;
+}
 
 export interface SpeedTestResult {
   dl: number;
@@ -15,7 +30,7 @@ export interface SpeedTestResult {
   jitter: number;
   packetLoss: number;
   timestamp: number;
-  // Advanced mode extras
+  // Advanced mode extras (compat legado)
   dlP25?: number;
   dlP75?: number;
   ulP25?: number;
@@ -26,6 +41,17 @@ export interface SpeedTestResult {
   bufferbloatDeltaMs?: number;
   mode?: SpeedTestMode;
   dns?: import('../utils/dnsBenchmark').DnsBenchmarkResult;
+  // Motor v2
+  stabilityScore?: number;
+  peakDlMbps?: number;
+  peakUlMbps?: number;
+  bufferbloatSeverity?: BufferbloatSeverity;
+  latencyUnloaded?: number;
+  latencyDownload?: number;
+  latencyUpload?: number;
+  diagnostics?: SpeedTestDiagnostics;
+  dlSamples?: SpeedTestSample[];
+  ulSamples?: SpeedTestSample[];
 }
 
 export interface SpeedTestProgress {
@@ -68,6 +94,12 @@ export interface TestRecord {
   connectionProfile?: ConnectionProfile;
   ruleSetVersion?: RuleSetVersion;
   locationTag?: string;
+  // Motor v2
+  stabilityScore?: number;
+  bufferbloatSeverity?: BufferbloatSeverity;
+  diagnosticSummary?: string;
+  peakDlMbps?: number;
+  peakUlMbps?: number;
 }
 
 export interface Classification {

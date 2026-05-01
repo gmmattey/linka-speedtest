@@ -9,6 +9,7 @@ export interface Settings {
   gamingProfile: GamingProfile;
   contractedDown: number | null;
   contractedUp: number | null;
+  defaultMode: 'fast' | 'complete';
 }
 
 const KEY = 'linka.speedtest.settings.v1';
@@ -20,6 +21,7 @@ const DEFAULTS: Settings = {
   gamingProfile: 'off',
   contractedDown: null,
   contractedUp: null,
+  defaultMode: 'complete',
 };
 
 function load(): Settings {

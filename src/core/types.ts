@@ -56,6 +56,7 @@ export interface InterpretFlags {
   unstable: boolean;
   packetLoss: boolean;
   veryUnstable: boolean;
+  highBufferbloat?: boolean;
 }
 
 // --- Recommendations ---------------------------------------------------------
@@ -65,7 +66,7 @@ export interface InterpretFlags {
  * sem precisar reavaliar regras. `'history'` quando o disparo veio do padrão
  * de testes recentes; `'useCase'` quando veio de um cenário rebaixado.
  */
-export type RecommendationTrigger = keyof InterpretFlags | 'history' | 'useCase';
+export type RecommendationTrigger = 'highLatency' | 'lowUpload' | 'unstable' | 'packetLoss' | 'veryUnstable' | 'highBufferbloat' | 'history' | 'useCase';
 
 export interface InterpretedRecommendation {
   id: string;

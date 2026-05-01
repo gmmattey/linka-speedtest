@@ -10,15 +10,16 @@ import { DiagnosticScreen } from './screens/DiagnosticScreen';
 import { GamerScreen } from './screens/GamerScreen';
 import { RecommendScreen } from './screens/RecommendScreen';
 import { DNSGuideScreen } from './screens/DNSGuideScreen';
+import { DNSBenchmarkScreen } from './screens/DNSBenchmarkScreen';
 import { useDeviceInfo } from './hooks/useDeviceInfo';
 import { useSpeedTest } from './hooks/useSpeedTest';
 import { useSettings } from './hooks/useSettings';
 import { appendRecord, previousRecord, recordToResult } from './utils/history';
 import { averageSpeedResults } from './utils/provaReal';
 import { classify } from './utils/classifier';
-import type { SpeedTestMode, SpeedTestResult, TestRecord } from './types';
+import type { SpeedTestResult, TestRecord } from './types';
 
-type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter' | 'roomtest' | 'diagnostic' | 'gamer' | 'recommend' | 'dnsguide';
+type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter' | 'roomtest' | 'diagnostic' | 'gamer' | 'recommend' | 'dnsguide' | 'dnsbenchmark';
 
 const THEME_KEY = 'linka.speedtest.theme';
 const SWIPE_THRESHOLD_PX = 80;
@@ -34,11 +35,22 @@ function readInitialTheme(): 'dark' | 'light' {
 
 export default function App() {
   const [theme, setTheme] = useState<'dark' | 'light'>(readInitialTheme);
+  const { settings, update: updateSettings } = useSettings();
   const [screen, setScreen] = useState<Screen>(() => previousRecord() ? 'result' : 'start');
   const [previous, setPrevious] = useState<TestRecord | null>(null);
   const [lastRecord, setLastRecord] = useState<TestRecord | null>(() => previousRecord());
   const [historyInitialId, setHistoryInitialId] = useState<string | undefined>(undefined);
-  const [testMode, setTestMode] = useState<SpeedTestMode>('complete');
+  const [testMode, setTestMode] = useState<'fast' | 'complete'>(() => {
+    // Lê o defaultMode salvo nas settings de forma síncrona
+    try {
+      const raw = localStorage.getItem('linka.speedtest.settings.v1');
+      if (raw) {
+        const parsed = JSON.parse(raw) as { defaultMode?: string };
+        if (parsed.defaultMode === 'fast' || parsed.defaultMode === 'complete') return parsed.defaultMode;
+      }
+    } catch { /* ignore */ }
+    return 'complete';
+  });
   const [comparisonStep, setComparisonStep] = useState<ComparisonStep>('near');
   const [comparisonNear, setComparisonNear] = useState<SpeedTestResult | null>(null);
   const [comparisonFar, setComparisonFar] = useState<SpeedTestResult | null>(null);
@@ -63,7 +75,6 @@ export default function App() {
 
   const deviceInfo = useDeviceInfo('cloudflare');
   const test = useSpeedTest();
-  const { settings, update: updateSettings } = useSettings();
 
   useEffect(() => {
     const handleOnline  = () => setIsOnline(true);
@@ -224,12 +235,13 @@ export default function App() {
     }
   }, [test.phase, test, effectiveConnection]);
 
-  const handleStart = useCallback((mode: SpeedTestMode) => {
+  const handleStart = useCallback((mode: 'fast' | 'complete') => {
     setTestMode(mode);
+    updateSettings({ defaultMode: mode });
     recordedRef.current = false;
     goTo('running');
     test.start(effectiveConnection, mode);
-  }, [test, effectiveConnection, goTo]);
+  }, [test, effectiveConnection, goTo, updateSettings]);
 
   const handleCancel = useCallback(() => {
     provaRealResultsRef.current = [];
@@ -335,6 +347,7 @@ export default function App() {
   const handleDiagnostic = useCallback(() => goTo('diagnostic'), [goTo]);
   const handleGamer = useCallback(() => goTo('gamer'), [goTo]);
   const handleRecommend = useCallback(() => goTo('recommend'), [goTo]);
+  const handleShowDNSBenchmark = useCallback(() => goTo('dnsbenchmark'), [goTo]);
   const handleShowDNSGuide = useCallback((serverId: string) => {
     setDnsGuideServerId(serverId);
     goTo('dnsguide');
@@ -412,11 +425,8 @@ export default function App() {
             onDiagnostic={handleDiagnostic}
             onGamer={handleGamer}
             onRecommend={handleRecommend}
-            onStartComparison={handleStartComparison}
-            onStartBeforeAfter={handleStartBeforeAfter}
-            onStartProvaReal={handleStartProvaReal}
             onStartRoomTest={handleOpenRoomTest}
-            onShowDNSGuide={handleShowDNSGuide}
+            onShowDNSBenchmark={handleShowDNSBenchmark}
           />
         ) : null;
       }
@@ -425,6 +435,13 @@ export default function App() {
           <DNSGuideScreen
             serverId={dnsGuideServerId}
             onBack={() => goTo('result')}
+          />
+        );
+      case 'dnsbenchmark':
+        return (
+          <DNSBenchmarkScreen
+            onBack={() => goTo('result')}
+            onShowDNSGuide={handleShowDNSGuide}
           />
         );
       case 'diagnostic': {
@@ -534,7 +551,7 @@ export default function App() {
     handleComparisonStartNear, handleComparisonStartFar, handleComparisonRetryNear,
     handleStartBeforeAfter, handleBAStartBefore, handleBAStartAfter, handleBARetry,
     handleStartProvaReal, handleOpenRoomTest, handleRoomStart,
-    handleDiagnostic, handleGamer, handleRecommend, handleShowDNSGuide,
+    handleDiagnostic, handleGamer, handleRecommend, handleShowDNSBenchmark, handleShowDNSGuide,
     dnsGuideServerId,
     settings, updateSettings, testMode,
     comparisonStep, comparisonNear, comparisonFar,

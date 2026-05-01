@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { DeviceInfo, ServerInfo, SpeedTestMode, TestRecord } from '../types';
+import type { DeviceInfo, ServerInfo, TestRecord } from '../types';
 import type { Settings } from '../hooks/useSettings';
 import { IOSList } from '../components/IOSList';
 import { Icon } from '../components/icons';
@@ -16,7 +16,7 @@ interface Props {
   isOnline: boolean;
   settings: Settings;
   onUpdateSettings: (patch: Partial<Settings>) => void;
-  onStart: (mode: SpeedTestMode) => void;
+  onStart: (mode: 'fast' | 'complete') => void;
   onRetry: () => void;
   lastRecord: TestRecord | null;
   onShowLastResult: () => void;
@@ -32,13 +32,19 @@ export function StartScreen({
   error,
   isOnline,
   settings,
+  onUpdateSettings,
   onStart,
   onRetry,
   lastRecord,
   onShowLastResult,
   onShowHistory,
 }: Props) {
-  const [selectedMode, setSelectedMode] = useState<'normal' | 'advanced'>('normal');
+  const [selectedMode, setSelectedMode] = useState<'fast' | 'complete'>(settings.defaultMode ?? 'complete');
+
+  const handleModeChange = (mode: 'fast' | 'complete') => {
+    setSelectedMode(mode);
+    onUpdateSettings({ defaultMode: mode });
+  };
 
   const canStart = isOnline && !loading && !!server?.available && !!device;
   const unitLabel = settings.unit === 'gbps' ? 'Gbps' : 'Mbps';
@@ -108,41 +114,28 @@ export function StartScreen({
         {/* Seletor de modo */}
         <div className="lk-start__mode-toggle">
           <button
-            className={`lk-start__mode-btn${selectedMode === 'normal' ? ' lk-start__mode-btn--active' : ''}`}
-            onClick={() => setSelectedMode('normal')}
+            className={`lk-start__mode-btn${selectedMode === 'fast' ? ' lk-start__mode-btn--active' : ''}`}
+            onClick={() => handleModeChange('fast')}
           >
-            Normal
+            Rápido
           </button>
           <button
-            className={`lk-start__mode-btn${selectedMode === 'advanced' ? ' lk-start__mode-btn--active' : ''}`}
-            onClick={() => setSelectedMode('advanced')}
+            className={`lk-start__mode-btn${selectedMode === 'complete' ? ' lk-start__mode-btn--active' : ''}`}
+            onClick={() => handleModeChange('complete')}
           >
-            Avançado
+            Completo
           </button>
         </div>
 
         {/* Linhas de info */}
         <div className="lk-start__info">
-          {selectedMode === 'normal' ? (
+          {selectedMode === 'fast' ? (
             <>
-              <div>Download, upload e ping</div>
-              <div>
-                Consumo estimado{' '}
-                <span style={{ color: 'var(--text)', fontWeight: 500 }}>
-                  {device?.connectionType === 'mobile' ? '~ 70 MB' : '~ 500 MB'}
-                </span>
-              </div>
+              <div>Download, upload e ping · ~30s · bufferbloat integrado</div>
             </>
           ) : (
             <>
-              <div>Diagnóstico completo · bufferbloat, DNS e mais</div>
-              <div>
-                Consumo estimado{' '}
-                <span style={{ color: 'var(--text)', fontWeight: 500 }}>
-                  {device?.connectionType === 'mobile' ? '~ 200 MB' : '~ 500 MB'}
-                </span>
-                {' '}· recomendamos Wi-Fi
-              </div>
+              <div>Diagnóstico detalhado com paralelismo progressivo · ~60s · recomendamos Wi-Fi</div>
             </>
           )}
           {server && <div>{serverLabel}</div>}

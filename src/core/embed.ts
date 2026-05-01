@@ -15,7 +15,7 @@
  */
 
 import type { ConnectionProfile, ConnectionType, SpeedTestMode, SpeedTestProgress, SpeedTestResult, TestRecord } from '../types';
-import { runSpeedTest } from '../utils/speedtest';
+import { runSpeedTestV2 } from '../utils/speedTestOrchestrator';
 import { interpretSpeedTestResult } from './interpret';
 import type { InterpretedResult } from './types';
 
@@ -50,12 +50,18 @@ export async function runHeadlessTest(
   const ctrl = signal ? null : new AbortController();
   const abortSignal = signal ?? ctrl!.signal;
 
+  // Mapeia modos legados para fast | complete
+  const v2Mode: 'fast' | 'complete' =
+    mode === 'complete' ? 'complete'
+    : mode === 'advanced' ? 'complete'
+    : 'fast';
+
   const noop = () => {};
-  const metrics = await runSpeedTest(
+  const metrics = await runSpeedTestV2(
+    v2Mode,
     onProgress ?? noop,
     abortSignal,
     connectionType,
-    mode,
   );
 
   const interpreted = interpretSpeedTestResult({ metrics, profile, history });

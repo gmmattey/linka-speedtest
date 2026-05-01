@@ -64,23 +64,31 @@ Linka SpeedTest/
 │   │   ├── RoomTestScreen.tsx / .css
 │   │   ├── DiagnosticScreen.tsx / .css  ← Diagnóstico de 6 áreas em grid 2-col
 │   │   ├── GamerScreen.tsx / .css       ← Avaliação de jogos: ping/jitter/loss + rows por game
-│   │   └── RecommendScreen.tsx / .css   ← 4 ações para melhorar o Wi-Fi
+│   │   ├── RecommendScreen.tsx / .css   ← 4 ações para melhorar o Wi-Fi
+│   │   ├── DNSGuideScreen.tsx / .css    ← Guia de configuração de DNS no dispositivo
+│   │   └── DNSBenchmarkScreen.tsx / .css ← Verificação on-demand de servidores DNS (feature Explorar)
 │   │
 │   ├── utils/                    ← Funções puras / lógica de domínio (sem React) — específicas do PWA
 │   │   ├── classifier.ts         ← Classificação de qualidade + diagnóstico (legado, em coexistência com src/core)
+│   │   ├── cloudflareSpeedTest.ts ← Primitivas HTTP: cfDownloadStream, cfPing, cfUploadChunk (Motor v2)
 │   │   ├── connectionProfile.ts  ← Mapeamento ConnectionType → ConnectionProfile (Anatel)
+│   │   ├── dnsBenchmark.ts       ← runDNSBenchmark via DoH; loadLastDnsResult
+│   │   ├── downloadProbe.ts      ← Motor de download time-based com paralelismo progressivo (Motor v2)
 │   │   ├── format.ts             ← formatMbps, formatMs, formatDate, formatDateIsoLike
 │   │   ├── history.ts            ← CRUD do histórico em localStorage
+│   │   ├── latencyProbe.ts       ← runLatencyPhase (pings com remoção de outliers) + runPingLoop (Motor v2)
 │   │   ├── pdfExport.ts          ← Geração de PDF (resultado + histórico)
 │   │   ├── serverRegistry.ts     ← ServerProvider interface + CloudflareProvider
 │   │   ├── share.ts              ← buildShareText + shareResultText (texto de compartilhamento)
-│   │   └── speedtest.ts          ← Algoritmo de medição DL/UL/lat/jitter/packetLoss
+│   │   ├── speedTestOrchestrator.ts ← runSpeedTestV2(); coordena latência+DL+UL com bufferbloat integrado
+│   │   └── uploadProbe.ts        ← Motor de upload time-based com XHR onprogress (Motor v2)
 │   │
 │   └── core/                     ← Motor de decisão único (puro, sem React/DOM/localStorage)
 │       ├── types.ts              ← Tipos do contrato do motor (UseCaseId, InterpretedResult, etc.)
 │       ├── profiles.ts           ← Thresholds Anatel-aware por ConnectionProfile (fixa/móvel)
 │       ├── copyDictionary.ts     ← Mapeamento copyKeys → string pt-BR + resolveCopy()
 │       ├── interpret.ts          ← interpretSpeedTestResult() — entrada única do motor
+│       ├── networkQualityClassifier.ts ← gradeFrom, classifyBufferbloatSeverity, buildDiagnostics (Motor v2)
 │       └── index.ts              ← Reexporta o contrato público (usado pela Fase 7 / embed Flutter)
 │
 ├── __tests__/                    ← Testes Vitest (ficam dentro de src/)

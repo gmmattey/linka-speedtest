@@ -1,0 +1,101 @@
+.lk-dns {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.lk-dns__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: max(16px, var(--safe-top)) var(--space-lg) var(--space-md);
+  border-bottom: 1px solid var(--border);
+}
+
+.lk-dns__back {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.lk-dns__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lk-dns__scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-xl) var(--space-lg);
+  padding-bottom: max(var(--space-xxl), var(--safe-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.lk-dns__intro {
+  font-size: 14px;
+  color: var(--text-2);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.lk-dns__action {
+  display: flex;
+  justify-content: center;
+}
+
+.lk-dns__progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.lk-dns__progress-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--surface-3);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.lk-dns__progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-pill);
+  transition: width 300ms ease;
+}
+
+.lk-dns__progress-label {
+  font-size: 13px;
+  color: var(--text-2);
+  margin: 0;
+}
+
+.lk-dns__error {
+  font-size: 14px;
+  color: var(--error);
+  margin: 0;
+}
+
+.lk-dns__section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lk-dns__rec {
+  font-size: 13px;
+  color: var(--text-2);
+  margin: 0;
+  line-height: 1.5;
+}

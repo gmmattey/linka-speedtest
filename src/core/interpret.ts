@@ -53,6 +53,8 @@ function computeQuality(metrics: SpeedTestResult, rules: ProfileRules): Quality 
 
   if (dl === 0 && ul === 0) return 'unavailable';
 
+  let quality: Quality;
+
   if (
     dl >= q.excellent.dl &&
     ul >= q.excellent.ul &&
@@ -60,30 +62,35 @@ function computeQuality(metrics: SpeedTestResult, rules: ProfileRules): Quality 
     jitter <= q.excellent.jitter &&
     packetLoss <= q.excellent.packetLoss
   ) {
-    return 'excellent';
-  }
-
-  if (
+    quality = 'excellent';
+  } else if (
     dl >= q.good.dl &&
     ul >= q.good.ul &&
     latency <= q.good.latency &&
     jitter <= q.good.jitter &&
     packetLoss <= q.good.packetLoss
   ) {
-    return 'good';
-  }
-
-  if (
+    quality = 'good';
+  } else if (
     dl >= q.fair.dl &&
     ul >= q.fair.ul &&
     latency <= q.fair.latency &&
     packetLoss <= q.fair.packetLoss
   ) {
-    return 'fair';
+    quality = 'fair';
+  } else if (dl > 0 || ul > 0) {
+    quality = 'slow';
+  } else {
+    quality = 'unavailable';
   }
 
-  if (dl > 0 || ul > 0) return 'slow';
-  return 'unavailable';
+  // Bufferbloat crítico penaliza um nível: excellent→good, good→fair.
+  if (metrics.bufferbloatSeverity === 'critical') {
+    if (quality === 'excellent') quality = 'good';
+    else if (quality === 'good') quality = 'fair';
+  }
+
+  return quality;
 }
 
 // =============================================================================
@@ -101,7 +108,8 @@ function computeFlags(metrics: SpeedTestResult, rules: ProfileRules): InterpretF
     // Mantemos o `veryUnstable: number` como threshold de jitter; a perda
     // crítica usa `packetLoss * 2.5` (gera 5 com fixa, 5 com móvel — ambos
     // refletem o mesmo limiar regulatório).
-    veryUnstable: metrics.jitter > f.veryUnstable || metrics.packetLoss > f.packetLoss * 2.5,
+    veryUnstable:    metrics.jitter > f.veryUnstable || metrics.packetLoss > f.packetLoss * 2.5,
+    highBufferbloat: metrics.bufferbloatSeverity === 'high' || metrics.bufferbloatSeverity === 'critical',
   };
 }
 
@@ -109,7 +117,7 @@ function computeFlags(metrics: SpeedTestResult, rules: ProfileRules): InterpretF
 // Stability
 // =============================================================================
 
-function computeStabilityScore(metrics: SpeedTestResult): number {
+function computeStabilityScoreFromMetrics(metrics: SpeedTestResult): number {
   // Mantém a fórmula do classifier legado (stability.ts em coexistência):
   //   jitterScore = 100 - clamp((jitter/50)*100, 0, 100)
   //   lossScore   = 100 - clamp((loss/2)*100,   0, 100)
@@ -130,7 +138,9 @@ function computeStability(
   metrics: SpeedTestResult,
   rules: ProfileRules,
 ): { score: number; level: StabilityLevel } {
-  const score = computeStabilityScore(metrics);
+  // Preferir o score calculado pelo motor v2 (série temporal), que é mais preciso
+  // do que a fórmula derivada apenas de jitter e perda.
+  const score = metrics.stabilityScore ?? computeStabilityScoreFromMetrics(metrics);
   let level = scoreToLevel(score);
 
   // Achado #2: "Muito estável" + "Resposta alta" não pode coexistir. Se a
@@ -269,11 +279,12 @@ function evaluateUseCases(
 
 function flagPriority(flag: keyof InterpretFlags): 'low' | 'medium' | 'high' {
   switch (flag) {
-    case 'veryUnstable': return 'high';
-    case 'packetLoss':   return 'high';
-    case 'highLatency':  return 'high';
-    case 'unstable':     return 'medium';
-    case 'lowUpload':    return 'medium';
+    case 'veryUnstable':    return 'high';
+    case 'packetLoss':      return 'high';
+    case 'highLatency':     return 'high';
+    case 'highBufferbloat': return 'high';
+    case 'unstable':        return 'medium';
+    case 'lowUpload':       return 'medium';
   }
 }
 

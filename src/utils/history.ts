@@ -64,6 +64,12 @@ export function appendRecord(
     connectionProfile: meta.connectionProfile ?? toConnectionProfile(meta.connectionType),
     ruleSetVersion: meta.ruleSetVersion ?? RULE_SET_VERSION,
     locationTag: meta.locationTag,
+    // Motor v2 — opcionais; undefined para registros legados
+    stabilityScore:     result.stabilityScore,
+    bufferbloatSeverity: result.bufferbloatSeverity,
+    diagnosticSummary:  result.diagnostics?.summaryText,
+    peakDlMbps:         result.peakDlMbps,
+    peakUlMbps:         result.peakUlMbps,
   };
   const items = [record, ...loadHistory()].slice(0, MAX);
   persist(items);

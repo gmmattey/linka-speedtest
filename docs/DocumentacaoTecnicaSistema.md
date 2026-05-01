@@ -33,30 +33,56 @@ type Tag = 'highLatency' | 'lowUpload' | 'unstable' | 'packetLoss' | 'veryUnstab
 type DeviceType = 'mobile' | 'tablet' | 'desktop'
 type ConnectionType = 'wifi' | 'mobile' | 'cable'
 type TestPhase = 'idle' | 'latency' | 'download' | 'upload' | 'load' | 'done' | 'error'
-type SpeedTestMode = 'quick' | 'complete' | 'normal' | 'advanced'
+type SpeedTestMode = 'quick' | 'fast' | 'complete' | 'normal' | 'advanced'
+type BufferbloatSeverity = 'low' | 'moderate' | 'high' | 'critical'
 type GamingProfile = 'off' | 'casual' | 'moba' | 'fps' | 'cloud'
 type RecommendationAction =
   | 'repeat_test' | 'move_closer_router' | 'restart_router'
   | 'try_cable' | 'compare_location' | 'contact_operator'
   | 'run_proof_mode' | 'run_gamer_mode' | 'none'
+
+interface SpeedTestSample {
+  tMs: number;   // ms relativo ao início da fase
+  mbps: number;
+  phase: 'download' | 'upload';
+}
+
+interface SpeedTestDiagnostics {
+  streamingVerdict: 'good' | 'acceptable' | 'poor';
+  gamingVerdict:    'good' | 'acceptable' | 'poor';
+  videoCallVerdict: 'good' | 'acceptable' | 'poor';
+  primaryBottleneck: 'none' | 'latency' | 'upload' | 'bufferbloat' | 'packetLoss';
+  summaryText: string;
+}
 ```
 
 ### Interfaces principais
 
 ```ts
 interface SpeedTestResult {
-  dl: number          // Mbps download (P90 das rodadas)
-  ul: number          // Mbps upload (P90 das rodadas)
-  latency: number     // ms mediana das amostras
+  dl: number          // Mbps download (média da janela estável — Motor v2)
+  ul: number          // Mbps upload (média da janela estável — Motor v2)
+  latency: number     // ms mediana das amostras idle
   jitter: number      // ms MAD da latência idle
   packetLoss: number  // % perda de pacotes (0–100)
   timestamp: number   // Unix ms
   mode?: SpeedTestMode
-  // ── Advanced mode (opcionais) ────────────────────────
+  // ── Motor v2 (opcionais) ─────────────────────────────
+  stabilityScore?: number;         // 0–100 derivado da série temporal (100 = mínima variação)
+  peakDlMbps?: number;             // pico de download Mbps
+  peakUlMbps?: number;             // pico de upload Mbps
+  bufferbloatSeverity?: BufferbloatSeverity;
+  latencyUnloaded?: number;        // ms — mediana idle (mesmo que latency)
+  latencyDownload?: number;        // ms — mediana durante DL simultâneo
+  latencyUpload?: number;          // ms — mediana durante UL simultâneo
+  diagnostics?: SpeedTestDiagnostics;
+  dlSamples?: SpeedTestSample[];
+  ulSamples?: SpeedTestSample[];
+  // ── Advanced mode legado (opcionais) ────────────────
   dlP25?: number; dlP75?: number   // Mbps — intervalo de estabilidade DL
   ulP25?: number; ulP75?: number   // Mbps — intervalo de estabilidade UL
-  latencyLoaded?: number           // ms — latência mediana sob carga
-  jitterLoaded?: number            // ms — MAD da latência sob carga
+  latencyLoaded?: number           // ms — latência mediana sob carga (legado)
+  jitterLoaded?: number            // ms — MAD da latência sob carga (legado)
   bufferbloatGrade?: 'A'|'B'|'C'|'D'|'F'
   bufferbloatDeltaMs?: number      // ms de degradação (loaded − idle)
 }
@@ -97,6 +123,12 @@ interface TestRecord {
   connectionProfile?: ConnectionProfile
   ruleSetVersion?: RuleSetVersion
   locationTag?: string      // etiqueta de cômodo/local (Teste por local)
+  // ── Motor v2 (opcionais) ─────────────────────────────
+  stabilityScore?: number;
+  bufferbloatSeverity?: BufferbloatSeverity;
+  diagnosticSummary?: string;
+  peakDlMbps?: number;
+  peakUlMbps?: number;
 }
 
 interface Classification {
@@ -125,74 +157,123 @@ interface Recommendation {
 
 ## 3. Utils (`src/utils/`)
 
-### 3.1 `speedtest.ts` — Algoritmo de medição
+### 3.1 Motor v2 — Medição Cloudflare direta
 
-Função principal: `runSpeedTest(onProgress, signal, connectionType?, mode?): Promise<SpeedTestResult>`
+O motor legado (`speedtest.ts` e `bufferbloat.ts`) foi removido e substituído por cinco módulos independentes. O Motor v2 implementa medição temporal com paralelismo progressivo e bufferbloat integrado durante DL/UL.
 
-Os parâmetros `connectionType?: ConnectionType` e `mode?: SpeedTestMode` selecionam um preset de payload via `presetFor(connectionType?, mode?)`.
+---
 
-| Preset | Trigger | Pings | DL warmup | DL round × n | UL warmup | UL round × n | Total |
-|---|---|---|---|---|---|---|---|
-| `PRESET_DEFAULT` | `'wifi'`/`'cable'`/`undefined` (non-quick) | 20 | 25 MB | 100 MB × 3 | 10 MB | 50 MB × 3 | ~400 MB |
-| `PRESET_MOBILE`  | `'mobile'` (non-quick) | 20 | 5 MB | 25 MB × 2 | 2 MB | 10 MB × 2 | ~70 MB |
-| `PRESET_QUICK`   | `mode === 'quick'` | 8 | 5 MB | 50 MB × 1 | 2 MB | 20 MB × 1 | ~80 MB |
+#### 3.1a `cloudflareSpeedTest.ts` — Primitivas HTTP
 
-Modos `'normal'` e `'advanced'` usam `PRESET_DEFAULT`/`PRESET_MOBILE` (mesmo preset). A diferença está nas fases adicionais executadas após upload no modo avançado.
+Endpoints Cloudflare usados diretamente (sem SDK):
 
-**Mapeamento de progresso por modo:**
-
-| Fase | Normal [from, to] | Advanced [from, to] |
+| Propósito | Método | URL |
 |---|---|---|
-| `latency` | [0.00, 0.15] | [0.00, 0.10] |
-| `download` | [0.15, 0.70] | [0.10, 0.52] |
-| `upload` | [0.70, 1.00] | [0.52, 0.76] |
-| `load` | não executada | [0.76, 1.00] |
+| Download | GET | `https://speed.cloudflare.com/__down?bytes=N&_cb={ts}_{rand}` |
+| Upload | POST | `https://speed.cloudflare.com/__up` |
+| Latência / Ping | GET | `https://speed.cloudflare.com/__down?bytes=0&_cb={ts}_{rand}` |
 
-**Latência:**
-- 20 pings (HEAD requests para `/__down?_cb=<ts>`), descarta o primeiro
-- Mediana das amostras restantes = `latency`; jitter = MAD dos RTTs
+Anti-cache: `_cb={Date.now()}_{Math.random()}` em todo request; `Cache-Control: no-store`.
 
-**Download:**
-- Warmup + `dlRounds` rounds; EMA α=0.3 por chunk
-- P90 dos rounds = `dl` (resultado final)
-- Advanced: p25 e p75 calculados de `dlSamples` → `dlP25`, `dlP75`
+```ts
+export const DL_SIZES = [100_000, 1_000_000, 10_000_000, 25_000_000, 100_000_000] as const;
+export const UL_SIZES = [256_000, 1_000_000, 5_000_000, 10_000_000] as const;
 
-**Upload:**
-- Buffer pré-gerado com `crypto.getRandomValues` (chunks de 65536 bytes)
-- Warmup + `ulRounds` rounds; P90 = `ul`
-- Advanced: `ulP25`, `ulP75`
-- **Progresso instantâneo:** a API Fetch não expõe bytes enviados progressivamente. O `setInterval` de cada round emite `instantMbps: null` (sem valor) — o gauge decai numericamente até o round concluir e retornar a velocidade real. Estimativa via `totalBytes / elapsed * 0.5` foi removida por ser empiricamente imprecisa.
+cfDownloadStream(bytes, signal): Promise<ReadableStreamDefaultReader<Uint8Array>>
+cfPing(signal): Promise<number | null>  // RTT em ms; null = timeout
+cfUploadChunk(buffer, signal, onProgress): Promise<void>
+```
 
-**Fase `load` (somente `mode === 'advanced'`):**
-- Chama `runBufferbloatTest(idleLatency, signal, onProgress)` — veja §3.x
-- Resultado adicionado ao `SpeedTestResult`: `latencyLoaded`, `jitterLoaded`, `bufferbloatGrade`, `bufferbloatDeltaMs`
+---
 
-**Packet loss:**
-- Estimado por `packetLoss = (timeouts / totalPings) * 100` durante a fase de latência
+#### 3.1b `latencyProbe.ts` — Medição de latência
 
-**CORS:** POSTs para `/__up` usam `Content-Type` simples (sem header customizado) para evitar preflight.
+```ts
+interface LatencyPhaseResult {
+  medianMs: number;        // métrica principal
+  meanMs: number;
+  jitterMs: number;
+  timeoutRate: number;     // 0–1
+  approximateLoss: number; // %
+}
 
-### 3.1b `bufferbloat.ts` — Medição de latência sob carga
+runLatencyPhase(pingCount, signal, onProgress): Promise<LatencyPhaseResult>
+runPingLoop(signal, intervalMs, onPing): Promise<void>
+```
 
-Função: `runBufferbloatTest(idleLatency, signal, onProgress): Promise<BufferbloatResult>`
+- `runLatencyPhase`: 15–25 pings; descarta o 1º; remove outliers > 3× mediana
+- `runPingLoop`: loop contínuo de pings — usado em paralelo com DL/UL para medir bufferbloat
+
+---
+
+#### 3.1c `downloadProbe.ts` — Motor de download time-based
+
+| Config | durationMs | initialStreams | maxStreams | sizeIndex | warmupMs |
+|---|---|---|---|---|---|
+| `DOWNLOAD_CONFIG_FAST` | 7.000 | 2 | 4 | 2 (10 MB) | 1.000 |
+| `DOWNLOAD_CONFIG_COMPLETE` | 18.000 | 2 | 8 | 3 (25 MB) | 2.000 |
 
 **Algoritmo:**
-1. Abre `STREAM_COUNT` (4) downloads paralelos de 25 MB cada para saturar o link durante `DURATION_MS` (12 s)
-2. Enquanto streams correm, dispara pings a cada `PING_INTERVAL` (300 ms) e coleta RTTs
-3. Cancela streams ao final da duração
-4. Calcula mediana dos RTTs = `latencyLoaded`; MAD = `jitterLoaded`
-5. `deltaMs = max(0, latencyLoaded − idleLatency)`
-6. Grade por `deltaMs`:
+- Abre `initialStreams` streams via `cfDownloadStream`; tick de amostragem a cada 300 ms
+- Cada stream: ao terminar, reabre nova requisição com novo `_cb` (fluxo contínuo)
+- Paralelismo progressivo (modo completo): a cada 4 s, se ganho ≥ 10% e streams < maxStreams → abre +2 streams
+- Encerramento: `AbortController` com timeout = `durationMs`
 
-| Grade | deltaMs |
-|---|---|
-| A | < 30 ms |
-| B | 30–60 ms |
-| C | 60–200 ms |
-| D | 200–400 ms |
-| F | ≥ 400 ms |
+**Cálculo final (MÉDIA — não mediana, não P90):**
+```
+valid  = samples com tMs ≥ warmupMs
+stable = valid.slice(Math.ceil(len * 0.35))   // últimos 65%
+throughputMbps = mean(stable)
+peakMbps       = max(valid)
+stabilityScore = clamp(100 − (std/mean × 150), 0, 100)
+```
 
-**`BufferbloatResult`:** `{ latencyLoaded, jitterLoaded, grade, deltaMs }`
+**Fallback:** stream falha → tenta `DL_SIZES[i−1]` (até 2×). Todos falham → `SpeedTestError('download_failed')`.
+
+```ts
+interface DownloadProbeResult { throughputMbps; peakMbps; stabilityScore; samples: SpeedTestSample[]; }
+runDownloadProbe(config, signal, onInstant): Promise<DownloadProbeResult>
+```
+
+---
+
+#### 3.1d `uploadProbe.ts` — Motor de upload time-based
+
+Espelho do `downloadProbe`, usando `cfUploadChunk` com amostras via XHR `upload.onprogress` a cada 300 ms.
+
+| Config | durationMs | initialStreams | maxStreams | sizeIndex | warmupMs |
+|---|---|---|---|---|---|
+| `UPLOAD_CONFIG_FAST` | 7.000 | 2 | 3 | 1 (1 MB) | 1.000 |
+| `UPLOAD_CONFIG_COMPLETE` | 18.000 | 2 | 6 | 2 (5 MB) | 2.000 |
+
+Mesma lógica de janela estável (65%) e fallback com `UL_SIZES[i−1]`.
+
+---
+
+#### 3.1e `speedTestOrchestrator.ts` — Orquestrador
+
+```ts
+type SpeedTestErrorCode = 'download_failed' | 'upload_failed' | 'latency_failed' | 'network_offline' | 'server_unavailable'
+class SpeedTestError extends Error { readonly code: SpeedTestErrorCode }
+
+runSpeedTestV2(mode: 'fast' | 'complete', onProgress, signal, connectionType?): Promise<SpeedTestResult>
+```
+
+**Sequência de execução:**
+
+1. **Latência** — `runLatencyPhase(15|25)` → emite `partial: { latency, jitter, packetLoss }`
+2. **Download + bufferbloat DL** — `Promise.all([runDownloadProbe, runPingLoop(300ms)])` → `latencyDownload`; emite `partial: { dl }`
+3. **Upload + bufferbloat UL** — `Promise.all([runUploadProbe, runPingLoop(300ms)])` → `latencyUpload`
+4. **Diagnóstico** — `dlDelta = max(0, latencyDownload − latencyUnloaded)`; `ulDelta` idem; `severity = classifyBufferbloatSeverity(max(dlDelta, ulDelta))`; `buildDiagnostics(partialResult)`
+5. Retorna `SpeedTestResult` completo com campos v2
+
+**Mapeamento de progresso:**
+
+| Fase | Rápido | Completo |
+|---|---|---|
+| Latência | 0–10% | 0–8% |
+| Download | 10–55% | 8–53% |
+| Upload | 55–100% | 53–100% |
 
 ### 3.2 `classifier.ts` — Classificador de qualidade
 
@@ -400,7 +481,7 @@ interface DnsBenchmarkResult { servers, winner, testedAt }
 
 **Vencedor:** servidor com menor p50 entre os que têm `samples > 0`. Resultado salvo em `localStorage` na chave `linka.dns.result.v1`.
 
-**Integração no fluxo Advanced:** `runDNSBenchmark` é iniciado em paralelo ao `runBufferbloatTest` (fase `'load'`), aguardado na fase `'dns'` com tick de progresso a cada 300 ms. Timeout máximo: 20 s.
+**Integração:** DNS não faz parte do fluxo de speed test. É invocado on-demand pela `DNSBenchmarkScreen` (feature standalone em Explorar). Timeout máximo: 20 s via `AbortController`.
 
 ### 3.12 `shareCard.ts` — Geração de card para WhatsApp
 
@@ -450,7 +531,7 @@ interface InterpretedResult {
   ruleSetVersion: RuleSetVersion        // versão das regras aplicadas (atualmente 'v1')
   profile: ConnectionProfile             // ecoado da entrada
   quality: Quality                       // excellent | good | fair | slow | unavailable
-  flags: InterpretFlags                  // 5 booleanos (highLatency, lowUpload, unstable, packetLoss, veryUnstable)
+  flags: InterpretFlags                  // 6 booleanos (highLatency, lowUpload, unstable, packetLoss, veryUnstable, highBufferbloat)
   stability: { score: number; level: StabilityLevel }
   useCases: UseCaseVerdict[]             // 4 cenários: gaming, streaming_4k, home_office, video_call
   recommendations: Array<{               // disparos rastreáveis para a fase de UX
@@ -472,6 +553,8 @@ interface InterpretedResult {
 - O motor retorna **chaves de copy**, não strings. O dicionário pt-BR vive em `copyDictionary.ts`. Isso permite que o app Flutter use o mesmo motor com seu próprio dicionário.
 - Os **UseCases** olham todas as métricas relevantes (download, upload, latência, jitter, perda) — não só uma fração. Streaming 4K com perda alta cai de "good"; Games com latência boa não cai para "limited" só por jitter levemente alto.
 - O ajuste de **stability** rebaixa um nível quando `latency > rules.flags.highLatency × 1.5`. Resolve o caso "Muito estável" exibido junto com "Resposta alta" (achado da auditoria).
+- **`highBufferbloat`** (flag v2): disparado quando `bufferbloatSeverity === 'high' | 'critical'`. Penaliza quality um nível quando severity é `'critical'` (excellent→good, good→fair). Gera recomendação com prioridade `'high'`.
+- **`stabilityScore`** (campo v2): quando presente no input, `computeStability()` usa o valor calculado pela série temporal do Motor v2 em vez de derivar o score das métricas sumárias.
 
 ### 3.10.2 `ConnectionProfile` — fixa vs. móvel
 
@@ -496,6 +579,7 @@ Atualmente: `'v1'`. Os thresholds de `fixed_broadband` têm paridade com o legad
 | `src/core/profiles.ts` | `QualityThresholds`, `FlagThresholds`, `UseCaseThresholds`, `ProfileRules`, `PROFILES: Record<ConnectionProfile, ProfileRules>` + `GamingProfileId`, `GamingProfileThresholds`, `GamingProfileDef`, `GAMING_PROFILES` |
 | `src/core/copyDictionary.ts` | Map `chave → string pt-BR` + `resolveCopy(key, params?)` com interpolação `{name}` |
 | `src/core/interpret.ts` | `interpretSpeedTestResult(input)` — função principal |
+| `src/core/networkQualityClassifier.ts` | `gradeFrom(deltaMs)` (migrado de `bufferbloat.ts`), `classifyBufferbloatSeverity(deltaMs)`, `computeStabilityFromSamples(samples)`, `buildDiagnostics(result)`, `severityToGrade(s)` |
 | `src/core/index.ts` | Reexporta o contrato público para uso externo (Fase 7 / Flutter embed) |
 
 **`GAMING_PROFILES`** — thresholds de desempenho por perfil de gamer:
@@ -547,17 +631,24 @@ Usado por `GamingVerdict` na ResultScreen para avaliar se as métricas do teste 
 
 **Retorno:** `{ phase, instantMbps, overallProgress, result, error, live, start, cancel, reset }`
 
-**Assinatura de `start`**: `start(connectionType?: ConnectionType, mode?: SpeedTestMode)`. O hook repassa ambos os parâmetros para `runSpeedTest`, que escolhe o preset adequado (default, mobile ou quick). Ver §3.1.
+**Assinatura de `start`**: `start(connectionType?: ConnectionType, mode?: SpeedTestMode)`. O hook mapeia `mode` para `'fast' | 'complete'` e chama `runSpeedTestV2(v2Mode, onProgress, signal, connectionType)`. Modos `'normal'` e `'quick'` mapeiam para `'fast'`; `'complete'` e `'advanced'` mapeiam para `'complete'`.
 
-**`live: LivePoint[]`** — buffer dos últimos 60 pontos `{ t: number, speed: number, phase: 'download'|'upload' }`. Mantido por compatibilidade interna; **não é mais consumido** pela RunningScreen (gauge passou a ser apenas número + unidade). O componente `LiveChart.tsx` foi deletado na Fase 6 — não havia callers.
+**Erros classificados:** no `catch`, instâncias de `SpeedTestError` têm seu `code` mapeado para mensagens pt-BR amigáveis via `errorMessageFor(code)`:
+- `network_offline` → "Sem conexão com a internet."
+- `server_unavailable` → "Servidor não disponível no momento."
+- `download_failed` → "Falha ao medir o download."
+- `upload_failed` → "Falha ao medir o upload."
+- `latency_failed` → "Falha ao medir a latência."
+
+**`live: LivePoint[]`** — buffer dos últimos 60 pontos `{ t: number, speed: number, phase: 'download'|'upload' }`. Mantido por compatibilidade interna; **não é mais consumido** pela RunningScreen.
 
 **Suavização do `instantMbps`:**
 - `targetMbpsRef` recebe o valor bruto do callback `onProgress`
 - `requestAnimationFrame` roda loop de EMA: `next = 0.25 * target + 0.75 * rendered`
 - `renderedMbpsRef` → `setState({ instantMbps: next })`
 
-**Limpeza do buffer live:**  
-Quando a fase muda de `download` para `upload`, o buffer é limpo para não misturar séries.
+**Parciais progressivos (`SpeedTestProgress.partial`):**  
+O orchestrator emite `partial: { latency, jitter, packetLoss }` após a fase de latência e `partial: { dl }` após o download. A RunningScreen pode consumir esses valores para exibição progressiva enquanto a fase seguinte corre.
 
 ### 4.3 `useSettings()`
 
@@ -570,10 +661,13 @@ interface Settings {
   connectionOverride: 'auto' | 'wifi' | 'cable' | 'mobile'  // padrão: 'auto'
   hideIpOnShare: boolean            // padrão: true — oculta IP ao compartilhar resultado
   gamingProfile: GamingProfile      // padrão: 'off' — perfil de gamer para veredicto na ResultScreen
+  defaultMode: 'fast' | 'complete' // padrão: 'complete' — modo selecionado na StartScreen, persiste entre sessões
 }
 ```
 
 `gamingProfile` controla o bloco `GamingVerdict` da ResultScreen e o hint da StartScreen. Quando `'off'`, nenhum desses elementos é exibido. Configurado no BottomSheet → seção Configurações via seletor segmentado `[Off] Casual MOBA FPS Cloud`.
+
+`defaultMode` é atualizado toda vez que o usuário altera o seletor de modo na StartScreen, garantindo que o modo persista após fechar e reabrir o app.
 
 Chave localStorage: `linka.speedtest.settings.v1`  
 `update` faz merge com settings atual e persiste imediatamente.
@@ -712,12 +806,12 @@ Estado gerenciado em `App.tsx`:
 | State | Tipo | Descrição |
 |---|---|---|
 | `theme` | `'dark'\|'light'` | Tema atual, persiste em localStorage |
-| `screen` | `Screen` | Tela ativa: `'start'\|'running'\|'result'\|'history'\|'comparison'\|'beforeafter'\|'roomtest'\|'diagnostic'\|'gamer'\|'recommend'` |
+| `screen` | `Screen` | Tela ativa: `'start'\|'running'\|'result'\|'history'\|'comparison'\|'beforeafter'\|'roomtest'\|'diagnostic'\|'gamer'\|'recommend'\|'dnsbenchmark'` |
 | `isOnline` | `boolean` | Conectividade detectada via eventos `online`/`offline` do browser |
 | `previous` | `TestRecord\|null` | Registro do teste anterior à sessão atual (para comparação na ResultScreen) |
 | `lastRecord` | `TestRecord\|null` | Último registro do histórico, exibido como card na StartScreen |
 | `historyInitialId` | `string\|undefined` | Id pré-selecionado quando se abre o HistoryScreen direto no detalhe |
-| `testMode` | `SpeedTestMode` | Modo selecionado na StartScreen: `'quick'` ou `'complete'` |
+| `testMode` | `'fast'\|'complete'` | Modo selecionado na StartScreen; inicializado a partir de `settings.defaultMode` (lido do localStorage); atualizado via `handleStart` e via `StartScreen.handleModeChange` |
 | `comparisonStep` | `ComparisonStep` | Passo da ComparisonScreen: `'near'\|'far'\|'done'` |
 | `comparisonNear` | `SpeedTestResult\|null` | Resultado do teste perto do roteador |
 | `comparisonFar` | `SpeedTestResult\|null` | Resultado do teste longe do roteador |
@@ -952,7 +1046,7 @@ npx wrangler pages deploy dist --project-name linka-speedtest --branch main
 | `share.test.ts` | — | `buildShareText()`, `shareResultText()` |
 | `compare.test.ts` | 12 | `calculateComparison()` — coverage_issue, both_bad, both_good, percentuais, edge cases |
 
-**Total:** 79 testes passando (−23 da Fase 6: funções legadas removidas do classifier).
+**Total:** 142 testes passando. Importação de `gradeFrom` foi migrada de `'../utils/bufferbloat'` para `'../core/networkQualityClassifier'` no `classifier.test.ts`.
 
 **Comando:** `npm test`
 

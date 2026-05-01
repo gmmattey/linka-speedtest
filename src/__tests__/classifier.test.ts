@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { classify, RULE_SET_VERSION } from '../utils/classifier';
-import { gradeFrom } from '../utils/bufferbloat';
+import { gradeFrom } from '../core/networkQualityClassifier';
 import type { SpeedTestResult } from '../types';
 
 function r(overrides: Partial<SpeedTestResult> = {}): SpeedTestResult {

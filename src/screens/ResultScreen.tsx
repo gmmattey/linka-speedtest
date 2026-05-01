@@ -26,11 +26,8 @@ interface Props {
   onDiagnostic?: () => void;
   onGamer?: () => void;
   onRecommend?: () => void;
-  onStartComparison?: () => void;
-  onStartBeforeAfter?: () => void;
-  onStartProvaReal?: () => void;
   onStartRoomTest?: () => void;
-  onShowDNSGuide?: (serverId: string) => void;
+  onShowDNSBenchmark?: () => void;
   unit?: 'mbps' | 'gbps';
   hideIpOnShare?: boolean;
   gamingProfile?: GamingProfile;
@@ -160,8 +157,7 @@ export function ResultScreen({
   result, server,
   onRetry, onShowHistory,
   onDiagnostic, onGamer, onRecommend,
-  onStartComparison, onStartBeforeAfter, onStartProvaReal,
-  onShowDNSGuide,
+  onShowDNSBenchmark,
   unit = 'mbps',
   connectionType, contractedDown = null, contractedUp = null, onUpdateContracted,
 }: Props) {
@@ -333,8 +329,8 @@ export function ResultScreen({
           <IOSList items={detailItems} />
         </div>
 
-        {/* Advanced section — visível apenas no modo avançado */}
-        {result.mode === 'advanced' && (result.bufferbloatGrade || result.dlP25 != null) && (
+        {/* Diagnostico avançado — visível quando há dados de bufferbloat */}
+        {(result.bufferbloatGrade || result.bufferbloatSeverity) && (
           <div className="lk-result__advanced">
             <p className="lk-result__advanced-label">Diagnóstico avançado</p>
             <IOSList
@@ -403,63 +399,12 @@ export function ResultScreen({
           </div>
         )}
 
-        {/* DNS section */}
-        {result.dns && result.dns.servers.length > 0 && (() => {
-          const winner = result.dns.winner;
-          const winnerMs = Math.round(winner.p50);
-          const dnsLabel = winnerMs < 20 ? 'Rápido' : winnerMs < 50 ? 'Aceitável' : 'Lento';
-          const dnsColor = winnerMs < 20 ? 'var(--success)' : winnerMs < 50 ? 'var(--warn)' : 'var(--error)';
-          const dnsRec = winnerMs < 50
-            ? `${winner.name} é o mais rápido na sua rede — mantenha o atual.`
-            : `Considere usar ${winner.name} para reduzir o tempo de resposta DNS.`;
-
-          return (
-            <div className="lk-result__advanced">
-              <p className="lk-result__advanced-label">DNS</p>
-              <IOSList
-                items={[
-                  {
-                    icon: <Icon name="bolt" size={14} color={dnsColor} />,
-                    iconBg: 'var(--surface-3)',
-                    title: winner.name,
-                    subtitle: `Mais rápido · ${winner.ip}`,
-                    trailing: (
-                      <div style={{ textAlign: 'right' }}>
-                        <div className="lk-result__metric-sub" style={{ color: dnsColor, fontWeight: 700 }}>
-                          {winnerMs} ms
-                        </div>
-                        <div style={{ fontSize: 10, color: dnsColor }}>{dnsLabel}</div>
-                      </div>
-                    ),
-                  },
-                  ...result.dns.servers
-                    .filter(s => s.id !== result.dns!.winner.id && s.samples > 0)
-                    .sort((a, b) => a.p50 - b.p50)
-                    .map(s => ({
-                      icon: <Icon name="ping" size={14} color="var(--text-3)" />,
-                      iconBg: 'var(--surface-3)',
-                      title: s.name,
-                      subtitle: s.ip,
-                      trailing: (
-                        <span className="lk-result__metric-sub">
-                          {Math.round(s.p50)} ms
-                        </span>
-                      ),
-                    })),
-                  ...(onShowDNSGuide ? [{
-                    icon: <Icon name="cog" size={14} color="#fff" />,
-                    iconBg: 'var(--accent)',
-                    title: 'Como trocar o DNS',
-                    subtitle: `Usar ${winner.name} no seu dispositivo`,
-                    showChevron: true,
-                    onClick: () => onShowDNSGuide!(result.dns!.winner.id),
-                  }] : []),
-                ]}
-              />
-              <p className="lk-result__dns-disclaimer">{dnsRec}</p>
-            </div>
-          );
-        })()}
+        {/* Diagnóstico de texto — summaryText do motor v2 */}
+        {result.diagnostics?.summaryText && (
+          <div className="lk-result__summary-text">
+            {result.diagnostics.summaryText}
+          </div>
+        )}
 
         {/* Ferramentas */}
         <div className="lk-result__tools">
@@ -490,29 +435,13 @@ export function ResultScreen({
                 showChevron: true,
                 onClick: onRecommend,
               }] : []),
-              ...(onStartComparison ? [{
-                icon: <Icon name="cmp" size={14} color="var(--text-2)" />,
-                iconBg: 'var(--surface-3)',
-                title: 'Comparar locais',
-                subtitle: 'Perto vs. longe do roteador',
+              ...(onShowDNSBenchmark ? [{
+                icon: <Icon name="bolt" size={14} color="#fff" />,
+                iconBg: 'var(--accent)',
+                title: 'Verificar DNS',
+                subtitle: 'Testar os servidores DNS disponíveis',
                 showChevron: true,
-                onClick: onStartComparison,
-              }] : []),
-              ...(onStartBeforeAfter ? [{
-                icon: <Icon name="cmp" size={14} color="var(--text-2)" />,
-                iconBg: 'var(--surface-3)',
-                title: 'Antes e Depois',
-                subtitle: 'Faça uma mudança e compare o resultado',
-                showChevron: true,
-                onClick: onStartBeforeAfter,
-              }] : []),
-              ...(onStartProvaReal ? [{
-                icon: <Icon name="refresh" size={14} color="var(--text-2)" />,
-                iconBg: 'var(--surface-3)',
-                title: 'Confirmar resultado (3×)',
-                subtitle: 'Média de 3 testes seguidos para mais precisão',
-                showChevron: true,
-                onClick: onStartProvaReal,
+                onClick: onShowDNSBenchmark,
               }] : []),
             ]}
           />
