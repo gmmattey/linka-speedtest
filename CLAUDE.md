@@ -25,6 +25,7 @@ Você é um colaborador de engenharia trabalhando no PWA **linka SpeedTest** —
 
 ## 3. Regras inegociáveis
 
+- **Branch único:** Trabalhe sempre em `main`. Nunca crie branch paralela (`claude/*`, `feat/*`, ou qualquer outra). Ver [`docs/PoliticaBranchUnico.md`](docs/PoliticaBranchUnico.md).
 - **Atualize a documentação na MESMA tarefa.** Código sem doc atualizada = tarefa incompleta.
 - **Não crie arquivos fora de `GuiaOrganizacaoPastas.md`.** Se a pasta destino não está prevista, atualize o guia primeiro.
 - **Não invente.** Se não está no código nem na doc, é pendência — registre, não fabrique.
@@ -69,11 +70,12 @@ Você é um colaborador de engenharia trabalhando no PWA **linka SpeedTest** —
 
 Antes de qualquer modificação, informe em uma mensagem:
 
-1. Classificação da tarefa (uma frase).
-2. Ferramenta + modelo recomendado.
-3. Tamanho: Pequeno / Médio / Grande.
-4. Arquivos prováveis a alterar + documentos a atualizar.
-5. Riscos identificados.
+1. Ferramenta e modelo **em uso agora** (ex.: "Claude Code / Sonnet 4.6").
+2. Se outro modelo ou ferramenta seria mais adequado para esta tarefa — diga antes de começar.
+3. Classificação da tarefa (uma frase).
+4. Tamanho: Pequeno / Médio / Grande.
+5. Arquivos prováveis a alterar + documentos a atualizar (use a tabela de decisão de `docs/ManifestoDesenvolvimentoIA.md` seção 4.3).
+6. Riscos identificados.
 
 Aguarde "OK" antes de modificações amplas ou irreversíveis.
 
@@ -81,7 +83,8 @@ Aguarde "OK" antes de modificações amplas ou irreversíveis.
 
 Apresente:
 - Arquivos de código alterados (path + o que mudou).
-- Documentos atualizados.
+- **Documentos atualizados — liste cada um explicitamente** (não apenas "docs atualizadas"). Ex.: "Atualizei `DocumentacaoTecnicaSistema.md` seção X e `GuiaOrganizacaoPastas.md`."
+- Se nenhum documento precisou de atualização, justifique em uma frase por quê.
 - Próximos passos sugeridos.
 
 ## 7. Quando recusar

@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Auditoria UX · linka SpeedTest · 2026-05-01</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,600&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --ink:#0f0f12; --ink2:#3a3a45; --ink3:#6b6b7a;
+    --paper:#f7f6f2; --paper2:#eeecea; --paper3:#e3e0db;
+    --rule:#d6d3cc;
+    --brand:#4a3aff; --brand-bg:#f0eeff;
+    --red:#c0392b;    --red-bg:#fdf2f0;
+    --orange:#c45e1a; --orange-bg:#fef5ed;
+    --yellow:#a08000; --yellow-bg:#fefbe6;
+    --green:#1a7a4a;  --green-bg:#edfaf3;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:"DM Sans",system-ui,sans-serif;font-weight:400;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:900px;margin:0 auto;padding:60px 40px 100px}
+  h1{font-family:"Fraunces",serif;font-weight:300;font-size:52px;line-height:1.0;letter-spacing:-0.02em;margin:0 0 8px}
+  h1 em{font-style:italic;color:var(--brand);font-weight:300}
+  h2{font-family:"Fraunces",serif;font-weight:300;font-size:28px;line-height:1.15;letter-spacing:-0.01em;margin:0 0 16px}
+  h3{font-family:"DM Sans",sans-serif;font-weight:500;font-size:13px;text-transform:uppercase;letter-spacing:0.03em;margin:0 0 12px;color:var(--ink2)}
+  .section-label{font-family:"DM Mono",monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.18em;color:var(--ink3);margin:0 0 14px}
+  p{margin:0 0 14px;color:var(--ink2)}
+  hr{border:0;border-top:1px solid var(--rule);margin:48px 0}
+  code{font-family:"DM Mono",monospace;font-size:12px;background:var(--paper2);color:var(--brand);padding:1px 5px;border-radius:3px}
+  blockquote{border-left:3px solid var(--brand);background:var(--brand-bg);padding:18px 22px;margin:20px 0;font-style:italic;color:var(--ink);border-radius:2px}
+  blockquote p{margin:0;color:var(--ink)}
+
+  .meta{display:flex;justify-content:space-between;font-family:"DM Mono",monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink3);margin-bottom:48px;padding-bottom:18px;border-bottom:1px solid var(--rule)}
+  .subtitle{font-size:18px;color:var(--ink2);max-width:680px;margin:18px 0 0}
+
+  /* Resumo grid */
+  .resumo{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:28px 0 22px}
+  .resumo .cell{background:#fff;border:1px solid var(--rule);border-radius:12px;padding:22px}
+  .resumo .num{font-family:"Fraunces",serif;font-size:56px;line-height:1;font-weight:300;letter-spacing:-0.02em}
+  .resumo .lbl{font-family:"DM Mono",monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.16em;color:var(--ink3);margin-top:10px}
+  .num.red{color:var(--red)} .num.yellow{color:var(--yellow)} .num.green{color:var(--green)}
+
+  /* Tabelas */
+  table{width:100%;border-collapse:collapse;margin:8px 0 22px;font-size:14px}
+  th{background:var(--paper2);font-family:"DM Mono",monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink2);text-align:left;padding:10px 12px;border-bottom:1px solid var(--rule)}
+  td{padding:11px 12px;border-bottom:1px solid var(--rule);vertical-align:top;color:var(--ink2)}
+  td.code,td code{font-size:12px}
+  tr:last-child td{border-bottom:0}
+
+  .tag{display:inline-block;font-family:"DM Mono",monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.12em;padding:3px 8px;border-radius:3px;border:1px solid;font-weight:500}
+  .tag.red{color:var(--red);background:var(--red-bg);border-color:var(--red)}
+  .tag.orange{color:var(--orange);background:var(--orange-bg);border-color:var(--orange)}
+  .tag.yellow{color:var(--yellow);background:var(--yellow-bg);border-color:var(--yellow)}
+  .tag.green{color:var(--green);background:var(--green-bg);border-color:var(--green)}
+  .tag.gray{color:var(--ink3);background:var(--paper2);border-color:var(--rule)}
+
+  /* Issue cards */
+  .issue{background:#fff;border:1px solid var(--rule);border-radius:12px;margin:14px 0;overflow:hidden}
+  .issue-head{display:flex;gap:14px;align-items:flex-start;padding:18px 20px}
+  .issue-id{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:0.1em;color:var(--ink3);flex:0 0 48px;padding-top:3px}
+  .issue-body{flex:1}
+  .issue-title{font-family:"Fraunces",serif;font-size:20px;font-weight:300;letter-spacing:-0.01em;margin:0 0 8px;color:var(--ink)}
+  .issue-desc{margin:0;color:var(--ink2);font-size:14px}
+  .issue-sev{flex:0 0 auto;margin-left:auto;padding-top:2px}
+  .issue-fix{border-top:1px solid var(--rule);background:var(--paper);padding:14px 20px 14px 68px;font-size:14px;color:var(--ink2)}
+  .issue-fix strong{color:var(--ink);font-weight:500;display:inline-block;margin-right:6px}
+  .ev{display:block;margin-top:6px;font-family:"DM Mono",monospace;font-size:12px;color:var(--ink3)}
+
+  /* Phase blocks */
+  .phase{background:#fff;border:1px solid var(--rule);border-radius:12px;padding:24px 26px;margin:14px 0;display:grid;grid-template-columns:64px 1fr auto;gap:20px;align-items:start}
+  .phase-num{font-family:"Fraunces",serif;font-size:56px;font-weight:300;line-height:1;color:var(--brand)}
+  .phase-body h3{margin-bottom:6px;text-transform:none;font-size:18px;font-family:"Fraunces",serif;font-weight:300;letter-spacing:-0.01em;color:var(--ink)}
+  .phase-meta{font-family:"DM Mono",monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink3);margin-bottom:8px}
+  .phase ul{margin:6px 0 0;padding-left:18px}
+  .phase li{margin:4px 0;font-size:14px;color:var(--ink2)}
+
+  pre.flow{background:var(--paper2);border:1px solid var(--rule);border-radius:8px;padding:18px 20px;font-family:"DM Mono",monospace;font-size:12px;line-height:1.7;color:var(--ink);overflow-x:auto;white-space:pre}
+
+  ol.questions{padding-left:22px}
+  ol.questions li{margin:10px 0;color:var(--ink2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="meta">
+  <span>Documento · Auditoria UX</span>
+  <span>Versão 1.0 · 2026-05-01</span>
+</div>
+
+<h1>Linka SpeedTest <em>tem velocidade,</em><br/>mas ainda não <em>responde</em>.</h1>
+<p class="subtitle">Diagnóstico baseado em leitura integral de <code>src/</code> — 10 telas, 13 utils, 3 hooks, motor unificado em <code>src/core/*</code>. Cada achado abaixo cita o arquivo e a linha como evidência.</p>
+
+<hr/>
+
+<p class="section-label">Resumo executivo</p>
+<h2>O que a auditoria encontrou</h2>
+
+<div class="resumo">
+  <div class="cell"><div class="num red">11</div><div class="lbl">Críticos + Altos</div></div>
+  <div class="cell"><div class="num yellow">6</div><div class="lbl">Médios</div></div>
+  <div class="cell"><div class="num green">4</div><div class="lbl">Polimento</div></div>
+</div>
+
+<p>O motor de interpretação (<code>src/core/interpret.ts</code>) e o dicionário pt-BR (<code>src/core/copyDictionary.ts</code>) já produzem veredito editorial, classificação por uso e diagnóstico em linguagem consumer-friendly — esse trabalho está bem feito. O problema está na <strong>camada de apresentação</strong>: a hierarquia visual do resultado trata todas as métricas como itens de lista equivalentes, a tela de medição não comunica fases, fluxos críticos como Modo Normal/Avançado e Offline ainda não existem como telas dedicadas, e há vazamentos de jargão técnico (Jitter, Loss, Ping) em pontos onde o usuário leigo precisa de tradução.</p>
+
+<blockquote><p>O produto promete responder se a internet serve para o que o usuário quer fazer. O motor já sabe responder. A tela ainda apresenta números em vez de uma resposta.</p></blockquote>
+
+<hr/>
+
+<p class="section-label">Análise por tela</p>
+<h2>Estado por superfície</h2>
+
+<table>
+  <thead><tr><th style="width:24%">Tela</th><th>Problema central</th><th style="width:18%">Status</th></tr></thead>
+  <tbody>
+    <tr><td><code>StartScreen.tsx</code></td><td>Botão único <code>onStart('complete')</code> sem seleção de modo (Normal vs Avançado). Linhas 95–104.</td><td><span class="tag orange">Incompleto</span></td></tr>
+    <tr><td><code>RunningScreen.tsx</code></td><td>Sem stepper de fases (LAT → DOWN → UP → RESULT). Apenas um label dentro do Gauge muda. Linhas 99–107.</td><td><span class="tag red">Fraco</span></td></tr>
+    <tr><td><code>ResultScreen.tsx</code></td><td>Download não tem destaque tipográfico — vira linha de IOSList equivalente a "Histórico". Veredito (<code>shortPhrase</code>) existe mas é tipograficamente comum. Linhas 154–166, 224.</td><td><span class="tag red">Fraco</span></td></tr>
+    <tr><td><code>HistoryScreen.tsx</code></td><td>Limpeza usa <code>confirm()</code> nativo (linha 51). Lista densa com linguagem mista (Resp./Oscil./Perda).</td><td><span class="tag yellow">Parcial</span></td></tr>
+    <tr><td><code>DiagnosticScreen.tsx</code></td><td>Card "Resposta" interpola <code>${latency}</code> bruto sem <code>formatMs()</code> (linhas 64–66) — mostra decimais técnicos (ex.: <code>23.481 ms</code>).</td><td><span class="tag orange">Incompleto</span></td></tr>
+    <tr><td><code>GamerScreen.tsx</code></td><td>Labels primários "Ping", "Jitter", "Loss" em inglês técnico (linhas 72–74). Stat "Loss" sem sinal de percentual no número.</td><td><span class="tag orange">Incompleto</span></td></tr>
+    <tr><td><code>RecommendScreen.tsx</code></td><td>Fallback estático com CTAs ("Como fazer", "Ver guia") que não levam a lugar nenhum — botões sem destino (linhas 102–106).</td><td><span class="tag yellow">Parcial</span></td></tr>
+    <tr><td><code>ComparisonScreen.tsx</code></td><td>Funcional. "Resposta" sem unidade clara em alguns trechos. Linhas 117–125.</td><td><span class="tag green">OK</span></td></tr>
+    <tr><td><code>BeforeAfterScreen.tsx</code></td><td>Funcional. Verdict depende de <code>calculateBeforeAfter</code>, copy adequada.</td><td><span class="tag green">OK</span></td></tr>
+    <tr><td><code>RoomTestScreen.tsx</code></td><td>Funcional. Input com <code>maxLength={32}</code>, sem aria-label.</td><td><span class="tag green">OK</span></td></tr>
+    <tr><td><strong>OfflineScreen</strong></td><td>Não existe. Offline cai em faixa de alerta dentro de StartScreen (linhas 78–82). Verificado via <code>ls src/screens/</code> — sem arquivo correspondente.</td><td><span class="tag red">Ausente</span></td></tr>
+    <tr><td><strong>ModeSelectScreen</strong></td><td>Não existe. <code>SpeedTestMode</code> definido em <code>types/index.ts:7</code> mas tela de seleção nunca foi implementada.</td><td><span class="tag red">Ausente</span></td></tr>
+  </tbody>
+</table>
+
+<hr/>
+
+<p class="section-label">Diagnóstico detalhado</p>
+<h2>17 achados ordenados por severidade</h2>
+
+<div class="issue">
+  <div class="issue-head">
+    <div class="issue-id">I-01</div>
+    <div class="issue-body">
+      <div class="issue-title">Hierarquia visual do resultado não tem primário</div>
+      <p class="issue-desc">Download é renderizado como linha de <code>IOSList</code> idêntica a "Upload", "Histórico" e "Mais". Não há fonte grande, número de destaque, nem posição de destaque visual — o usuário precisa ler todas as linhas para encontrar o número que importa.</p>
+      <span class="ev">Evidência: <code>src/screens/ResultScreen.tsx:154–166</code> — <code>metricsItems</code> coloca DL/UL/Histórico como itens equivalentes em <code>&lt;IOSList items={metricsItems} /&gt;</code> (linha 243).</span>
+    </div>
+    <div class="issue-sev"><span class="tag red">Crítico</span></div>
+  </div>
+  <div class="issue-fix"><strong>Resolução:</strong> Substituir <code>metricsItems</code> por um bloco hero acima da lista — número grande de Download (≥ 56px Fraunces), Upload secundário ao lado, latência/jitter/loss como linha terciária. Manter <code>shortPhrase</code> (já existe em <code>resolveCopy(interpreted.copyKeys.shortPhraseKey)</code>) imediatamente abaixo do número, em fonte editorial.</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head">
+    <div class="issue-id">I-02</div>
+    <div class="issue-body">
+      <div class="issue-title">Tela de medição não mostra progresso por fase</div>
+      <p class="issue-desc">A fase atual é refletida apenas pelo label dentro do Gauge ("PING" → "DOWNLOAD" → "UPLOAD") e pela frase em <code>phraseFor()</code>. Não existe um stepper, breadcrumb ou indicador visual de "1/3 fases concluídas". O usuário não sabe quanto falta nem o que vem depois.</p>
+      <span class="ev">Evidência: <code>src/screens/RunningScreen.tsx:99–113</code> — apenas <code>&lt;Gauge ... phase={gaugePhaseLabel(phase)} /&gt;</code> e <code>&lt;p&gt;{phraseFor(phase)}&lt;/p&gt;</code>.</span>
+    </div>
+    <div class="issue-sev"><span class="tag red">Crítico</span></div>
+  </div>
+  <div class="issue-fix"><strong>Resolução:</strong> Adicionar componente <code>PhaseStepper</code> com 3 pontos (Resposta · Download · Upload), preenchidos conforme <code>phase</code>. Mostrar tempo decorrido aproximado por fase. Considerar revelação progressiva dos números no resultado conforme cada fase termina (já há <code>partial</code> em <code>SpeedTestProgress</code> em <code>types/index.ts:24</code> não usado).</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head">
+    <div class="issue-id">I-03</div>
+    <div class="issue-body">
+      <div class="issue-title">ModeSelectScreen ausente</div>
+      <p class="issue-desc">O tipo <code>SpeedTestMode = 'quick' | 'complete'</code> está definido e o motor aceita ambos, mas a StartScreen sempre dispara <code>onStart('complete')</code>. Modo Avançado/Rápido não é exposto ao usuário em nenhuma tela.</p>
+      <span class="ev">Evidência: <code>src/screens/StartScreen.tsx:97</code> — <code>onClick={() =&gt; onStart('complete')}</code>. Busca por "ModeSelect" em <code>src/</code> retornou 0 resultados.</span>
+    </div>
+    <div class="issue-sev"><span class="tag red">Crítico</span></div>
+  </div>
+  <div class="issue-fix"><strong>Resolução:</strong> Criar <code>src/screens/ModeSelectScreen.tsx</code> com cards "Rápido (~80 MB · 30s)" e "Completo (~400 MB · 60s)" — usar <code>PRESET_QUICK</code> e <code>PRESET_DEFAULT</code> de <code>speedtest.ts:31</code> como base de copy. Persistir escolha em <code>useSettings</code> (campo <code>defaultMode</code>) e oferecer pular a tela em testes seguintes.</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head">
+    <div class="issue-id">I-04</div>
+    <div class="issue-body">
+      <div class="issue-title">OfflineScreen ausente — usuário cai em StartScreen com faixa</div>
+      <p class="issue-desc">Quando <code>navigator.onLine === false</code>, a única indicação é uma faixa vermelha no topo da StartScreen e o botão Iniciar fica desabilitado. Não há tela dedicada explicando o que fazer, sem retry visível, sem ilustração ou orientação.</p>
+      <span class="ev">Evidência: <code>src/App.tsx:59,66–73</code> registra listeners online/offline e propaga <code>isOnline</code>; <code>src/screens/StartScreen.tsx:78–82</code> trata o caso só com <code>&lt;div className="lk-start__alert" role="alert"&gt;</code>. Busca por "OfflineScreen" em <code>src/</code> retornou 0 resultados.</span>
+    </div>
+    <div class="issue-sev"><span class="tag red">Crítico</span></div>
+  </div>
+  <div class="issue-fix"><strong>Resolução:</strong> Criar <code>src/screens/OfflineScreen.tsx</code> — exibir quando <code>!isOnline</code> tomar a tela inteira. Copy: "Sem conexão. Conecte-se ao Wi-Fi ou aos dados móveis para medir." + botão "Tentar novamente" que chame <code>deviceInfo.reload</code>. Adicionar caso correspondente em <code>App.tsx</code> antes do switch de <code>screen</code>.</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head">
+    <div class="issue-id">I-05</div>
+    <div class="issue-body">
+      <div class="issue-title">Jargão técnico exposto como label primário</div>
+      <p class="issue-desc">Em GamerScreen, três métricas-chave aparecem como "Ping", "Jitter" e "Loss" — termos técnicos sem tradução. DiagnosticScreen escapa "Jitter" inline na nota. Em ResultScreen o trabalho está feito (usa "Oscilação", "Perda de pacotes"), mas nas telas derivadas o vocabulário regrediu.</p>
+      <span class="ev">Evidência: <code>src/screens/GamerScreen.tsx:72–74</code> — <code>&lt;StatCard label="Ping" .../&gt;</code>, <code>label="Jitter"</code>, <code>label="Loss"</code>. <code>src/screens/DiagnosticScreen.tsx:74–77</code> — <code>`Jitter ${jitter.toFixed(1)} ms — variação...`</code>.</span>
+    </div>
+    <div class="issue-sev"><span class="tag red">Crítico</span></div>
+  </div>
+  <div class="issue-fix"><strong>Resolução:</strong> Substituir labels por "Resposta", "Oscilação", "Perda de pacotes" — termos já em uso em <code>ResultScreen.tsx:178,184</code> e no <code>copyDictionary.ts</code> (chave <code>flag.unstable</code> = "Oscilação alta"). Manter o termo técnico como subtítulo opcional em parênteses para usuários avançados ("Resposta (ping)").</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head">
+    <div class="issue-id">I-06</div>
+    <div class="issue-body">
+      <div class="issue-title">Latência exibida com decimais brutos no Diagnóstico</div>
+      <p class="issue-desc">Os notes do card "Resposta" interpolam <code>${latency}</code> diretamente, sem passar por <code>formatMs()</code>. Resultado: usuário vê <code>23.481827... ms — excelente para jogos</code>. Em outras telas a latência é arredondada para inteiro consistentemente.</p>
+      <span class="ev">Evidência: <code>src/screens/DiagnosticScreen.tsx:64–66</code> — três literais <code>`${latency} ms — ...`</code> sem formatação.</span>
+    </div>
+    <div class="issue-sev"><span class="tag orange">Alto</span></div>
+  </div>
+  <div class="issue-fix"><strong>Resolução:</strong> Trocar por <code>formatMs(latency)</code> em todas as três interpolações. Importar de <code>../utils/format</code> que já é usado em DiagnosticScreen ausente — adicionar import.</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head">
+    <div class="issue-id">I-07</div>
+    <div class="issue-body">
+      <div class="issue-title">Inconsistência de precisão do jitter entre telas</div>
+      <p class="issue-desc">ResultScreen mostra jitter via <code>formatMs()</code> que arredonda para inteiro (linha 179). HistoryScreen detalhe e DiagnosticScreen mostram <code>jitter.toFixed(1)</code> com 1 decimal. Mesmo número aparece como "12 ms" em uma tela e "12.4 ms" em outra.</p>
+      <span class="ev">Evidência: <code>ResultScreen.tsx:179</code> <code>formatMs(result.jitter)</code> · <code>HistoryScreen.tsx:307</code> <code>{record.jitter.toFixed(1)}</code> · <code>DiagnosticScreen.tsx:74</code> <code>jitter.toFixed(1)</code>.</span>
+    </div>
+    <div class="issue-sev"><span class="tag orange">Alto</span></div>
+  </div>
+  <div class="issue-fix"><strong>Resolução:</strong> Adicionar <code>formatJitter(v)</code> em <code>utils/format.ts</code> com 1 casa decimal abaixo de 10 ms e inteiro acima — aplicar consistente nas três telas.</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head">
+    <div class="issue-id">I-08</div>
+    <div class="issue-body">
+      <div class="issue-title">Modo do teste não persiste entre sessões</div>
+      <p class="issue-desc"><code>useSettings</code> persiste unidade, escala, override de conexão, ocultar IP e perfil de jogo — mas não o modo (quick/complete). <code>testMode</code> vive em React state em <code>App.tsx:40</code> e reinicia em "complete" todo carregamento.</p>
+      <span class="ev">Evidência: <code>src/hooks/useSettings.ts:4–10</code> — interface <code>Settings</code> sem <code>defaultMode</code>. <code>src/App.tsx:40</code> — <code>useState&lt;SpeedTestMode&gt;('complete')</code>.</span>
+    </div>
+    <div class="issue-sev"><span class="tag orange">Alto</span></div>
+  </div>
+  <div class="issue-fix"><strong>Resolução:</strong> Adicionar <code>defaultMode: SpeedTestMode</code> em <code>Settings</code> e DEFAULTS. Hidratar <code>testMode</code> a partir de <code>settings.defaultMode</code> e atualizar via <code>updateSettings</code> quando o usuário escolher na ModeSelectScreen.</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head">
+    <div class="issue-id">I-09</div>
+    <div class="issue-body">
+      <div class="issue-title">A11y mínimo: muitos botões de navegação sem aria-label</div>
+      <p class="issue-desc">Apenas 6 ocorrências de <code>aria-label</code> no projeto inteiro (verificado via grep). Botões "‹ Início" / "‹ Voltar" em ResultScreen, HistoryScreen, DiagnosticScreen, GamerScreen, RecommendScreen, ComparisonScreen, BeforeAfterScreen, RoomTestScreen são todos texto puro sem rótulo acessível adicional. Toggles de tema em StartScreen (linhas 159–172) também não têm <code>aria-pressed</code>.</p>
+      <span class="ev">Evidência: grep <code>aria-label</code> em <code>src/</code> retorna 6 linhas — listadas em <code>BottomSheet.tsx:116</code>, <code>Header.tsx:17</code>, <code>HistoryScreen.tsx:238</code>, <code>ResultScreen.tsx:213</code>, <code>StartScreen.tsx:71,99</code>.</span>
+    </div>
+    <div class="issue-sev"><span class="tag orange">Alto</span></div>
+  </div>
+  <div class="issue-fix"><strong>Resolução:</strong> Auditoria de botões — todo <code>&lt;button&gt;</code> que contenha apenas ícone ou caractere chevron deve ter <code>aria-label</code>. Toggle Light/Dark precisa de <code>role="radiogroup"</code> ou <code>aria-pressed</code>. Adicionar <code>onKeyDown</code> com Escape em modais (<code>BottomSheet.tsx</code>) — verificado: 0 ocorrências de Escape em <code>src/</code>.</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head">
+    <div class="issue-id">I-10</div>
+    <div class="issue-body">
+      <div class="issue-title">Swipe lateral durante teste pode abortar sem confirmação</div>
+      <p class="issue-desc">O handler global de touch em <code>App.tsx</code> intercepta qualquer swipe horizontal &gt; 80px e chama <code>goBack()</code>. Durante <code>screen === 'running'</code> isso volta para StartScreen sem cancelar o teste explicitamente — o estado fica em backstack com fase ainda em execução até que <code>handleCancel</code> seja chamado pelo botão Cancelar.</p>
+      <span class="ev">Evidência: <code>src/App.tsx:349–365</code> — <code>onTouchEnd</code> não checa <code>screen === 'running'</code> antes de <code>goBack()</code>.</span>
+    </div>
+    <div class="issue-sev"><span class="tag orange">Alto</span></div>
+  </div>
+  <div class="issue-fix"><strong>Resolução:</strong> Em <code>onTouchEnd</code>, se <code>screen === 'running'</code>, não fazer <code>goBack()</code>; em vez disso disparar diálogo "Cancelar teste em andamento?". Alternativamente, suprimir swipe quando <code>test.phase !== 'idle' && test.phase !== 'done'</code>.</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head">
+    <div class="issue-id">I-11</div>
+    <div class="issue-body">
+      <div class="issue-title">IPv4 não é mascarado no painel de detalhes</div>
+      <p class="issue-desc"><code>truncateIp()</code> em <code>format.ts</code> só mascara IPv6 longo; IPv4 retorna sem alteração. <code>BottomSheet.tsx:133</code> exibe o IP cru sem nem chamar <code>truncateIp</code>. <code>InfoCards.tsx:94</code> chama <code>truncateIp</code>, mas para IPv4 não há efeito. <code>buildShareText</code> (ResultScreen.tsx:38–44) e <code>generateShareCard</code> (shareCard.ts) não incluem IP — bom — mas a tela ainda revela o IP completo.</p>
+      <span class="ev">Evidência: <code>src/utils/format.ts:35–42</code> — função só processa o caso <code>ip.includes(':') && ip.length &gt; 16</code>; IPv4 cai no <code>return ip</code>. <code>src/components/BottomSheet.tsx:133</code> usa <code>server?.ip ?? '—'</code> direto.</span>
+    </div>
+    <div class="issue-sev"><span class="tag orange">Alto</span></div>
+  </div>
+  <div class="issue-fix"><strong>Resolução:</strong> Estender <code>truncateIp</code> para IPv4 quando <code>settings.hideIpOnShare === true</code> ou sempre na UI: <code>200.150.x.x</code>. Padronizar uso em todos os componentes que renderizam IP. Considerar mover decisão de mascarar para <code>useSettings</code>.</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head">
+    <div class="issue-id">I-12</div>
+    <div class="issue-body">
+      <div class="issue-title">Resultado aparece de uma só vez, com timer mínimo de 10 s</div>
+      <p class="issue-desc">Após <code>test.phase === 'done'</code>, App força <code>setTimeout(proceed, remaining)</code> até completar 10 s desde o início do download (linhas 205–214). Métricas individuais não são reveladas conforme cada fase termina — Download, Upload, Latência, Jitter, Loss aparecem juntos no final. <code>SpeedTestProgress.partial</code> existe no tipo (<code>types/index.ts:24</code>) mas não é consumido pela UI.</p>
+      <span class="ev">Evidência: <code>src/App.tsx:205–214</code> · <code>src/types/index.ts:24</code> · <code>src/utils/speedtest.ts:320</code> emite <code>partial: result</code> só em <code>'done'</code>.</span>
+    </div>
+    <div class="issue-sev"><span class="tag orange">Alto</span></div>
+  </div>
+  <div class="issue-fix"><strong>Resolução:</strong> Emitir <code>partial</code> ao final de cada fase em <code>runSpeedTest</code> (após latência, após download). Em RunningScreen, mostrar números das fases já concluídas no rodapé. Manter o timer de 10 s como piso mínimo total mas começar a revelar números ao longo do caminho.</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head">
+    <div class="issue-id">I-13</div>
+    <div class="issue-body">
+      <div class="issue-title">Sem detecção/aviso de VPN, proxy ou aba em background</div>
+      <p class="issue-desc">Não há listener em <code>visibilitychange</code> (verificado via grep — 0 ocorrências em <code>src/</code>) nem detecção de VPN. Um teste rodando em aba inativa sofre throttling de timers do navegador e mede valores artificialmente baixos sem aviso ao usuário.</p>
+      <span class="ev">Evidência: grep <code>visibilitychange</code> em <code>src/</code> retornou 0 resultados. Grep <code>VPN</code> em <code>src/</code> retornou 0 resultados.</span>
+    </div>
+    <div class="issue-sev"><span class="tag yellow">Médio</span></div>
+  </div>
+  <div class="issue-fix"><strong>Resolução:</strong> Em <code>useSpeedTest</code>, adicionar listener <code>document.addEventListener('visibilitychange', ...)</code> que pausa/avisa quando <code>document.hidden</code>. Para VPN, comparar <code>server.isp</code> (Cloudflare) com geolocalização aproximada via timezone — heurística leve, exibir badge "VPN provavelmente ativa" no resultado.</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head">
+    <div class="issue-id">I-14</div>
+    <div class="issue-body">
+      <div class="issue-title">Limpar histórico usa <code>confirm()</code> nativo</div>
+      <p class="issue-desc">Confirmação destrutiva de histórico apoia-se em <code>window.confirm</code> — diálogo nativo que quebra a experiência iOS-like do PWA, não respeita o tema dark/light, sem foco gerenciado.</p>
+      <span class="ev">Evidência: <code>src/screens/HistoryScreen.tsx:51</code> — <code>if (!confirm('Apagar todo o histórico de testes?')) return;</code></span>
+    </div>
+    <div class="issue-sev"><span class="tag yellow">Médio</span></div>
+  </div>
+  <div class="issue-fix"><strong>Resolução:</strong> Substituir por <code>BottomSheet</code> (já existe em <code>src/components/BottomSheet.tsx</code>) ou modal customizado com botões "Cancelar" e "Apagar tudo".</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head">
+    <div class="issue-id">I-15</div>
+    <div class="issue-body">
+      <div class="issue-title">Estado de erro genérico — sem distinção entre causas</div>
+      <p class="issue-desc">Toda falha do speedtest cai em "Falha ao executar o teste. Tente novamente." sem distinguir timeout, perda de conexão, servidor indisponível ou abort do usuário.</p>
+      <span class="ev">Evidência: <code>src/hooks/useSpeedTest.ts:115–122</code> — único <code>catch</code> com mensagem fixa. <code>src/screens/RunningScreen.tsx:80–81</code> mostra "Não foi possível completar o teste · Verifique sua conexão e tente novamente."</span>
+    </div>
+    <div class="issue-sev"><span class="tag yellow">Médio</span></div>
+  </div>
+  <div class="issue-fix"><strong>Resolução:</strong> Distinguir <code>AbortError</code> de erros de rede de erros de servidor no <code>catch</code>. Mapear para 3 mensagens: "Conexão caiu durante o teste", "Servidor de teste indisponível agora", "Algo deu errado — tente novamente". Em offline durante o teste, retornar diretamente para tela offline.</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head">
+    <div class="issue-id">I-16</div>
+    <div class="issue-body">
+      <div class="issue-title">Botão de voltar do ResultScreen vai para Histórico, não para Início</div>
+      <p class="issue-desc">O label do botão é "‹ Início" mas o handler é <code>onShowHistory</code>. Usuário toca em "Início" e cai na tela de Histórico — quebra de expectativa.</p>
+      <span class="ev">Evidência: <code>src/screens/ResultScreen.tsx:212</code> — <code>&lt;button className="lk-result__back" onClick={onShowHistory}&gt;‹ Início&lt;/button&gt;</code>.</span>
+    </div>
+    <div class="issue-sev"><span class="tag yellow">Médio</span></div>
+  </div>
+  <div class="issue-fix"><strong>Resolução:</strong> Trocar para <code>onClick={() =&gt; goTo('start')}</code> (ou prop equivalente) — alinhar comportamento com o label. Se a intenção for ir para Histórico, mudar o label.</div>
+</div>
+
+<div class="issue">
+  <div class="issue-head">
+    <div class="issue-id">I-17</div>
+    <div class="issue-body">
+      <div class="issue-title">Coexistência de dois sistemas de classificação</div>
+      <p class="issue-desc"><code>history.appendRecord</code> usa <code>classify()</code> antigo (<code>utils/classifier.ts</code>) com 5 classes fixas, enquanto ResultScreen e PDF usam <code>interpretSpeedTestResult()</code> de <code>core/interpret.ts</code> que aplica perfis (<code>fixed_broadband</code>/<code>mobile_broadband</code>). Resultado: a "qualidade" gravada no histórico pode divergir da que apareceu na tela. Risco baixo hoje porque os limites são próximos, mas é uma fonte futura de bug.</p>
+      <span class="ev">Evidência: <code>src/utils/history.ts:48</code> chama <code>classify(result)</code>; <code>src/screens/ResultScreen.tsx:108–111</code> chama <code>interpretSpeedTestResult(...)</code>. Documentação interna em <code>src/core/interpret.ts:9–12</code> reconhece a coexistência.</span>
+    </div>
+    <div class="issue-sev"><span class="tag green">Polimento</span></div>
+  </div>
+  <div class="issue-fix"><strong>Resolução:</strong> Migrar <code>appendRecord</code> para usar <code>interpretSpeedTestResult</code> + <code>connectionProfile</code> derivado. Marcar <code>classify()</code> legacy como <code>@deprecated</code> e remover quando histórico for migrado.</div>
+</div>
+
+<hr/>
+
+<p class="section-label">Análise de campos</p>
+<h2>O que está errado e o que falta</h2>
+
+<h3>Campos errados agora</h3>
+<table>
+  <thead><tr><th style="width:22%">Campo</th><th style="width:42%">Como está (com evidência)</th><th>Como deveria</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Download</td>
+      <td>Linha de IOSList equivalente a "Histórico". <code>ResultScreen.tsx:154–160</code></td>
+      <td>Hero tipográfico — número 56–72px Fraunces ou equivalente, posição de destaque no topo</td>
+    </tr>
+    <tr>
+      <td>Latência (Diagnóstico)</td>
+      <td><code>${latency}</code> bruto — exibe decimais técnicos. <code>DiagnosticScreen.tsx:64–66</code></td>
+      <td><code>formatMs(latency)</code> — inteiro consistente com restante do app</td>
+    </tr>
+    <tr>
+      <td>Ping / Jitter / Loss</td>
+      <td>Labels em inglês técnico em StatCard. <code>GamerScreen.tsx:72–74</code></td>
+      <td>Resposta · Oscilação · Perda — alinhar com vocabulário já usado em ResultScreen</td>
+    </tr>
+    <tr>
+      <td>Jitter (precisão)</td>
+      <td>Inteiro em ResultScreen, 1 decimal em History/Diagnostic. Inconsistente entre 3 telas.</td>
+      <td>Política única: 1 casa abaixo de 10 ms, inteiro acima — em <code>formatJitter()</code></td>
+    </tr>
+    <tr>
+      <td>IP público (BottomSheet)</td>
+      <td>Exibido sem máscara. <code>BottomSheet.tsx:133</code> — IPv4 não passa por <code>truncateIp</code>; mesmo passando, IPv4 não é mascarado pela função.</td>
+      <td>Mascarar IPv4 ("200.150.x.x") quando <code>hideIpOnShare</code>; aplicar consistente</td>
+    </tr>
+    <tr>
+      <td>Botão "‹ Início" do Resultado</td>
+      <td>Aciona <code>onShowHistory</code> e leva para Histórico. <code>ResultScreen.tsx:212</code></td>
+      <td>Levar para StartScreen — coerência label/ação</td>
+    </tr>
+    <tr>
+      <td>Loss (StatCard Gamer)</td>
+      <td>Valor é <code>packetLoss.toFixed(1)</code> sem o "%" no número, unit fica em <code>&lt;span&gt;</code> separado mas com tipografia menor. <code>GamerScreen.tsx:74,107</code></td>
+      <td>Render unificado: "0.5%" em mesma altura tipográfica para evitar leitura quebrada</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Campos faltando</h3>
+<table>
+  <thead><tr><th style="width:22%">Campo</th><th style="width:38%">Onde deveria estar</th><th>Por quê importa</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Stepper de fases</td>
+      <td>RunningScreen entre Gauge e frase descritiva</td>
+      <td>Comunica progresso e gerencia expectativa de tempo restante</td>
+    </tr>
+    <tr>
+      <td>Métricas progressivas</td>
+      <td>RunningScreen rodapé — DL "—" → valor após fase concluir</td>
+      <td>Resultado começa a render durante o teste; sensação de velocidade percebida</td>
+    </tr>
+    <tr>
+      <td>Modo selecionado</td>
+      <td>ModeSelectScreen + persistência em <code>useSettings.defaultMode</code></td>
+      <td>Hoje só <code>complete</code> é executável; <code>quick</code> existe no motor mas não é alcançável</td>
+    </tr>
+    <tr>
+      <td>Tempo decorrido / ETA</td>
+      <td>Topo da RunningScreen ou abaixo do Gauge</td>
+      <td>Reduz ansiedade em testes <code>complete</code> (~60s), especialmente em mobile</td>
+    </tr>
+    <tr>
+      <td>Retomada offline</td>
+      <td>OfflineScreen full-screen (não a faixa atual)</td>
+      <td>Diferenciar "sem conexão" de "servidor indisponível" muda a ação que o usuário toma</td>
+    </tr>
+    <tr>
+      <td>Aviso de aba em background</td>
+      <td>RunningScreen quando <code>document.hidden</code></td>
+      <td>Throttling de timer pode invalidar resultado sem o usuário saber</td>
+    </tr>
+    <tr>
+      <td>Comparativo com último teste</td>
+      <td>ResultScreen no hero — Δ vs <code>previous</code></td>
+      <td><code>previousRecord</code> já é passado como prop mas não é usado visualmente em ResultScreen</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr/>
+
+<p class="section-label">Plano de resolução</p>
+<h2>4 fases priorizadas</h2>
+
+<div class="phase">
+  <div class="phase-num">1</div>
+  <div class="phase-body">
+    <div class="phase-meta">~3 dias · Fundamento de hierarquia</div>
+    <h3>Hero do resultado e fases visíveis</h3>
+    <ul>
+      <li>Refatorar <code>src/screens/ResultScreen.tsx</code> separando hero (Download grande, Upload secundário, veredito editorial) das listas de métricas e ferramentas — endereça I-01.</li>
+      <li>Criar <code>src/components/PhaseStepper.tsx</code> e integrar em <code>src/screens/RunningScreen.tsx</code> — endereça I-02.</li>
+      <li>Emitir <code>partial</code> ao final de cada fase em <code>src/utils/speedtest.ts</code> (linhas 268, 310) e consumir em RunningScreen — endereça I-12.</li>
+      <li>Corrigir <code>${latency}</code> bruto em <code>src/screens/DiagnosticScreen.tsx:64–66</code> — endereça I-06.</li>
+    </ul>
+  </div>
+  <div><span class="tag red">Crítico</span></div>
+</div>
+
+<div class="phase">
+  <div class="phase-num">2</div>
+  <div class="phase-body">
+    <div class="phase-meta">~2 dias · Telas ausentes</div>
+    <h3>Modo, Offline e linguagem</h3>
+    <ul>
+      <li>Criar <code>src/screens/ModeSelectScreen.tsx</code> com cards Rápido/Completo, copy derivada de <code>PRESET_QUICK</code>/<code>PRESET_DEFAULT</code> em <code>src/utils/speedtest.ts:31</code> — endereça I-03.</li>
+      <li>Criar <code>src/screens/OfflineScreen.tsx</code> com retry; integrar em switch de <code>src/App.tsx</code> antes de <code>case 'start'</code> — endereça I-04.</li>
+      <li>Adicionar <code>defaultMode</code> em <code>src/hooks/useSettings.ts</code> e hidratar <code>testMode</code> em <code>App.tsx:40</code> — endereça I-08.</li>
+      <li>Substituir labels técnicos em <code>src/screens/GamerScreen.tsx:72–74</code> por "Resposta", "Oscilação", "Perda" — endereça I-05.</li>
+    </ul>
+  </div>
+  <div><span class="tag red">Crítico</span></div>
+</div>
+
+<div class="phase">
+  <div class="phase-num">3</div>
+  <div class="phase-body">
+    <div class="phase-meta">~2 dias · Robustez e a11y</div>
+    <h3>Acessibilidade, swipe seguro, IP, erros</h3>
+    <ul>
+      <li>Auditar todos os botões em <code>src/screens/*</code> e <code>src/components/*</code> — adicionar <code>aria-label</code> e <code>aria-pressed</code> onde faltar; gerenciar foco e Escape em <code>BottomSheet.tsx</code> — endereça I-09.</li>
+      <li>Em <code>src/App.tsx:354–365</code>, suprimir swipe quando <code>screen === 'running'</code> — endereça I-10.</li>
+      <li>Estender <code>src/utils/format.ts:35</code> <code>truncateIp</code> para IPv4 e padronizar uso em <code>BottomSheet.tsx:133</code> e <code>InfoCards.tsx:94</code> — endereça I-11.</li>
+      <li>Distinguir tipos de erro em <code>src/hooks/useSpeedTest.ts:115–122</code> e adicionar <code>visibilitychange</code> listener — endereça I-13, I-15.</li>
+      <li>Adicionar <code>formatJitter()</code> em <code>src/utils/format.ts</code> e aplicar nas 3 telas — endereça I-07.</li>
+    </ul>
+  </div>
+  <div><span class="tag orange">Alto</span></div>
+</div>
+
+<div class="phase">
+  <div class="phase-num">4</div>
+  <div class="phase-body">
+    <div class="phase-meta">~1 dia · Coerência e polimento</div>
+    <h3>Limpezas finais</h3>
+    <ul>
+      <li>Substituir <code>confirm()</code> em <code>src/screens/HistoryScreen.tsx:51</code> por modal customizado — endereça I-14.</li>
+      <li>Corrigir <code>onClick</code> do botão "‹ Início" em <code>src/screens/ResultScreen.tsx:212</code> — endereça I-16.</li>
+      <li>Migrar <code>src/utils/history.ts:48</code> para usar <code>interpretSpeedTestResult</code> e marcar <code>classify()</code> como <code>@deprecated</code> — endereça I-17.</li>
+      <li>Usar <code>previous</code> (já passado em <code>App.tsx:394</code>) na ResultScreen para mostrar Δ vs último teste.</li>
+    </ul>
+  </div>
+  <div><span class="tag yellow">Médio</span></div>
+</div>
+
+<hr/>
+
+<p class="section-label">Navegação e fluxo</p>
+<h2>Fluxo atual vs fluxo correto</h2>
+
+<h3>Fluxo atual (mapeado em src/App.tsx)</h3>
+<pre class="flow">StartScreen ─[Iniciar 'complete']──► RunningScreen
+   │                                       │
+   │                                       ├─[Cancelar]──► StartScreen (estado em backstack)
+   │                                       │
+   │                                       └─[done + 10s]─► ResultScreen
+   │                                                          │
+   │                                                          ├─► DiagnosticScreen ─► ResultScreen
+   │                                                          ├─► GamerScreen ─────► ResultScreen
+   │                                                          ├─► RecommendScreen ─► ResultScreen
+   │                                                          ├─► ComparisonScreen
+   │                                                          ├─► BeforeAfterScreen
+   │                                                          ├─► RoomTestScreen ─► RunningScreen
+   │                                                          └─[‹ Início]─► HistoryScreen  ⚠ label diz "Início"
+   │
+   ├─[ícone histórico]─► HistoryScreen
+   └─[card último resultado]─► HistoryScreen com id pré-selecionado
+
+OFFLINE: nenhuma tela dedicada — apenas faixa em StartScreen.
+MODO: sem seleção; sempre 'complete'.</pre>
+
+<h3>Fluxo correto (proposto)</h3>
+<pre class="flow">PRIMEIRO USO  ─► ModeSelectScreen ─► StartScreen
+USOS SEGUINTES ─► StartScreen (modo lembrado de useSettings.defaultMode)
+
+StartScreen ─[Iniciar]─► RunningScreen com PhaseStepper visível
+                            │
+                            ├─[swipe lateral]─► confirma "Cancelar?"
+                            ├─[Cancelar]─► StartScreen (teste abortado)
+                            └─[fases concluídas progressivamente]
+                                  └─► ResultScreen (hero com Download grande,
+                                                    veredito editorial,
+                                                    Δ vs último teste,
+                                                    métricas secundárias)
+
+OFFLINE em qualquer ponto ─► OfflineScreen full-screen
+ABA EM BACKGROUND durante teste ─► aviso visível, pausa opcional</pre>
+
+<h3>Transições problemáticas</h3>
+<table>
+  <thead><tr><th>Transição</th><th>Problema (com evidência)</th><th>Resolução</th></tr></thead>
+  <tbody>
+    <tr><td>Swipe → goBack durante running</td><td>Sai da tela sem cancelar o teste explicitamente. <code>App.tsx:354–365</code></td><td>Suprimir swipe ou pedir confirmação</td></tr>
+    <tr><td>"‹ Início" do Resultado</td><td>Vai para Histórico, não Início. <code>ResultScreen.tsx:212</code></td><td>Corrigir handler para goTo('start')</td></tr>
+    <tr><td>StartScreen → onStart('complete')</td><td>Sem escolha de modo. <code>StartScreen.tsx:97</code></td><td>Inserir ModeSelectScreen na primeira vez ou tornar modo configurável</td></tr>
+    <tr><td>Done → ResultScreen com timer mínimo 10 s</td><td>Resultado todo de uma vez. <code>App.tsx:205–214</code></td><td>Render progressivo durante o teste; manter 10 s só como piso</td></tr>
+    <tr><td>Offline → StartScreen com faixa</td><td>Faixa de alerta em vez de tela. <code>StartScreen.tsx:78–82</code></td><td>OfflineScreen dedicada</td></tr>
+    <tr><td>Erro de teste → mensagem genérica</td><td>Mesma copy para qualquer falha. <code>useSpeedTest.ts:120</code></td><td>Distinguir abort/rede/servidor</td></tr>
+  </tbody>
+</table>
+
+<hr/>
+
+<p class="section-label">Perguntas antes de implementar</p>
+<h2>Decisões pendentes</h2>
+
+<ol class="questions">
+  <li>O sistema de qualidade exibido fica em texto ("Excelente / Boa / Estável / Lenta", já implementado em <code>copyDictionary.ts:14–18</code>) ou deve migrar para grade A–F? O briefing pede confirmar — hoje é texto, sem letras. Manter texto evita redundância e está alinhado com o tom editorial; introduzir A–F adiciona linguagem de "nota escolar" que não combina com o motor atual.</li>
+  <li>ModeSelectScreen deve aparecer toda vez (escolha por teste) ou só no primeiro uso, com modo padrão lembrado? Implicações em <code>useSettings.defaultMode</code> e em quantos toques o usuário precisa para iniciar.</li>
+  <li>O "veredito editorial" do hero deve usar <code>shortPhraseKey</code> (frase mais curta) ou <code>headlineKey + diagnosisKeys[0]</code> (par título + parágrafo)? Hoje só <code>shortPhrase</code> aparece em ResultScreen.tsx:152, mas o motor produz ambos.</li>
+  <li>O timer mínimo de 10 s no resultado (<code>App.tsx:206</code>) é um requisito de produto (parecer "completo") ou pode cair quando a revelação for progressiva? Se cair, ajustar UX de transição.</li>
+  <li>Mascarar IPv4 deve ser sempre, ou só quando <code>settings.hideIpOnShare === true</code>? Há motivo de produto para o usuário ver o IP completo na UI?</li>
+  <li>Coexistência de <code>classify()</code> (legacy) e <code>interpretSpeedTestResult()</code>: a migração de <code>history.ts</code> está prevista no plano de unificação? Se sim, esta auditoria respeita o roadmap; se não, propor migração faseada.</li>
+  <li>VPN/aba background: detecção heurística vale o risco de falso positivo, ou apenas um aviso passivo via <code>visibilitychange</code> é suficiente?</li>
+</ol>
+
+</div>
+</body>
+</html>

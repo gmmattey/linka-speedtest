@@ -11,6 +11,7 @@
 | [`../CLAUDE.md`](../CLAUDE.md) | Instruções para Claude Code nesta sessão — regras, precedências, fluxo de trabalho |
 | [`ManifestoDesenvolvimentoIA.md`](ManifestoDesenvolvimentoIA.md) | Disciplina completa de desenvolvimento assistido por IA: proibições, checklist, padrões |
 | [`GuiaFluxoGit.md`](GuiaFluxoGit.md) | Protocolo de sincronização Git para todas as IAs e humanos — checklist pré-sessão, worktrees, riscos |
+| [`PoliticaBranchUnico.md`](PoliticaBranchUnico.md) | Proibição absoluta de branches paralelas — toda IA trabalha exclusivamente em `main` |
 | [`GuiaSelecaoModeloIA.md`](GuiaSelecaoModeloIA.md) | Matriz tarefa → ferramenta + modelo IA; custo/benefício |
 
 ## Documentos de projeto

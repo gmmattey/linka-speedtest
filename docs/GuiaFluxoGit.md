@@ -59,9 +59,8 @@ git diff --staged
 # 2. Commit (apenas com aprovação explícita)
 git commit -m "tipo: descrição curta em pt-BR"
 
-# 3. Push para o remoto
-git push origin main     # push direto (apenas com confirmação)
-# OU abrir PR se estiver em branch de feature/worktree
+# 3. Push para o remoto (apenas com confirmação)
+git push origin main
 ```
 
 **Antes de qualquer push:**
@@ -74,22 +73,22 @@ git push origin main     # push direto (apenas com confirmação)
 
 ## 4. Worktrees do Claude Code
 
-Claude Code cria **worktrees** isolados para cada sessão. Entenda como funciona:
+Claude Code cria **worktrees** isolados por diretório para cada sessão. O worktree é isolamento de **diretório**, não de branch — e deve sempre usar `main`:
 
 ```
 Repo principal:   D:\Projetos\Linka SpeedTest\              (branch: main)
-Worktree Claude:  D:\Projetos\Linka SpeedTest\.claude\worktrees\<nome>\  (branch: claude/<nome>)
+Worktree Claude:  D:\Projetos\Linka SpeedTest\.claude\worktrees\<nome>\  (branch: main)
 ```
 
-- A branch `claude/<nome>` rastreia `origin/main` por padrão.
-- Alterações feitas no worktree ficam isoladas até o commit + push.
+- Alterações feitas no worktree ficam isoladas no diretório até o commit + push para `main`.
 - O `git fetch origin` dentro do worktree acessa o mesmo remoto — sempre funciona.
-- Para integrar work do worktree ao `main`: commit na branch `claude/<nome>` → push → abrir PR → merge.
-- Nunca fazer merge direto sem revisão quando o worktree tiver mudanças de código (docs-only pode ser push direto com aprovação).
+- **Nunca crie uma nova branch** a partir do worktree. Ver [`PoliticaBranchUnico.md`](PoliticaBranchUnico.md).
+- Se o ambiente forçar a criação de branch nova ao montar o worktree: **pare e informe o usuário** antes de qualquer edição.
 
-**Verificação de qual worktree você está:**
+**Verificação de qual worktree e branch você está:**
 ```bash
 git worktree list
+git branch   # deve mostrar * main
 ```
 
 ---
@@ -154,7 +153,6 @@ Risco: duas IAs editando o mesmo arquivo ao mesmo tempo.
 | Histórico local | `git log --oneline -10` |
 | Todos os worktrees | `git worktree list` |
 | Push seguro (após aprovação) | `git push origin main` |
-| Push de branch de worktree | `git push origin claude/<nome>` |
 
 ---
 

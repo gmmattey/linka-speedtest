@@ -36,7 +36,8 @@ Antes de qualquer modificação, ler na ordem:
 - **Não commitar credenciais**, tokens de API, chaves Cloudflare.
 - **Não refatorar amplamente** sem plano explícito aprovado.
 - **Não pular hooks de commit** (`--no-verify`).
-- **Não fazer force push** em branches principais sem confirmação dupla.
+- **Não fazer force push** sem confirmação dupla.
+- **Não criar branch paralela** — `claude/*`, `feat/*`, `fix/*`, ou qualquer outra. Trabalhe sempre em `main`. Ver [`PoliticaBranchUnico.md`](PoliticaBranchUnico.md).
 - **Não quebrar os 24 testes existentes** sem justificativa documentada.
 
 ---
@@ -75,12 +76,28 @@ Riscos: [se houver]
 Documentos a atualizar: [lista]
 ```
 
-### 3.bis.4 — Avalie o contexto da sessão
+### 3.bis.4 — Avalie o contexto da sessão e oriente o usuário
 
-A cada novo pedido na sessão, avalie:
-- "É continuação direta do escopo anterior?" → diga "Continuo aqui."
-- "É tarefa de domínio diferente ou independente?" → sugira novo contexto.
-- "A sessão está saturada (muito contexto acumulado)?" → recomende nova sessão.
+**Ao iniciar qualquer sessão**, informe em uma mensagem:
+- Ferramenta e modelo em uso (ex.: "Estou rodando como Claude Code / Sonnet 4.6").
+- Se a tarefa pedida exige um modelo ou ferramenta diferente, diga antes de começar.
+
+**A cada novo pedido**, avalie e comunique:
+
+| Situação | O que fazer |
+|---|---|
+| Continuação direta do escopo anterior | Diga "Continuo aqui." e prossiga. |
+| Tarefa de domínio diferente ou independente | "Esta tarefa é de outro domínio — recomendo abrir nova sessão para não saturar o contexto." |
+| Sessão com muito contexto acumulado | "O contexto desta sessão está longo. Para melhor qualidade, abra nova sessão e informe o objetivo." |
+| Tarefa que pede modelo mais potente | "Esta decisão arquitetural pede Opus 4.7. Use `/model claude-opus-4-7` antes de prosseguir." |
+| Tarefa que pede outra ferramenta | "Esta tarefa é mais eficiente com [Cursor / Gemini / Copilot] porque [razão]. Quer continuar aqui mesmo assim?" |
+
+**Sinais concretos de sessão saturada:**
+- Mais de 3 tarefas distintas já concluídas na mesma sessão.
+- A IA começa a repetir contexto que já foi dado antes.
+- A tarefa nova não tem relação com o histórico da sessão.
+
+**Nunca silencie uma recomendação de handoff** por achar que o usuário não vai querer trocar de ferramenta. É obrigação da IA informar — a decisão é do usuário.
 
 ---
 
@@ -102,8 +119,21 @@ A cada novo pedido na sessão, avalie:
 
 1. Verificar que `npm run build` passa sem erros TS.
 2. Verificar que `npm test` passa (todos os testes).
-3. Atualizar `DocumentacaoFuncionalSistema.md` ou `DocumentacaoTecnicaSistema.md` conforme o domínio.
-4. Se criou ou removeu arquivo, atualizar `GuiaOrganizacaoPastas.md`.
+3. Identificar quais documentos foram impactados pela mudança e atualizá-los **antes** de declarar a tarefa concluída.
+
+**Tabela de decisão — o que mudei → qual doc atualizar:**
+
+| O que foi alterado | Documento a atualizar |
+|---|---|
+| Tela (screen), fluxo de navegação, estado de UI, UX | `DocumentacaoFuncionalSistema.md` |
+| Hook, util, componente, tipo TypeScript | `DocumentacaoTecnicaSistema.md` |
+| Arquivo criado ou removido | `GuiaOrganizacaoPastas.md` |
+| Regra Git, branch, worktree, fluxo de commit | `GuiaFluxoGit.md` |
+| Ferramenta IA, modelo, critério de seleção | `GuiaSelecaoModeloIA.md` |
+| Nova pasta ou reorganização de estrutura | `GuiaOrganizacaoPastas.md` |
+| Regra de processo ou disciplina de IA | `ManifestoDesenvolvimentoIA.md` e/ou `CLAUDE.md` |
+
+> Se a mudança tocar dois domínios (ex.: novo hook que muda o fluxo de uma tela), atualize **os dois** documentos correspondentes.
 
 ---
 
@@ -214,7 +244,7 @@ Antes de declarar uma tarefa concluída, confirmar:
 - [ ] Testes passam: `npm test`
 - [ ] Nenhum `any` introduzido sem justificativa
 - [ ] Nenhum valor hardcoded de cor/espaçamento
-- [ ] Documentação atualizada (Funcional e/ou Técnico)
+- [ ] Documentação atualizada: listar explicitamente quais docs foram tocados (use a tabela de decisão da seção 4.3)
 - [ ] `GuiaOrganizacaoPastas.md` atualizado se arquivos criados/removidos
 - [ ] Branding: "linka" minúsculo, sem box-shadow, ícones SVG
 - [ ] Copy em pt-BR
