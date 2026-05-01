@@ -24,10 +24,9 @@ interface Props {
   onRetry: () => void;
   onShowHistory: () => void;
   onDiagnostic?: () => void;
-  onGamer?: () => void;
   onRecommend?: () => void;
+  onExplore?: () => void;
   onStartRoomTest?: () => void;
-  onShowDNSBenchmark?: () => void;
   unit?: 'mbps' | 'gbps';
   hideIpOnShare?: boolean;
   gamingProfile?: GamingProfile;
@@ -156,8 +155,7 @@ export function ResultScreen({
   theme, onToggleTheme,
   result, server,
   onRetry, onShowHistory,
-  onDiagnostic, onGamer, onRecommend,
-  onShowDNSBenchmark,
+  onDiagnostic, onRecommend, onExplore,
   unit = 'mbps',
   connectionType, contractedDown = null, contractedUp = null, onUpdateContracted,
 }: Props) {
@@ -406,42 +404,34 @@ export function ResultScreen({
           </div>
         )}
 
-        {/* Ferramentas */}
+        {/* Explorar */}
         <div className="lk-result__tools">
           <p className="lk-result__tools-label">Explorar</p>
           <IOSList
             items={[
-              ...(onDiagnostic ? [{
-                icon: <Icon name="shield" size={14} color="#fff" />,
-                iconBg: 'var(--accent)',
-                title: 'Diagnóstico',
-                subtitle: 'Análise detalhada por métrica',
-                showChevron: true,
-                onClick: onDiagnostic,
-              }] : []),
-              ...(onGamer ? [{
-                icon: <Icon name="game" size={14} color="#fff" />,
-                iconBg: 'var(--accent)',
-                title: 'Modo Gamer',
-                subtitle: 'Avaliação por jogo e categoria',
-                showChevron: true,
-                onClick: onGamer,
-              }] : []),
               ...(onRecommend ? [{
                 icon: <Icon name="bulb" size={14} color="#fff" />,
                 iconBg: 'var(--accent)',
-                title: 'Recomendações',
+                title: 'Ver recomendações',
                 subtitle: 'Como melhorar sua internet',
                 showChevron: true,
                 onClick: onRecommend,
               }] : []),
-              ...(onShowDNSBenchmark ? [{
-                icon: <Icon name="bolt" size={14} color="#fff" />,
+              ...(onDiagnostic ? [{
+                icon: <Icon name="shield" size={14} color="#fff" />,
                 iconBg: 'var(--accent)',
-                title: 'Verificar DNS',
-                subtitle: 'Testar os servidores DNS disponíveis',
+                title: 'Mais detalhes',
+                subtitle: 'Análise de cada métrica',
                 showChevron: true,
-                onClick: onShowDNSBenchmark,
+                onClick: onDiagnostic,
+              }] : []),
+              ...(onExplore ? [{
+                icon: <Icon name="bolt" size={14} color="#fff" />,
+                iconBg: 'var(--surface-3)',
+                title: 'Explorar ferramentas',
+                subtitle: 'Modo Gamer, DNS e testes avançados',
+                showChevron: true,
+                onClick: onExplore,
               }] : []),
             ]}
           />

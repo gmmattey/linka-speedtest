@@ -9,20 +9,24 @@
 ```
 App (estado global)
 ├── StartScreen         ← tela inicial (padrão)
+│   └── ExploreScreen   ← hub de ferramentas avançadas
 ├── RunningScreen       ← durante o teste (todos os modos)
-├── ResultScreen        ← resultado do teste
-│   ├── DiagnosticScreen    ← diagnóstico de 6 áreas (acesso via ResultScreen)
-│   ├── GamerScreen         ← avaliação gamer: ping/jitter/loss + rows por jogo
-│   ├── RecommendScreen     ← 4 ações para melhorar o Wi-Fi
-│   ├── DNSBenchmarkScreen  ← verificação on-demand de DNS (feature Explorar)
-│   │   └── DNSGuideScreen  ← guia de configuração de DNS no dispositivo
-├── HistoryScreen       ← histórico de testes
-├── ComparisonScreen    ← comparativo perto vs longe do roteador
-├── BeforeAfterScreen   ← comparação antes/depois de uma ação
-└── RoomTestScreen      ← seleção de cômodo para Teste por local
+├── ResultScreen        ← resultado focado (entender + agir)
+│   ├── DiagnosticScreen    ← diagnóstico de 6 áreas (ação rápida via "Mais detalhes")
+│   ├── RecommendScreen     ← recomendações (ação rápida via "Ver recomendações")
+│   └── ExploreScreen       ← hub de ferramentas avançadas (via "Explorar ferramentas")
+│       ├── DiagnosticScreen
+│       ├── RecommendScreen
+│       ├── GamerScreen         ← avaliação gamer: ping/jitter/loss + rows por jogo
+│       ├── ComparisonScreen    ← comparativo perto vs longe do roteador
+│       ├── BeforeAfterScreen   ← comparação antes/depois de uma ação
+│       ├── RoomTestScreen      ← seleção de cômodo para Teste por local
+│       └── DNSBenchmarkScreen  ← verificação de servidores DNS
+│           └── DNSGuideScreen  ← guia de configuração de DNS no dispositivo
+├── HistoryScreen       ← histórico de testes (acessível de Start e Result)
 ```
 
-O roteamento é feito por `switch/case` em `App.tsx` via `useState<Screen>`. Não há react-router. Cada tela é um componente que ocupa 100% do viewport.
+O roteamento é feito por `switch/case` em `App.tsx` via `useState<Screen>`. Não há react-router. Cada tela é um componente que ocupa 100% do viewport. A navegação de volta respeita a origem via `returnToRef`.
 
 ### Fluxo principal
 
@@ -30,30 +34,26 @@ O roteamento é feito por `switch/case` em `App.tsx` via `useState<Screen>`. Nã
 StartScreen → [Teste rápido / completo] → RunningScreen → [Conclusão] → ResultScreen
    ↑                                        [Cancelar] ↓                ↓ [Testar novamente]
    │                                       StartScreen                  │
-   ├─[Ver histórico]──────────────────────────────────────► HistoryScreen
+   ├─[Ver histórico]──────────────────────────────────────► HistoryScreen → [Voltar] → StartScreen
    └─[Link último teste]─────────────────────────────────► HistoryScreen (detalhe pré-aberto)
+   └─[Explorar ferramentas]──────────────────────────────► ExploreScreen → [Voltar] → StartScreen
 
-StartScreen → [Comparar locais] → ComparisonScreen (passo 1/2)
-   ComparisonScreen → [Testar perto] → RunningScreen → ComparisonScreen (passo 2/2)
-   ComparisonScreen → [Testar longe] → RunningScreen → ComparisonScreen (resultado)
+ResultScreen → [Ver recomendações] → RecommendScreen     → [‹ Voltar] → ResultScreen
+ResultScreen → [Mais detalhes]     → DiagnosticScreen    → [‹ Voltar] → ResultScreen
+ResultScreen → [Explorar ferramentas] → ExploreScreen    → [‹ Voltar] → ResultScreen
+ResultScreen → [Histórico]         → HistoryScreen       → [Voltar]   → ResultScreen
 
-StartScreen → [Antes e Depois] → BeforeAfterScreen (passo 1 — Antes)
-   BeforeAfterScreen → [Iniciar teste (antes)] → RunningScreen → BeforeAfterScreen (passo 2 — Depois)
-   BeforeAfterScreen → [Iniciar teste (depois)] → RunningScreen → BeforeAfterScreen (resultado)
+ExploreScreen → [Diagnóstico completo] → DiagnosticScreen → [‹ Voltar] → ExploreScreen
+ExploreScreen → [Recomendações]        → RecommendScreen  → [‹ Voltar] → ExploreScreen
+ExploreScreen → [Modo Gamer]           → GamerScreen      → [‹ Voltar] → ExploreScreen
+ExploreScreen → [Prova Real]           → RunningScreen (3×) → ResultScreen
+ExploreScreen → [Comparar locais]      → ComparisonScreen → [Voltar]   → ExploreScreen
+ExploreScreen → [Antes e Depois]       → BeforeAfterScreen → [Voltar]  → ExploreScreen
+ExploreScreen → [Teste por local]      → RoomTestScreen   → [Voltar]   → ExploreScreen
+ExploreScreen → [Verificar DNS]        → DNSBenchmarkScreen → [‹ Voltar] → ExploreScreen
+                                         → [Como trocar o DNS] → DNSGuideScreen
 
-StartScreen → [Prova Real (3×)] → RunningScreen (Teste 1 de 3)
-   → [automático] → RunningScreen (Teste 2 de 3)
-   → [automático] → RunningScreen (Teste 3 de 3) → ResultScreen (média dos 3)
-
-StartScreen → [Teste por local] → RoomTestScreen → [seleciona cômodo]
-   → RunningScreen → ResultScreen (com locationTag)
-
-ResultScreen → [Diagnóstico]   → DiagnosticScreen    → [‹ Início] → ResultScreen
-ResultScreen → [Modo Gamer]   → GamerScreen         → [‹ Início] → ResultScreen
-                                                      → [Refazer teste] → RunningScreen
-ResultScreen → [Recomendações] → RecommendScreen     → [‹ Início] → ResultScreen
-ResultScreen → [Verificar DNS] → DNSBenchmarkScreen  → [‹ Voltar] → ResultScreen
-                                                      → [Como trocar o DNS] → DNSGuideScreen
+ResultScreen → [Comparar locais / Antes e Depois / Prova Real]: acesso via ExploreScreen
 ```
 
 ### Navegação por gestos

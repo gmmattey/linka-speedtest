@@ -215,6 +215,28 @@
   font-size: 13px;
 }
 
+/* ── Explorar ferramentas ─────────────────────────── */
+
+.lk-start__explore {
+  margin-bottom: 8px;
+}
+
+.lk-start__explore-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  justify-content: flex-start;
+  font-size: 13px;
+  color: var(--text-2);
+  padding: 8px 2px;
+}
+
+.lk-start__explore-btn span {
+  flex: 1;
+  text-align: left;
+}
+
 /* ── iOS-list de contexto ────────────────────────── */
 
 .lk-start__list {

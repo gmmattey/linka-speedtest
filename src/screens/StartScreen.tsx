@@ -21,6 +21,7 @@ interface Props {
   lastRecord: TestRecord | null;
   onShowLastResult: () => void;
   onShowHistory: () => void;
+  onExplore?: () => void;
 }
 
 export function StartScreen({
@@ -38,6 +39,7 @@ export function StartScreen({
   lastRecord,
   onShowLastResult,
   onShowHistory,
+  onExplore,
 }: Props) {
   const [selectedMode, setSelectedMode] = useState<'fast' | 'complete'>(settings.defaultMode ?? 'complete');
 
@@ -154,6 +156,17 @@ export function StartScreen({
               {' '}
               <span style={{ color: 'var(--text-2)' }}>{unitLabel}</span>
             </span>
+          </button>
+        </div>
+      )}
+
+      {/* Acesso discreto a Explorar */}
+      {onExplore && (
+        <div className="lk-start__explore">
+          <button className="lk-start__explore-btn btn-text" onClick={onExplore}>
+            <Icon name="bolt" size={14} color="var(--accent)" />
+            <span>Explorar ferramentas</span>
+            <Icon name="chevron" size={12} color="var(--text-3)" />
           </button>
         </div>
       )}

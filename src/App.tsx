@@ -11,6 +11,7 @@ import { GamerScreen } from './screens/GamerScreen';
 import { RecommendScreen } from './screens/RecommendScreen';
 import { DNSGuideScreen } from './screens/DNSGuideScreen';
 import { DNSBenchmarkScreen } from './screens/DNSBenchmarkScreen';
+import { ExploreScreen } from './screens/ExploreScreen';
 import { useDeviceInfo } from './hooks/useDeviceInfo';
 import { useSpeedTest } from './hooks/useSpeedTest';
 import { useSettings } from './hooks/useSettings';
@@ -19,7 +20,7 @@ import { averageSpeedResults } from './utils/provaReal';
 import { classify } from './utils/classifier';
 import type { SpeedTestResult, TestRecord } from './types';
 
-type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter' | 'roomtest' | 'diagnostic' | 'gamer' | 'recommend' | 'dnsguide' | 'dnsbenchmark';
+type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter' | 'roomtest' | 'diagnostic' | 'gamer' | 'recommend' | 'dnsguide' | 'dnsbenchmark' | 'explore';
 
 const THEME_KEY = 'linka.speedtest.theme';
 const SWIPE_THRESHOLD_PX = 80;
@@ -68,6 +69,8 @@ export default function App() {
   const runStartTimeRef = useRef<number>(0);
   const backStackRef = useRef<Screen[]>([]);
   const forwardStackRef = useRef<Screen[]>([]);
+  const returnToRef = useRef<Screen>('result');
+  const screenRef = useRef<Screen>('start');
 
   const [dnsGuideServerId, setDnsGuideServerId] = useState<string>('cloudflare');
 
@@ -223,6 +226,8 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [test.phase, test.result, deviceInfo.device, deviceInfo.server, goTo, provaRealSession]);
 
+  screenRef.current = screen;
+
   const effectiveConnection = settings.connectionOverride !== 'auto'
     ? settings.connectionOverride
     : deviceInfo.device?.connectionType;
@@ -276,6 +281,7 @@ export default function App() {
   }, [test, effectiveConnection, goTo]);
 
   const handleOpenRoomTest = useCallback(() => {
+    returnToRef.current = screenRef.current;
     goTo('roomtest');
   }, [goTo]);
 
@@ -288,6 +294,7 @@ export default function App() {
   }, [test, effectiveConnection, goTo]);
 
   const handleStartComparison = useCallback(() => {
+    returnToRef.current = screenRef.current;
     setComparisonStep('near');
     setComparisonNear(null);
     setComparisonFar(null);
@@ -315,6 +322,7 @@ export default function App() {
   }, []);
 
   const handleStartBeforeAfter = useCallback(() => {
+    returnToRef.current = screenRef.current;
     setBaStep('before'); setBaBefore(null); setBaAfter(null);
     goTo('beforeafter');
   }, [goTo]);
@@ -334,12 +342,14 @@ export default function App() {
   }, []);
 
   const handleShowHistory = useCallback(() => {
+    returnToRef.current = screenRef.current;
     setHistoryInitialId(undefined);
     goTo('history');
   }, [goTo]);
 
   const handleShowLastResult = useCallback(() => {
     if (!lastRecord) return;
+    returnToRef.current = screenRef.current;
     setHistoryInitialId(lastRecord.id);
     goTo('history');
   }, [lastRecord, goTo]);
@@ -352,6 +362,8 @@ export default function App() {
     setDnsGuideServerId(serverId);
     goTo('dnsguide');
   }, [goTo]);
+
+  const handleExplore = useCallback(() => goTo('explore'), [goTo]);
 
   // ── Swipe lateral (back/forward) ─────────────────────────
   const swipeStartRef = useRef<{ x: number; y: number; valid: boolean } | null>(null);
@@ -423,10 +435,9 @@ export default function App() {
             contractedUp={settings.contractedUp}
             onUpdateContracted={(down, up) => updateSettings({ contractedDown: down, contractedUp: up })}
             onDiagnostic={handleDiagnostic}
-            onGamer={handleGamer}
             onRecommend={handleRecommend}
             onStartRoomTest={handleOpenRoomTest}
-            onShowDNSBenchmark={handleShowDNSBenchmark}
+            onExplore={handleExplore}
           />
         ) : null;
       }
@@ -434,13 +445,13 @@ export default function App() {
         return (
           <DNSGuideScreen
             serverId={dnsGuideServerId}
-            onBack={() => goTo('result')}
+            onBack={goBack}
           />
         );
       case 'dnsbenchmark':
         return (
           <DNSBenchmarkScreen
-            onBack={() => goTo('result')}
+            onBack={goBack}
             onShowDNSGuide={handleShowDNSGuide}
           />
         );
@@ -450,7 +461,7 @@ export default function App() {
           <DiagnosticScreen
             result={resultForDiag}
             connectionType={deviceInfo.device?.connectionType ?? null}
-            onBack={() => goTo('result')}
+            onBack={goBack}
             onRecommend={handleRecommend}
           />
         ) : null;
@@ -460,7 +471,7 @@ export default function App() {
         return resultForGamer ? (
           <GamerScreen
             result={resultForGamer}
-            onBack={() => goTo('result')}
+            onBack={goBack}
             onRetest={handleRetry}
           />
         ) : null;
@@ -473,7 +484,7 @@ export default function App() {
             result={resultForRec}
             quality={classification?.primary ?? ''}
             tags={classification ? [...classification.tags] : []}
-            onBack={() => goTo('result')}
+            onBack={goBack}
           />
         );
       }
@@ -487,7 +498,7 @@ export default function App() {
             farResult={comparisonFar}
             onStartNear={handleComparisonStartNear}
             onStartFar={handleComparisonStartFar}
-            onBack={() => goTo('result')}
+            onBack={() => goTo(returnToRef.current)}
             onRetryNear={handleComparisonRetryNear}
             unit={settings.unit}
           />
@@ -498,7 +509,7 @@ export default function App() {
             theme={theme} onToggleTheme={onToggleTheme}
             step={baStep} beforeResult={baBefore} afterResult={baAfter}
             onStartBefore={handleBAStartBefore} onStartAfter={handleBAStartAfter}
-            onBack={() => goTo('result')} onRetry={handleBARetry}
+            onBack={() => goTo(returnToRef.current)} onRetry={handleBARetry}
             unit={settings.unit}
           />
         );
@@ -508,9 +519,32 @@ export default function App() {
             theme={theme}
             onToggleTheme={onToggleTheme}
             onStart={handleRoomStart}
-            onBack={() => goTo('result')}
+            onBack={() => goTo(returnToRef.current)}
           />
         );
+      case 'explore': {
+        const hasResult = !!(provaRealOverride ?? test.result ?? lastRecord);
+        return (
+          <ExploreScreen
+            theme={theme}
+            onToggleTheme={onToggleTheme}
+            contractedDown={settings.contractedDown}
+            contractedUp={settings.contractedUp}
+            onUpdateContracted={(down, up) => updateSettings({ contractedDown: down, contractedUp: up })}
+            hasResult={hasResult}
+            onBack={goBack}
+            onDiagnostic={hasResult ? handleDiagnostic : undefined}
+            onRecommend={hasResult ? handleRecommend : undefined}
+            onGamer={hasResult ? handleGamer : undefined}
+            onStartProvaReal={handleStartProvaReal}
+            onStartRoomTest={handleOpenRoomTest}
+            onStartComparison={handleStartComparison}
+            onStartBeforeAfter={handleStartBeforeAfter}
+            onShowDNSBenchmark={handleShowDNSBenchmark}
+            onShowDNSGuide={() => handleShowDNSGuide('cloudflare')}
+          />
+        );
+      }
       case 'history':
         return (
           <HistoryScreen
@@ -518,7 +552,7 @@ export default function App() {
             onToggleTheme={onToggleTheme}
             unit={settings.unit}
             initialSelectedId={historyInitialId}
-            onBack={() => goTo(lastRecord ? 'result' : 'start')}
+            onBack={() => goTo(returnToRef.current)}
           />
         );
       case 'start':
@@ -539,6 +573,7 @@ export default function App() {
             lastRecord={lastRecord}
             onShowLastResult={handleShowLastResult}
             onShowHistory={handleShowHistory}
+            onExplore={handleExplore}
           />
         );
     }
@@ -551,7 +586,7 @@ export default function App() {
     handleComparisonStartNear, handleComparisonStartFar, handleComparisonRetryNear,
     handleStartBeforeAfter, handleBAStartBefore, handleBAStartAfter, handleBARetry,
     handleStartProvaReal, handleOpenRoomTest, handleRoomStart,
-    handleDiagnostic, handleGamer, handleRecommend, handleShowDNSBenchmark, handleShowDNSGuide,
+    handleDiagnostic, handleGamer, handleRecommend, handleShowDNSBenchmark, handleShowDNSGuide, handleExplore,
     dnsGuideServerId,
     settings, updateSettings, testMode,
     comparisonStep, comparisonNear, comparisonFar,

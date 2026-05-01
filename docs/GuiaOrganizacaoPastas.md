@@ -66,7 +66,8 @@ Linka SpeedTest/
 │   │   ├── GamerScreen.tsx / .css       ← Avaliação de jogos: ping/jitter/loss + rows por game
 │   │   ├── RecommendScreen.tsx / .css   ← 4 ações para melhorar o Wi-Fi
 │   │   ├── DNSGuideScreen.tsx / .css    ← Guia de configuração de DNS no dispositivo
-│   │   └── DNSBenchmarkScreen.tsx / .css ← Verificação on-demand de servidores DNS (feature Explorar)
+│   │   ├── DNSBenchmarkScreen.tsx / .css ← Verificação on-demand de servidores DNS (feature Explorar)
+│   │   └── ExploreScreen.tsx / .css     ← Hub de ferramentas avançadas (acessado via Result e Start)
 │   │
 │   ├── utils/                    ← Funções puras / lógica de domínio (sem React) — específicas do PWA
 │   │   ├── classifier.ts         ← Classificação de qualidade + diagnóstico (legado, em coexistência com src/core)
