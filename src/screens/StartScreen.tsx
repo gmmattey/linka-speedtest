@@ -126,7 +126,7 @@ export function StartScreen({
         <div className="lk-start__info">
           {selectedMode === 'normal' ? (
             <>
-              <div>Download, upload e latência</div>
+              <div>Download, upload e ping</div>
               <div>
                 Consumo estimado{' '}
                 <span style={{ color: 'var(--text)', fontWeight: 500 }}>

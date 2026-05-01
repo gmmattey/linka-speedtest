@@ -53,7 +53,7 @@ function gaugePhaseLabel(phase: TestPhase): string {
   switch (phase) {
     case 'download': return 'DOWNLOAD';
     case 'upload':   return 'UPLOAD';
-    case 'latency':  return 'LATÊNCIA';
+    case 'latency':  return 'PING';
     case 'done':     return 'CONCLUÍDO';
     default:         return 'AGUARDANDO';
   }
