@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { classify, RULE_SET_VERSION } from '../utils/classifier';
+import { gradeFrom } from '../utils/bufferbloat';
 import type { SpeedTestResult } from '../types';
 
 function r(overrides: Partial<SpeedTestResult> = {}): SpeedTestResult {
@@ -78,5 +79,20 @@ describe('classify — tags', () => {
   it('veryUnstable when jitter > 80ms', () => {
     expect(classify(r({ jitter: 81 })).tags.has('veryUnstable')).toBe(true);
   });
+});
+
+describe('gradeFrom — bufferbloat thresholds', () => {
+  it('delta=0 → A', () => expect(gradeFrom(0)).toBe('A'));
+  it('delta=29 → A', () => expect(gradeFrom(29)).toBe('A'));
+  it('delta=30 → B', () => expect(gradeFrom(30)).toBe('B'));
+  it('delta=59 → B', () => expect(gradeFrom(59)).toBe('B'));
+  it('delta=60 → C', () => expect(gradeFrom(60)).toBe('C'));
+  it('delta=100 → C', () => expect(gradeFrom(100)).toBe('C'));
+  it('delta=199 → C', () => expect(gradeFrom(199)).toBe('C'));
+  it('delta=200 → D', () => expect(gradeFrom(200)).toBe('D'));
+  it('delta=250 → D', () => expect(gradeFrom(250)).toBe('D'));
+  it('delta=399 → D', () => expect(gradeFrom(399)).toBe('D'));
+  it('delta=400 → F', () => expect(gradeFrom(400)).toBe('F'));
+  it('delta=450 → F', () => expect(gradeFrom(450)).toBe('F'));
 });
 

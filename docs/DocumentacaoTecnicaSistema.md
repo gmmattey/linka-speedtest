@@ -161,6 +161,7 @@ Modos `'normal'` e `'advanced'` usam `PRESET_DEFAULT`/`PRESET_MOBILE` (mesmo pre
 - Buffer pré-gerado com `crypto.getRandomValues` (chunks de 65536 bytes)
 - Warmup + `ulRounds` rounds; P90 = `ul`
 - Advanced: `ulP25`, `ulP75`
+- **Progresso instantâneo:** a API Fetch não expõe bytes enviados progressivamente. O `setInterval` de cada round emite `instantMbps: null` (sem valor) — o gauge decai numericamente até o round concluir e retornar a velocidade real. Estimativa via `totalBytes / elapsed * 0.5` foi removida por ser empiricamente imprecisa.
 
 **Fase `load` (somente `mode === 'advanced'`):**
 - Chama `runBufferbloatTest(idleLatency, signal, onProgress)` — veja §3.x
@@ -185,11 +186,11 @@ Função: `runBufferbloatTest(idleLatency, signal, onProgress): Promise<Bufferbl
 
 | Grade | deltaMs |
 |---|---|
-| A | ≤ 5 ms |
-| B | 5–30 ms |
-| C | 30–60 ms |
-| D | 60–200 ms |
-| F | > 200 ms |
+| A | < 30 ms |
+| B | 30–60 ms |
+| C | 60–200 ms |
+| D | 200–400 ms |
+| F | ≥ 400 ms |
 
 **`BufferbloatResult`:** `{ latencyLoaded, jitterLoaded, grade, deltaMs }`
 
@@ -395,7 +396,7 @@ interface DnsServerResult { id, name, ip, p50, p95, samples, grade: 'A'|'B'|'C'|
 interface DnsBenchmarkResult { servers, winner, testedAt }
 ```
 
-**Grades:** A (≤15 ms), B (≤30 ms), C (≤60 ms), D (>60 ms)
+**Grades:** A (≤15 ms), B (≤30 ms), C (≤50 ms), D (>50 ms)
 
 **Vencedor:** servidor com menor p50 entre os que têm `samples > 0`. Resultado salvo em `localStorage` na chave `linka.dns.result.v1`.
 

@@ -14,11 +14,11 @@ export interface BufferbloatProgress {
   instantLatency: number | null;
 }
 
-function gradeFrom(deltaMs: number): BufferbloatGrade {
-  if (deltaMs <= 5)   return 'A';
-  if (deltaMs <= 30)  return 'B';
-  if (deltaMs <= 60)  return 'C';
-  if (deltaMs <= 200) return 'D';
+export function gradeFrom(deltaMs: number): BufferbloatGrade {
+  if (deltaMs < 30)  return 'A';
+  if (deltaMs < 60)  return 'B';
+  if (deltaMs < 200) return 'C';
+  if (deltaMs < 400) return 'D';
   return 'F';
 }
 

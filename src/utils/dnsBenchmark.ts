@@ -51,7 +51,7 @@ function percentile(values: number[], p: number): number {
 function gradeFor(p50: number): DnsGrade {
   if (p50 <= 15)  return 'A';
   if (p50 <= 30)  return 'B';
-  if (p50 <= 60)  return 'C';
+  if (p50 <= 50)  return 'C';
   return 'D';
 }
 

@@ -197,7 +197,7 @@ async function downloadRound(
 async function uploadRound(
   buf: Uint8Array,
   signal: AbortSignal,
-  onInstant: (mbps: number) => void,
+  onInstant: (mbps: number | null) => void,
   timeoutMs: number,
 ): Promise<number> {
   const server = getDefaultServer();
@@ -209,13 +209,11 @@ async function uploadRound(
   const t0 = performance.now();
   try {
     const blob = new Blob([buf as unknown as BlobPart]);
+    // Fetch não expõe progresso de upload — omitimos estimativa falsa.
+    // O valor real é retornado ao final do round via (buf.length * 8) / seconds.
     const tickId = setInterval(() => {
-      const elapsed = (performance.now() - t0) / 1000;
-      if (elapsed > 0.05) {
-        const instant = (buf.length * 8) / elapsed / 1_000_000 * 0.5;
-        onInstant(instant);
-      }
-    }, 200);
+      onInstant(null);
+    }, 500);
     try {
       await fetch(server.uploadUrl(), {
         method: 'POST',
@@ -270,11 +268,14 @@ export async function runSpeedTest(
   for (let r = 0; r < preset.dlRounds; r++) {
     if (signal.aborted) throw new DOMException('aborted', 'AbortError');
     const roundStart = 0.1 + (r / preset.dlRounds) * 0.9;
+    const roundStartTime = performance.now();
     const mbps = await downloadRound(
       preset.dlRound,
       signal,
       (instant) => {
-        const local = Math.min(0.99, roundStart + 0.9 * (1 / preset.dlRounds) * 0.5);
+        const elapsed = performance.now() - roundStartTime;
+        const roundFraction = Math.min(1, elapsed / preset.dlTimeoutMs);
+        const local = Math.min(0.99, roundStart + (0.9 / preset.dlRounds) * roundFraction);
         onProgress({
           phase: 'download',
           instantMbps: instant,
