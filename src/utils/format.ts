@@ -41,8 +41,8 @@ export function truncateIp(ip: string): string {
   return ip;
 }
 
-export function deviceLabel(d: 'mobile' | 'tablet' | 'desktop', c: 'wifi' | 'mobile' | 'cable'): string {
+export function deviceLabel(d: 'mobile' | 'tablet' | 'desktop', c: 'wifi' | 'mobile' | 'cable' | 'unknown'): string {
   const dLabel = d === 'mobile' ? 'Celular' : d === 'tablet' ? 'Tablet' : 'PC';
-  const cLabel = c === 'wifi' ? 'Wi-Fi' : c === 'mobile' ? 'Celular' : 'Cabo';
+  const cLabel = c === 'wifi' ? 'Wi-Fi' : c === 'mobile' ? 'Celular' : c === 'cable' ? 'Cabo' : '—';
   return `${dLabel} · ${cLabel}`;
 }
