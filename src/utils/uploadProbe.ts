@@ -13,7 +13,7 @@ export const UPLOAD_CONFIG_FAST: UploadProbeConfig = {
   durationMs:     7_000,
   initialStreams:     2,
   maxStreams:         3,
-  sizeIndex:          1, // 1 MB
+  sizeIndex:          2, // 5 MB
   warmupMs:       1_000,
 };
 
@@ -21,7 +21,7 @@ export const UPLOAD_CONFIG_COMPLETE: UploadProbeConfig = {
   durationMs:    18_000,
   initialStreams:     2,
   maxStreams:         6,
-  sizeIndex:          2, // 5 MB
+  sizeIndex:          3, // 10 MB — mesma ordem do speed.cloudflare.com
   warmupMs:       2_000,
 };
 
@@ -122,32 +122,27 @@ export async function runUploadProbe(
 
     if (avgPrev > 0 && (avgRecent - avgPrev) / avgPrev >= 0.10) {
       const toAdd = Math.min(2, maxStreams - streamCount);
-      for (let i = 0; i < toAdd; i++) openStream(bufferSize);
+      for (let i = 0; i < toAdd; i++) openStream();
     }
   };
 
-  async function openStream(size: number): Promise<void> {
+  async function openStream(): Promise<void> {
     if (innerCtrl.signal.aborted) return;
     streamCount++;
     let fallbackTried = false;
-    let currentSize = size;
     let currentBuffer = buffer;
 
     while (!innerCtrl.signal.aborted) {
       try {
-        let lastLoaded = 0;
-        await cfUploadChunk(currentBuffer, innerCtrl.signal, (loaded) => {
-          const delta = loaded - lastLoaded;
-          if (delta > 0) tickBytes += delta;
-          lastLoaded = loaded;
-        });
+        const sent = await cfUploadChunk(currentBuffer, innerCtrl.signal);
+        tickBytes += sent;
         checkAndScale();
-      } catch (err) {
+      } catch {
         if (innerCtrl.signal.aborted) break;
         if (!fallbackTried && sizeIndex > 0) {
           fallbackTried = true;
-          currentSize = UL_SIZES[Math.max(0, sizeIndex - 1)];
-          currentBuffer = buffer.subarray(0, currentSize);
+          const fallbackSize = UL_SIZES[Math.max(0, sizeIndex - 1)];
+          currentBuffer = buffer.subarray(0, fallbackSize);
         } else {
           break;
         }
@@ -158,7 +153,7 @@ export async function runUploadProbe(
 
   const streamPromises: Promise<void>[] = [];
   for (let i = 0; i < initialStreams; i++) {
-    streamPromises.push(openStream(bufferSize));
+    streamPromises.push(openStream());
   }
 
   await Promise.allSettled(streamPromises);

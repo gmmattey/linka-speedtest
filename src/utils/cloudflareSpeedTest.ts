@@ -55,36 +55,58 @@ export async function cfPing(signal: AbortSignal): Promise<number | null> {
 }
 
 /**
- * Faz upload de `buffer` via fetch com ReadableStream.
- * Sem Content-Type explícito → simple CORS request → sem preflight.
- * `onProgress(loaded)` é chamado a cada chunk de 64 KB enfileirado.
+ * Faz upload de `buffer` via XHR com corpo binário e resolve com os bytes
+ * efetivamente enviados.
+ *
+ * **Sem `setRequestHeader` e sem listeners em `xhr.upload`.** Registrar
+ * qualquer listener de progresso em `xhr.upload` torna o request "non-simple"
+ * e força preflight CORS (OPTIONS) — que `speed.cloudflare.com/__up` rejeita
+ * com HTTP 400. Por isso a granularidade fina de progresso é trocada pela
+ * conclusão por POST: o sampler de 300 ms em `uploadProbe` contabiliza os
+ * bytes do buffer quando o request resolve.
  */
 export function cfUploadChunk(
   buffer: Uint8Array,
   signal: AbortSignal,
-  onProgress: (loaded: number) => void,
-): Promise<void> {
+): Promise<number> {
   const url = `${BASE}/__up?_cb=${cb()}`;
-  const CHUNK = 65_536;
-  let offset = 0;
 
-  const stream = new ReadableStream<Uint8Array>({
-    pull(controller) {
-      if (offset >= buffer.byteLength) {
-        controller.close();
-        return;
-      }
-      const end = Math.min(offset + CHUNK, buffer.byteLength);
-      controller.enqueue(buffer.subarray(offset, end));
-      offset = end;
-      onProgress(offset);
-    },
-  });
+  return new Promise<number>((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException('aborted', 'AbortError'));
+      return;
+    }
 
-  const init: RequestInit = { method: 'POST', body: stream, signal };
-  (init as any).duplex = 'half'; // required in Chrome for streaming request bodies
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    xhr.responseType = 'text';
 
-  return fetch(url, init).then(resp => {
-    if (!resp.ok) throw new Error(`cfUploadChunk: HTTP ${resp.status}`);
+    const onAbort = () => xhr.abort();
+    signal.addEventListener('abort', onAbort, { once: true });
+    const cleanup = () => signal.removeEventListener('abort', onAbort);
+
+    xhr.onload = () => {
+      cleanup();
+      if (xhr.status >= 200 && xhr.status < 300) resolve(buffer.byteLength);
+      else reject(new Error(`cfUploadChunk: HTTP ${xhr.status}`));
+    };
+    xhr.onerror = () => {
+      cleanup();
+      reject(new Error('cfUploadChunk: network error'));
+    };
+    xhr.ontimeout = () => {
+      cleanup();
+      reject(new Error('cfUploadChunk: timeout'));
+    };
+    xhr.onabort = () => {
+      cleanup();
+      reject(new DOMException('aborted', 'AbortError'));
+    };
+
+    const body = buffer.buffer.slice(
+      buffer.byteOffset,
+      buffer.byteOffset + buffer.byteLength,
+    ) as ArrayBuffer;
+    xhr.send(body);
   });
 }
