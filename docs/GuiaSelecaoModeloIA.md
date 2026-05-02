@@ -188,7 +188,7 @@ Identifique e comunique ao usuário quando a tarefa pede uma ferramenta diferent
 Antes de qualquer `wrangler pages deploy`:
 
 1. `npm run build` sem erros TypeScript
-2. `npm test` — todos os 24 testes passando
+2. `npm test` — todos os testes passando
 3. Confirmação explícita do usuário
 
 Comando de deploy:

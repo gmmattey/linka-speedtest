@@ -12,6 +12,9 @@
 | React | ^19 | Framework UI |
 | TypeScript | ^6 | Tipagem estática |
 | vite-plugin-pwa | ^1.2 | Manifest + service worker |
+| Capacitor | ^8 | Empacotamento Android nativo do PWA |
+| Android SDK | Platform 36 / Build Tools 36.1 | Build do APK |
+| JDK | 21 LTS | Compilação Gradle/Android |
 | Recharts | latest | Gráficos (HistoryScreen) |
 | jsPDF | latest | Geração de PDF |
 | html2canvas | latest | Captura de DOM para PDF |
@@ -181,8 +184,10 @@ export const UL_SIZES = [256_000, 1_000_000, 5_000_000, 10_000_000] as const;
 
 cfDownloadStream(bytes, signal): Promise<ReadableStreamDefaultReader<Uint8Array>>
 cfPing(signal): Promise<number | null>  // RTT em ms; null = timeout
-cfUploadChunk(buffer, signal, onProgress): Promise<void>
+cfUploadChunk(buffer, signal): Promise<number>  // resolve com bytes enviados
 ```
+
+**CORS no `/__up`** — `speed.cloudflare.com/__up` não responde a preflight (OPTIONS retorna HTTP 400). Para evitar preflight, `cfUploadChunk` é uma **simple CORS request**: POST + `ArrayBuffer`, sem `setRequestHeader` e **sem nenhum listener em `xhr.upload`** (registrar `upload.onprogress`/`onload`/etc. torna o request non-simple e força preflight). Em troca, perdemos progresso intra-POST: o sampler de `uploadProbe` contabiliza os bytes apenas na conclusão de cada POST. Os `sizeIndex` 5 MB/10 MB são alinhados ao próprio `speed.cloudflare.com` — chunks grandes amortizam o overhead TCP/TLS por POST, condição necessária para medir corretamente conexões > 100 Mbps.
 
 ---
 
@@ -239,12 +244,12 @@ runDownloadProbe(config, signal, onInstant): Promise<DownloadProbeResult>
 
 #### 3.1d `uploadProbe.ts` — Motor de upload time-based
 
-Espelho do `downloadProbe`, usando `cfUploadChunk` com amostras via XHR `upload.onprogress` a cada 300 ms.
+Espelho do `downloadProbe`, usando `cfUploadChunk` (XHR sem listeners em `xhr.upload`, ver §3.1a). O sampler de 300 ms é alimentado pelos bytes do buffer ao **completar cada POST** — não há progresso intra-POST por restrição de CORS.
 
 | Config | durationMs | initialStreams | maxStreams | sizeIndex | warmupMs |
 |---|---|---|---|---|---|
-| `UPLOAD_CONFIG_FAST` | 7.000 | 2 | 3 | 1 (1 MB) | 1.000 |
-| `UPLOAD_CONFIG_COMPLETE` | 18.000 | 2 | 6 | 2 (5 MB) | 2.000 |
+| `UPLOAD_CONFIG_FAST` | 7.000 | 2 | 3 | 2 (5 MB) | 1.000 |
+| `UPLOAD_CONFIG_COMPLETE` | 18.000 | 2 | 6 | 3 (10 MB) | 2.000 |
 
 Mesma lógica de janela estável (65%) e fallback com `UL_SIZES[i−1]`.
 
@@ -490,7 +495,7 @@ interface DnsBenchmarkResult { servers, winner, testedAt }
 Gera imagem PNG 1080×540 px via Canvas API:
 - Fundo: `#0E0E12`; barra decorativa esquerda: `#6C2BFF` (accent)
 - DL em azul `#3AB6FF`; UL em verde `#22C55E`
-- Aguarda `document.fonts.ready` antes de desenhar — garante que Space Grotesk e Inter estejam carregadas
+- Aguarda `document.fonts.ready` antes de desenhar — garante que Geist esteja carregada
 - Retorna `Blob` com `type: 'image/png'`
 
 ### 3.13 `combinedDiagnosis.ts` — Diagnóstico combinado
@@ -540,7 +545,7 @@ formatDateIsoLike(ts: number): string // YYYY-MM-DD para nome de arquivo
 
 Camada introduzida na Fase 1 do plano de unificação (PWA + linka Flutter). Pura, sem dependência de React, DOM, navegador ou localStorage.
 
-**Estado atual (Fase 6 concluída — migração completa):** `ResultScreen`, `HistoryScreen` e `pdfExport.ts` usam exclusivamente `interpretSpeedTestResult()` + `resolveCopy()`. O `classifier.ts` legado foi podado — mantém só `RULE_SET_VERSION` e `classify()` (ainda necessário para `TestRecord.quality` e bridge de recomendações). Recomendações da ResultScreen continuam com texto de `utils/recommendations.ts` (bridged via `Classification` sintética derivada das flags do motor).
+**Estado atual (Fase 6 concluída — migração completa):** `ResultScreen`, `HistoryScreen` e `pdfExport.ts` usam exclusivamente `interpretSpeedTestResult()` + `resolveCopy()`. O `classifier.ts` legado foi podado — mantém só `RULE_SET_VERSION` e `classify()` (ainda necessário para `TestRecord.quality` e bridge de recomendações). `ResultScreen` deriva o `ConnectionProfile` a partir do `connectionType`; `HistoryScreen` usa o perfil dominante da amostra analisada.
 
 **Dispersão histórica no resumo:** O card "Média dos seus testes" da HistoryScreen usa `syntheticLoss` (% de testes slow/unavailable nos últimos 5) como proxy de instabilidade temporal — evita que históricos alternando excelente/péssimo apareçam como "bons". Quando `stability.level === 'unstable' | 'oscillating'`, exibe o rótulo de estabilidade em vez do headline de quality.
 
@@ -712,15 +717,7 @@ Chave localStorage: `linka.speedtest.settings.v1`
 
 ## 5. Componentes (`src/components/`)
 
-### 5.1 `Header`
-
-Props: `theme, onToggleTheme`
-
-- Logo linka à esquerda; toggle de tema (sol/lua) à direita
-- Sticky no topo, altura ~52px
-- **Sem** `border-bottom` e **sem** botão de fechar/voltar — a navegação para trás é feita por swipe horizontal (App.tsx) ou por botões dedicados das próprias telas (ex.: "Cancelar" na RunningScreen, "← Voltar" no HistoryDetail)
-
-### 5.2 `PathRow`
+### 5.1 `PathRow`
 
 Props: `device, server, loading`
 
@@ -731,7 +728,7 @@ Três nós SVG conectados por linhas:
 - Linha animada com `stroke-dashoffset` via CSS keyframes ao carregar
 - Ícones importados de `icons.tsx`
 
-### 5.3 `BottomSheet`
+### 5.2 `BottomSheet`
 
 Props: `open, onToggle, onClose, device, server, loading, settings, onUpdateSettings`
 
@@ -745,18 +742,18 @@ Props: `open, onToggle, onClose, device, server, loading, settings, onUpdateSett
 - Subcomponente interno `Seg<T>` para controles segmentados
 - **Seção de privacidade:** toggle "IP ao compartilhar" (`['hide','show']`) que altera `settings.hideIpOnShare`. Nota informativa abaixo: "Seus testes ficam salvos neste aparelho. Você decide quando exportar ou compartilhar."
 
-### 5.4 `Gauge` (redesenhado)
+### 5.3 `Gauge` (redesenhado)
 
 Props: `value: number (0–1), phase: string, num: string, unit: string, color: string, size?: number`
 
 SVG com dois `<circle>`: track (`--surface-3`) e fill (cor dinâmica) com `strokeDasharray={2πr}`, `strokeDashoffset = 2πr × (1 – value)`, `strokeLinecap="round"`. Overlay central absolutamente posicionado exibe:
 - `.lk-gauge__phase` — label da fase (10px, uppercase, `--accent`)
-- `.lk-gauge__num` — número hero (52px, Space Grotesk 700, `tnum`)
+- `.lk-gauge__num` — número hero (52px, Geist 700, `tnum`)
 - `.lk-gauge__unit` — unidade (12px, `--text-3`)
 
 Usado em `RunningScreen` com helpers que calculam `gaugeProgress(phase)`, `gaugePhaseLabel(phase)` e `gaugeColor(phase)`.
 
-### 5.5 `IOSList` (novo)
+### 5.4 `IOSList`
 
 ```tsx
 interface IOSListItem {
@@ -774,7 +771,7 @@ Lista estilo iOS Settings. Fundo `--surface`, borda `--border`, `border-radius: 
 
 Usada em: ResultScreen (métricas DL/UL/lat), GamerScreen (avaliação por jogo), StartScreen (informações do servidor).
 
-### 5.6 `Chip` (novo)
+### 5.5 `Chip`
 
 ```tsx
 type ChipVariant = 'good' | 'maybe' | 'bad' | 'accent' | 'neutral';
@@ -793,11 +790,7 @@ Badge/pílula com 5 variantes semânticas. Estilos:
 
 Usada em: ResultScreen (badge de qualidade, chips de casos de uso), GamerScreen (badge "Otimizado p/ jogos").
 
-### 5.7 `LiveChart`
-
-Não consumido por nenhuma tela atualmente. Mantido para uso futuro.
-
-### 5.8 `icons.tsx` — Biblioteca de ícones
+### 5.6 `icons.tsx` — Biblioteca de ícones
 
 Todos os ícones são SVGs inline. Componente primitivo `<Icon name={...} size={...} color={...} />` que consulta o mapa `ICON_PATHS`. Os exports nomeados legados (`DeviceIcon`, `ConnectionIcon`, etc.) são preservados.
 
@@ -824,10 +817,6 @@ Todos os ícones são SVGs inline. Componente primitivo `<Icon name={...} size={
 | `signal` | Sinal |
 
 Componentes nomeados mantidos para compatibilidade com PathRow e BottomSheet: `DeviceIcon`, `ConnectionIcon`, `IconServer`, `IconBuilding`, `IconGames`, `IconStream`, `IconWork`, `IconVideoCall`, `IconPdf`, `IconShare`, `IconWhatsApp`.
-
-### 5.9 `InfoCards` (mantido, desativado)
-
-Componente da versão anterior da StartScreen. Mantido no projeto mas não mais utilizado. Pode ser removido quando o código for sanitizado.
 
 ---
 
@@ -865,6 +854,8 @@ Refs (não disparam re-render):
 | `recordedRef` | `boolean` | Evita gravação duplicada no histórico |
 | `backStackRef` | `Screen[]` | Pilha de telas anteriores para swipe → |
 | `forwardStackRef` | `Screen[]` | Pilha de telas avançáveis para swipe ← |
+| `returnToRef` | `Screen` | Guarda a origem de fluxos modais/avançados |
+| `screenRef` | `Screen` | Espelha a tela atual para handlers estáveis |
 
 Hooks usados:
 - `useDeviceInfo('cloudflare')` → `deviceInfo`
@@ -877,9 +868,10 @@ Hooks usados:
 goTo(next):    push(currentScreen) em backStack; clear forwardStack; setScreen(next)
 goBack():      pop() de backStack → push(currentScreen) em forwardStack; setScreen(prev)
 goForward():   pop() de forwardStack → push(currentScreen) em backStack; setScreen(next)
+goToReturnTarget(): clear forwardStack; setScreen(returnToRef.current) sem empilhar a tela atual
 ```
 
-Todas as transições internas (`handleStart`, `handleCancel`, `handleRetry`, `handleShowHistory`, `handleShowLastResult`, e o effect de `done`) usam `goTo`, alimentando a pilha de back automaticamente.
+Transições normais usam `goTo`, alimentando a pilha de back automaticamente. Retornos de fluxos avançados (`Comparison`, `BeforeAfter`, `RoomTest`, `History`) usam `goToReturnTarget()` para voltar à origem sem criar loop na pilha.
 
 **Swipe lateral:** wrapper `<div onTouchStart onTouchEnd>` em torno da view ativa. Em `onTouchStart` registra `{x, y, valid}` (válido se o alvo não está em `.lk-sheet`, `.lk-history__list`, `button`, `input`, `textarea` ou `a`). Em `onTouchEnd` calcula `dx`/`dy`; aceita gesto se `|dx| ≥ 80 px` e `|dx| > |dy| × 1.5`. `dx > 0` → `goBack`; `dx < 0` → `goForward`.
 
@@ -986,8 +978,8 @@ Um `useEffect` sem deps (executa só na montagem) chama `previousRecord()` e pop
 | `--warn` | `#F5A623` | Atenção / amarelo |
 | `--error` | `#FF453A` | Erros e falhas |
 | `--info` | `#3AB6FF` | Informação |
-| `--font-display` | `'Space Grotesk', sans-serif` | Números hero e títulos |
-| `--font-body` | `'Inter', sans-serif` | Texto corrido |
+| `--font-display` | `'Geist', system-ui, -apple-system, sans-serif` | Números hero e títulos |
+| `--font-body` | `'Geist', system-ui, -apple-system, sans-serif` | Texto corrido |
 | `--font-mono` | `'JetBrains Mono', ui-monospace, monospace` | Valores numéricos monospace |
 | `--radius` | `16px` | Border-radius de cards |
 | `--radius-sm` | `8px` | Border-radius pequeno |
@@ -1038,6 +1030,57 @@ Service worker gerado automaticamente. Sem runtime caching configurado (app não
 
 Testes com Vitest: `test: { environment: 'node' }` na mesma config.
 
+### 8.1 Android nativo via Capacitor
+
+O APK Android é gerado a partir do mesmo `dist/` do PWA usando Capacitor.
+
+**Configuração:** `capacitor.config.ts`
+
+```ts
+appId: 'br.com.linka.speedtest'
+appName: 'linka SpeedTest'
+webDir: 'dist'
+```
+
+**Projeto nativo:** `android/`
+
+- `android/app/src/main/AndroidManifest.xml` declara apenas `android.permission.INTERNET`.
+- `android/app/src/main/java/br/com/linka/speedtest/MainActivity.java` é a Activity Capacitor.
+- `android/app/src/main/res/values/strings.xml` mantém branding `linka SpeedTest`.
+
+**Toolchain local:** `_android-toolchain/` (ignorado pelo Git)
+
+- Android Command-line Tools: `cmdline-tools/latest`.
+- SDK instalado: `platform-tools`, `platforms;android-36`, `build-tools;36.1.0`.
+- JDK local: Microsoft OpenJDK 21 LTS.
+- Gradle cache: `_android-toolchain/gradle-home`.
+
+**Build de APK debug:**
+
+```powershell
+npm run android:apk
+```
+
+Saída obrigatória: `builds/apk/linka-speedtest-v{versionName}-code{versionCode}-{buildType}-{yyyyMMdd-HHmmss}-{gitSha}.apk`.
+
+**Regra obrigatória de versionamento e entrega:**
+
+- Nenhuma IA deve entregar APK diretamente de `android/app/build/outputs/...`.
+- Nenhuma IA deve sobrescrever APK anterior.
+- O script `scripts/build-android-apk.ps1` copia o APK para `builds/apk/` e falha se o arquivo de destino já existir.
+- `versionName` vem de `package.json` e deve seguir SemVer (`MAJOR.MINOR.PATCH`).
+- `versionCode` segue padrão compatível com distribuição Android: `MAJOR*1000000 + MINOR*10000 + PATCH*100 + BuildNumber`.
+- Build debug usa `BuildNumber=0` por padrão.
+- Build release/mercado exige `-BuildType release -BuildNumber N`, com `N > 0`, para manter versionCode monotônico.
+- Para Play Store, o formato de mercado é AAB. APK neste projeto é artefato para instalação manual, homologação ou distribuição interna.
+
+Exemplos:
+
+```powershell
+npm run android:apk
+.\scripts\build-android-apk.ps1 -BuildType release -BuildNumber 1
+```
+
 ---
 
 ## 9. Deploy — Cloudflare Pages
@@ -1073,12 +1116,14 @@ npx wrangler pages deploy dist --project-name linka-speedtest --branch main
 | Arquivo | Testes | Cobertura |
 |---|---|---|
 | `classifier.test.ts` | 12 | `RULE_SET_VERSION`, `classify()` — 5 quality + 7 tags |
-| `connectionProfile.test.ts` | — | `toConnectionProfile()` — mapeamento ConnectionType → ConnectionProfile |
-| `interpret.test.ts` | — | `interpretSpeedTestResult()` — motor unificado |
-| `share.test.ts` | — | `buildShareText()`, `shareResultText()` |
+| `connectionProfile.test.ts` | 4 | `toConnectionProfile()` — mapeamento ConnectionType → ConnectionProfile |
+| `interpret.test.ts` | 95 | `interpretSpeedTestResult()` — motor unificado |
+| `combinedDiagnosis.test.ts` | 14 | `combineDiagnostics()` — causas combinadas e confiança |
+| `LocalWifiService.test.ts` | 19 | helpers de frequência/canal/qualidade + fallback PWA |
+| `share.test.ts` | 4 | `buildShareText()`, `shareResultText()` |
 | `compare.test.ts` | 12 | `calculateComparison()` — coverage_issue, both_bad, both_good, percentuais, edge cases |
 
-**Total:** 142 testes passando. Importação de `gradeFrom` foi migrada de `'../utils/bufferbloat'` para `'../core/networkQualityClassifier'` no `classifier.test.ts`.
+**Total:** 175 testes passando.
 
 **Comando:** `npm test`
 
@@ -1088,7 +1133,7 @@ npx wrangler pages deploy dist --project-name linka-speedtest --branch main
 
 ## 11. Diagnóstico Wi-Fi nativo (`src/features/local-wifi/`)
 
-Feature isolada para estimar qualidade do link Wi-Fi local no app nativo, sem alterar o SpeedTest v2 e sem dependência de `combinedDiagnosis.ts`.
+Feature isolada para estimar qualidade do link Wi-Fi local no app nativo. No PWA, o item de navegação fica oculto; se a rota for acessada diretamente, o fallback seguro informa indisponibilidade sem tentar bridge nativa.
 
 ### Capability (`src/platform/capabilities.ts`)
 
@@ -1144,8 +1189,8 @@ API: `run()` executa diagnóstico e devolve resultado/null.
 
 ### Tela (`LocalWifiScreen.tsx`)
 
-Conectada em `App.tsx` via rota interna `screen: 'localwifi'`, acessada por item na `ExploreScreen`.
-No PWA comum, a própria tela mantém fallback de indisponibilidade sem tocar bridge nativa.
+Conectada em `App.tsx` via rota interna `screen: 'localwifi'`. O item aparece na `ExploreScreen` somente quando `getCapabilities().localWifiDiagnostics === true`.
+No PWA comum, a rota mantém fallback de indisponibilidade sem tocar bridge nativa caso seja acessada diretamente.
 Quando o diagnóstico retorna canal, a tela exibe:
 - `Canal atual: X`
 - `Qualidade do canal: bom/médio/ruim` com cor semântica (`--ul`/`--warn`/`--error`)

@@ -14,6 +14,7 @@ export interface DnsBenchmarkResult {
   servers: DnsServerResult[];
   winner: DnsServerResult;
   testedAt: number;
+  nativeDnsMs: number | null;
 }
 
 const DNS_STORAGE_KEY = 'linka.dns.result.v1';
@@ -104,10 +105,25 @@ async function benchmarkServer(
   return { id: server.id, name: server.name, ip: server.ip, p50, p95, samples: latencies.length, grade: gradeFor(p50) };
 }
 
+async function probeDnsLatency(): Promise<number | null> {
+  const url = `https://cloudflare-dns.com/cdn-cgi/trace?_=${Date.now()}`;
+  try {
+    await fetch(url, { cache: 'no-store', mode: 'no-cors' });
+    const entries = performance.getEntriesByName(url) as PerformanceResourceTiming[];
+    if (!entries.length) return null;
+    const e = entries[0];
+    const dnsMs = e.domainLookupEnd - e.domainLookupStart;
+    return dnsMs > 0 ? Math.round(dnsMs) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function runDNSBenchmark(
   signal: AbortSignal,
   onProgress?: (done: number, total: number, current: string) => void,
 ): Promise<DnsBenchmarkResult> {
+  const nativeDnsMs = await probeDnsLatency();
   const results: DnsServerResult[] = [];
 
   for (let i = 0; i < SERVERS.length; i++) {
@@ -136,7 +152,7 @@ export async function runDNSBenchmark(
     ? valid.reduce((best, r) => r.p50 < best.p50 ? r : best)
     : results[0];
 
-  const benchmarkResult: DnsBenchmarkResult = { servers: results, winner, testedAt: Date.now() };
+  const benchmarkResult: DnsBenchmarkResult = { servers: results, winner, testedAt: Date.now(), nativeDnsMs };
 
   try { localStorage.setItem(DNS_STORAGE_KEY, JSON.stringify(benchmarkResult)); } catch { /* ignore */ }
 

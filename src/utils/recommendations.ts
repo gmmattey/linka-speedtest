@@ -1,5 +1,76 @@
 import type { Classification, Recommendation, SpeedTestResult, TestRecord } from '../types';
 
+// ── Empty-state positivo ────────────────────────────────────────────────────
+
+export interface PositiveUsecase {
+  id: string;
+  label: string;
+  status: 'good' | 'limited';
+}
+
+export interface HistorySummary {
+  deltaPct: number;   // positivo = acima da média
+  count: number;      // total de registros do histórico
+}
+
+export const PREVENTIVE_TIPS = [
+  {
+    title: 'Reinicie o roteador a cada 30 dias',
+    desc: 'Libera memória e renova sessões.',
+  },
+  {
+    title: 'Mantenha o firmware atualizado',
+    desc: 'Correções e segurança vêm em atualizações da operadora.',
+  },
+  {
+    title: 'Refaça o teste se notar lentidão',
+    desc: 'A causa pode aparecer só sob carga ou em horários de pico.',
+  },
+] as const;
+
+export function derivePositiveUsecases(result: SpeedTestResult | null): PositiveUsecase[] {
+  if (!result) return [];
+  const { dl, ul, latency, jitter } = result;
+  return [
+    {
+      id: 'streaming',
+      label: 'Streaming 4K',
+      status: dl >= 25 && latency <= 80 ? 'good' : 'limited',
+    },
+    {
+      id: 'gaming',
+      label: 'Jogos online',
+      status: latency <= 50 && jitter <= 20 ? 'good' : 'limited',
+    },
+    {
+      id: 'videocall',
+      label: 'Videochamada',
+      status: latency <= 100 && ul >= 2 ? 'good' : 'limited',
+    },
+    {
+      id: 'remote',
+      label: 'Trabalho remoto',
+      status: ul >= 10 && dl >= 20 ? 'good' : 'limited',
+    },
+  ];
+}
+
+export function summarizeHistory(
+  currentDl: number,
+  history: TestRecord[],
+): HistorySummary | null {
+  if (history.length < 3) return null;
+  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const recent = history.filter((r) => r.timestamp > thirtyDaysAgo && r.dl > 0);
+  if (recent.length < 3) return null;
+  const avgDl = recent.reduce((s, r) => s + r.dl, 0) / recent.length;
+  if (avgDl === 0) return null;
+  return {
+    deltaPct: Math.round(((currentDl - avgDl) / avgDl) * 100),
+    count: recent.length,
+  };
+}
+
 function rec(
   id: string,
   title: string,

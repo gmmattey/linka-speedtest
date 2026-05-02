@@ -12,16 +12,19 @@ import { RecommendScreen } from './screens/RecommendScreen';
 import { DNSGuideScreen } from './screens/DNSGuideScreen';
 import { DNSBenchmarkScreen } from './screens/DNSBenchmarkScreen';
 import { ExploreScreen } from './screens/ExploreScreen';
+import { DetailsScreen } from './screens/DetailsScreen';
 import { LocalWifiScreen } from './features/local-wifi/LocalWifiScreen';
 import { useDeviceInfo } from './hooks/useDeviceInfo';
 import { useSpeedTest } from './hooks/useSpeedTest';
 import { useSettings } from './hooks/useSettings';
 import { appendRecord, previousRecord, recordToResult } from './utils/history';
+import { exportResultPdf } from './utils/pdfExport';
 import { averageSpeedResults } from './utils/provaReal';
 import { classify } from './utils/classifier';
+import { getCapabilities } from './platform/capabilities';
 import type { SpeedTestResult, TestRecord } from './types';
 
-type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter' | 'roomtest' | 'diagnostic' | 'gamer' | 'recommend' | 'dnsguide' | 'dnsbenchmark' | 'explore' | 'localwifi';
+type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter' | 'roomtest' | 'diagnostic' | 'gamer' | 'recommend' | 'dnsguide' | 'dnsbenchmark' | 'explore' | 'details' | 'localwifi';
 
 const THEME_KEY = 'linka.speedtest.theme';
 const SWIPE_THRESHOLD_PX = 80;
@@ -128,6 +131,11 @@ export default function App() {
     });
   }, []);
 
+  const goToReturnTarget = useCallback(() => {
+    forwardStackRef.current = [];
+    setScreen(returnToRef.current);
+  }, []);
+
   // Registra o instante em que o download começa (início real da medição).
   useEffect(() => {
     if (test.phase === 'download') {
@@ -227,9 +235,7 @@ export default function App() {
 
     const timer = setTimeout(proceed, remaining);
     return () => clearTimeout(timer);
-  }, [test.phase, test.result, deviceInfo.device, deviceInfo.server, goTo, provaRealSession]);
-
-  screenRef.current = screen;
+  }, [test, test.phase, test.result, deviceInfo.device, deviceInfo.server, goTo, provaRealSession, testMode]);
 
   const effectiveConnection = settings.connectionOverride !== 'auto'
     ? settings.connectionOverride
@@ -367,7 +373,10 @@ export default function App() {
   }, [goTo]);
 
   const handleExplore = useCallback(() => goTo('explore'), [goTo]);
+  const handleShowDetails = useCallback(() => goTo('details'), [goTo]);
   const handleShowLocalWifiDiagnostics = useCallback(() => goTo('localwifi'), [goTo]);
+
+  const capabilities = useMemo(() => getCapabilities(), []);
 
   // ── Swipe lateral (back/forward) ─────────────────────────
   const swipeStartRef = useRef<{ x: number; y: number; valid: boolean } | null>(null);
@@ -440,6 +449,7 @@ export default function App() {
             onUpdateContracted={(down, up) => updateSettings({ contractedDown: down, contractedUp: up })}
             onDiagnostic={handleDiagnostic}
             onRecommend={handleRecommend}
+            onDetails={handleShowDetails}
             onStartRoomTest={handleOpenRoomTest}
             onExplore={handleExplore}
           />
@@ -481,14 +491,18 @@ export default function App() {
         ) : null;
       }
       case 'recommend': {
-        const resultForRec = provaRealOverride ?? test.result;
+        const resultForRec = provaRealOverride ?? test.result ?? (lastRecord ? recordToResult(lastRecord) : null);
         const classification = resultForRec ? classify(resultForRec) : null;
+        const handleExportPdf = resultForRec && lastRecord
+          ? () => exportResultPdf(resultForRec, lastRecord.serverName, lastRecord.isp)
+          : undefined;
         return (
           <RecommendScreen
             result={resultForRec}
             quality={classification?.primary ?? ''}
             tags={classification ? [...classification.tags] : []}
             onBack={goBack}
+            onExportPdf={handleExportPdf}
           />
         );
       }
@@ -502,7 +516,7 @@ export default function App() {
             farResult={comparisonFar}
             onStartNear={handleComparisonStartNear}
             onStartFar={handleComparisonStartFar}
-            onBack={() => goTo(returnToRef.current)}
+            onBack={goToReturnTarget}
             onRetryNear={handleComparisonRetryNear}
             unit={settings.unit}
           />
@@ -513,7 +527,7 @@ export default function App() {
             theme={theme} onToggleTheme={onToggleTheme}
             step={baStep} beforeResult={baBefore} afterResult={baAfter}
             onStartBefore={handleBAStartBefore} onStartAfter={handleBAStartAfter}
-            onBack={() => goTo(returnToRef.current)} onRetry={handleBARetry}
+            onBack={goToReturnTarget} onRetry={handleBARetry}
             unit={settings.unit}
           />
         );
@@ -523,7 +537,7 @@ export default function App() {
             theme={theme}
             onToggleTheme={onToggleTheme}
             onStart={handleRoomStart}
-            onBack={() => goTo(returnToRef.current)}
+            onBack={goToReturnTarget}
           />
         );
       case 'explore': {
@@ -546,9 +560,25 @@ export default function App() {
             onStartBeforeAfter={handleStartBeforeAfter}
             onShowDNSBenchmark={handleShowDNSBenchmark}
             onShowDNSGuide={() => handleShowDNSGuide('cloudflare')}
-            onShowLocalWifiDiagnostics={handleShowLocalWifiDiagnostics}
+            onShowLocalWifiDiagnostics={capabilities.localWifiDiagnostics ? handleShowLocalWifiDiagnostics : undefined}
           />
         );
+      }
+      case 'details': {
+        const resultForDetails = provaRealOverride ?? test.result ?? (lastRecord ? recordToResult(lastRecord) : null);
+        const serverForDetails = (test.result || provaRealOverride)
+          ? deviceInfo.server
+          : lastRecord
+          ? { id: 'cloudflare', name: lastRecord.serverName, ip: '—', colo: '—', loc: '—', isp: lastRecord.isp ?? '—', available: true }
+          : deviceInfo.server;
+        return resultForDetails ? (
+          <DetailsScreen
+            result={resultForDetails}
+            server={serverForDetails}
+            unit={settings.unit}
+            onBack={goBack}
+          />
+        ) : null;
       }
       case 'localwifi':
         return <LocalWifiScreen onBack={goBack} />;
@@ -559,7 +589,7 @@ export default function App() {
             onToggleTheme={onToggleTheme}
             unit={settings.unit}
             initialSelectedId={historyInitialId}
-            onBack={() => goTo(returnToRef.current)}
+            onBack={goToReturnTarget}
           />
         );
       case 'start':
@@ -587,13 +617,14 @@ export default function App() {
   }, [
     screen, theme, onToggleTheme, isOnline,
     test.phase, test.instantMbps, test.result,
-    deviceInfo.device, deviceInfo.server, deviceInfo.loading, deviceInfo.error, deviceInfo.reload,
+    deviceInfo,
     previous, lastRecord, historyInitialId,
     handleStart, handleStartComparison, handleCancel, handleRetry, handleShowHistory, handleShowLastResult,
     handleComparisonStartNear, handleComparisonStartFar, handleComparisonRetryNear,
     handleStartBeforeAfter, handleBAStartBefore, handleBAStartAfter, handleBARetry,
     handleStartProvaReal, handleOpenRoomTest, handleRoomStart,
     handleDiagnostic, handleGamer, handleRecommend, handleShowDNSBenchmark, handleShowDNSGuide, handleExplore, handleShowLocalWifiDiagnostics,
+    goBack, goToReturnTarget, capabilities.localWifiDiagnostics,
     dnsGuideServerId,
     settings, updateSettings, testMode,
     comparisonStep, comparisonNear, comparisonFar,

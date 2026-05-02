@@ -23,7 +23,7 @@ export function RoomTestScreen({ onStart, onBack }: Props) {
   return (
     <div className="lk-room">
       <div className="lk-room__head">
-        <button className="lk-room__back" onClick={onBack}>‹ Início</button>
+        <button className="lk-room__back" onClick={onBack}>‹ Voltar</button>
         <span className="lk-room__head-label">Teste por local</span>
       </div>
 

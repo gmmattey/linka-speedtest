@@ -64,7 +64,6 @@ export async function runDownloadProbe(
 
   // Bytes acumulados no tick atual (compartilhado entre streams)
   let tickBytes = 0;
-  let activeStreams = 0;
 
   // Abort interno para encerrar todos os streams ao expirar durationMs
   const innerCtrl = new AbortController();
@@ -126,7 +125,6 @@ export async function runDownloadProbe(
   async function openStream(size: number): Promise<void> {
     if (innerCtrl.signal.aborted) return;
     streamCount++;
-    activeStreams++;
     let fallbackTried = false;
     let currentSize = size;
 
@@ -139,7 +137,7 @@ export async function runDownloadProbe(
           if (value) tickBytes += value.length;
         }
         checkAndScale();
-      } catch (err) {
+      } catch {
         if (innerCtrl.signal.aborted) break;
         // Fallback: tenta tamanho menor uma vez
         if (!fallbackTried && sizeIndex > 0) {
@@ -150,7 +148,6 @@ export async function runDownloadProbe(
         }
       }
     }
-    activeStreams--;
     streamCount--;
   }
 

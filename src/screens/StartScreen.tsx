@@ -133,11 +133,11 @@ export function StartScreen({
         <div className="lk-start__info">
           {selectedMode === 'fast' ? (
             <>
-              <div>Download, upload e ping · ~30s · bufferbloat integrado</div>
+              <div>Download, upload e resposta · cerca de 30s</div>
             </>
           ) : (
             <>
-              <div>Diagnóstico detalhado com paralelismo progressivo · ~60s · recomendamos Wi-Fi</div>
+              <div>Teste mais completo para entender estabilidade · cerca de 60s</div>
             </>
           )}
           {server && <div>{serverLabel}</div>}

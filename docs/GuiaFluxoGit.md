@@ -65,7 +65,7 @@ git push origin main
 
 **Antes de qualquer push:**
 - [ ] `npm run build` sem erros
-- [ ] `npm test` — todos os 24 testes passando
+- [ ] `npm test` — todos os testes passando
 - [ ] Documentação atualizada na mesma tarefa
 - [ ] Nenhuma credencial ou token no código
 

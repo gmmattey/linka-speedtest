@@ -38,7 +38,7 @@ export function ComparisonScreen({
   return (
     <div className="lk-cmp">
       <div className="lk-cmp__head">
-        <button className="lk-cmp__back" onClick={onBack}>‹ Início</button>
+        <button className="lk-cmp__back" onClick={onBack}>‹ Voltar</button>
         <span className="lk-cmp__head-label">Comparar locais</span>
       </div>
 
@@ -138,7 +138,7 @@ export function ComparisonScreen({
                 Nova comparação
               </button>
               <button className="btn-text" onClick={onBack}>
-                Voltar ao início
+                Voltar
               </button>
             </div>
           </div>

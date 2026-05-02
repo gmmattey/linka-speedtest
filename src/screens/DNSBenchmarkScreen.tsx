@@ -77,6 +77,19 @@ export function DNSBenchmarkScreen({ onBack, onShowDNSGuide }: Props) {
           Verifica qual servidor DNS responde mais rápido na sua rede atual.
         </p>
 
+        <div className="lk-dns__current">
+          <div className="lk-dns__current-icon">
+            <Icon name="router" size={14} color="var(--text-3)" />
+          </div>
+          <div className="lk-dns__current-body">
+            <span className="lk-dns__current-label">DNS atual</span>
+            <span className="lk-dns__current-val">Sistema · padrão do operador</span>
+          </div>
+          {result?.nativeDnsMs != null && (
+            <span className="lk-dns__current-ms">{result.nativeDnsMs} ms</span>
+          )}
+        </div>
+
         {phase === 'running' && (
           <div className="lk-dns__progress">
             <div className="lk-dns__progress-bar">
@@ -150,9 +163,13 @@ export function DNSBenchmarkScreen({ onBack, onShowDNSGuide }: Props) {
               ]}
             />
             <p className="lk-dns__rec">
-              {Math.round(winner.p50) < 50
-                ? `${winner.name} é o mais rápido na sua rede — mantenha o atual.`
-                : `Considere usar ${winner.name} para reduzir o tempo de resolução DNS.`}
+              {result.nativeDnsMs != null && result.nativeDnsMs > winner.p50
+                ? `Seu DNS atual (sistema) registrou ${result.nativeDnsMs} ms. ${winner.name} foi ${Math.round((1 - winner.p50 / result.nativeDnsMs) * 100)}% mais rápido — considere trocar.`
+                : result.nativeDnsMs != null && result.nativeDnsMs <= winner.p50
+                  ? `Seu DNS atual (sistema) está bem — registrou ${result.nativeDnsMs} ms, comparável ao mais rápido testado.`
+                  : Math.round(winner.p50) < 50
+                    ? `${winner.name} é o mais rápido na sua rede.`
+                    : `Considere usar ${winner.name} para reduzir o tempo de resolução DNS.`}
             </p>
           </>
         )}

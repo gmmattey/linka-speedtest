@@ -21,7 +21,9 @@ Linka SpeedTest/
 │   ├── EvolucaoTelaDesktop.md    ← Design de telas desktop (prototipagem aprovada)
 │   ├── PendenciasLayout.md       ← Backlog de melhorias de layout e UX
 │   ├── PendenciasTecnicas.md     ← Backlog técnico: diagnóstico, classificador, coerência
-│   └── RecomendacaoEquipamentos.md ← Plano de monetização: recomendação de equipamentos
+│   ├── RecomendacaoEquipamentos.md ← Plano de monetização: recomendação de equipamentos
+│   └── mockups/                  ← Protótipos HTML estáticos aprovados (não versionados em prod)
+│       └── recomendacoes_empty_state.html  ← Empty-state positivo da RecommendScreen (aprovado 2026-05-02)
 │
 ├── public/                       ← Assets estáticos (copiados verbatim para dist/)
 │   ├── logo.png                  ← Logo oficial linka (fonte: D:\Projetos\LINKA\...)
@@ -29,6 +31,22 @@ Linka SpeedTest/
 │   ├── icon-512.png              ← PWA icon any
 │   ├── icon-maskable-192.png     ← PWA icon maskable
 │   └── icon-maskable-512.png     ← PWA icon maskable
+│
+├── android/                      ← Projeto Android nativo gerado pelo Capacitor
+│   ├── app/                      ← Módulo Android do APK
+│   ├── gradle/                   ← Gradle Wrapper versionado
+│   ├── build.gradle
+│   ├── settings.gradle
+│   ├── variables.gradle
+│   └── gradlew / gradlew.bat
+│
+├── _android-toolchain/           ← Toolchain local ignorado pelo Git (SDK, JDK, caches)
+│
+├── builds/                       ← Artefatos gerados para entrega manual (ignorado pelo Git)
+│   └── apk/                      ← Pasta comum obrigatória para APKs versionados
+│
+├── scripts/                      ← Scripts operacionais do projeto
+│   └── build-android-apk.ps1     ← Gera APK versionado sem sobrescrever artefatos
 │
 ├── src/
 │   ├── main.tsx                  ← Entry point; imports tokens.css
@@ -42,10 +60,7 @@ Linka SpeedTest/
 │   │   ├── BottomSheet.tsx / .css
 │   │   ├── Chip.tsx / .css       ← Badge/chip com variantes semânticas (good/maybe/bad/accent/neutral)
 │   │   ├── Gauge.tsx / .css      ← Anel SVG com fase + número hero + unidade
-│   │   ├── Header.tsx / .css
-│   │   ├── InfoCards.tsx / .css  ← Mantido mas desativado (substituído pelo BottomSheet)
 │   │   ├── IOSList.tsx / .css    ← Lista estilo iOS Settings (ícone + título + trailing)
-│   │   ├── LiveChart.tsx
 │   │   ├── PathRow.tsx / .css
 │   │   └── icons.tsx             ← Biblioteca centralizada de SVGs inline
 │   │
@@ -64,6 +79,7 @@ Linka SpeedTest/
 │   │   ├── RoomTestScreen.tsx / .css
 │   │   ├── DiagnosticScreen.tsx / .css  ← Diagnóstico de 6 áreas em grid 2-col
 │   │   ├── GamerScreen.tsx / .css       ← Avaliação de jogos: ping/jitter/loss + rows por game
+│   │   ├── DetailsScreen.tsx / .css     ← Métricas técnicas detalhadas: qualidade sob carga, provedor
 │   │   ├── RecommendScreen.tsx / .css   ← 4 ações para melhorar o Wi-Fi
 │   │   ├── DNSGuideScreen.tsx / .css    ← Guia de configuração de DNS no dispositivo
 │   │   ├── DNSBenchmarkScreen.tsx / .css ← Verificação on-demand de servidores DNS (feature Explorar)
@@ -101,6 +117,7 @@ Linka SpeedTest/
 │   └── share.test.ts
 │
 ├── CLAUDE.md                     ← Instruções para Claude Code
+├── capacitor.config.ts           ← Configuração Capacitor (appId, appName, webDir)
 ├── index.html                    ← HTML raiz; links Google Fonts; favicons
 ├── vite.config.ts                ← Vite + VitePWA + Vitest config
 ├── tsconfig.json / tsconfig.app.json / tsconfig.node.json
@@ -125,6 +142,8 @@ Linka SpeedTest/
 | Asset público (imagens, ícones) | `public/` |
 | Documentação | `docs/NomeDocumento.md` |
 | Teste unitário | `src/__tests__/nomeUtil.test.ts` |
+| Script operacional | `scripts/nome-script.ps1` |
+| APK gerado para entrega manual | `builds/apk/` |
 
 ### `src/core/` vs `src/utils/`
 
@@ -162,10 +181,43 @@ Linka SpeedTest/
 | Pacote | Versão | Uso |
 |---|---|---|
 | `react` / `react-dom` | ^19 | Framework UI |
-| `recharts` | última | Gráficos (LiveChart, HistoryScreen) |
+| `recharts` | última | Gráficos do histórico |
 | `jspdf` | última | Geração de PDF |
 | `html2canvas` | última | Captura de DOM para PDF |
 | `vite-plugin-pwa` | ^1.2 | Manifest + service worker |
+| `@capacitor/core` / `@capacitor/android` | ^8 | Empacotamento Android nativo |
+| `@capacitor/cli` | ^8 | CLI para sincronizar assets e projeto Android |
+
+## Toolchain Android local
+
+Para gerar APK sem instalar Android Studio/SDK em `C:`, o projeto usa `_android-toolchain/` local e ignorado pelo Git:
+
+- `_android-toolchain/android-sdk/` — Android SDK Command-line Tools, Platform Tools, Platform 36 e Build Tools.
+- `_android-toolchain/java/` — JDK 21 portátil usado pelo Gradle/Capacitor.
+- `_android-toolchain/gradle-home/` — cache local do Gradle.
+- `_android-toolchain/npm-cache/` — cache npm opcional para instalações relacionadas.
+
+O APK debug sai em `android/app/build/outputs/apk/debug/app-debug.apk`.
+
+## Regra obrigatória para APK
+
+Toda IA ou humano que gerar APK neste projeto deve usar **somente**:
+
+```powershell
+npm run android:apk
+```
+
+É proibido entregar APK diretamente de `android/app/build/outputs/...`.
+
+Regras inegociáveis:
+
+- Todo APK final de entrega deve ficar em `builds/apk/`.
+- Nunca sobrescrever APK existente.
+- Todo APK deve conter no nome: `versionName`, `versionCode`, tipo de build, data/hora e hash Git.
+- `versionName` vem de `package.json` e deve seguir SemVer (`MAJOR.MINOR.PATCH`).
+- `versionCode` Android é calculado como `MAJOR*1000000 + MINOR*10000 + PATCH*100 + BuildNumber`.
+- Para build de mercado/release, usar `-BuildType release -BuildNumber N`, com `N > 0`.
+- Google Play publica AAB; APK é aceito aqui como artefato manual/interno. Se o destino for Play Store, gerar AAB em fluxo próprio.
 
 **Antes de adicionar qualquer nova dependência:** perguntar ao usuário e documentar o motivo aqui.
 

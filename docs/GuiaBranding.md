@@ -71,20 +71,20 @@ Geist é a fonte open-source da Vercel, projetada como alternativa web mais pró
 
 | Papel | Tamanho | Peso | Família |
 |---|---|---|---|
-| Número hero (gauge) | 72px | 700 | Space Grotesk |
-| Título de tela grande | 22–24px | 700 | Space Grotesk |
-| Título de tela médio | 20px | 700 | Space Grotesk |
-| Valor de métrica na lista | 14px | 600 | Space Grotesk |
-| Valor de métrica row2 | 15px | 600 | Space Grotesk |
-| Botão primário | 15px | 500–600 | Inter |
-| Body / descrição | 13–14px | 400 | Inter |
-| Label secundário | 12px | 400–500 | Inter |
-| Label uppercase (seção) | 11px | 600 | Inter, `letter-spacing: 0.06em` |
-| Metadado / hint | 11–12px | 400 | Inter |
+| Número hero (gauge) | 72px | 700 | Geist |
+| Título de tela grande | 22–24px | 700 | Geist |
+| Título de tela médio | 20px | 700 | Geist |
+| Valor de métrica na lista | 14px | 600 | Geist |
+| Valor de métrica row2 | 15px | 600 | Geist |
+| Botão primário | 15px | 500–600 | Geist |
+| Body / descrição | 13–14px | 400 | Geist |
+| Label secundário | 12px | 400–500 | Geist |
+| Label uppercase (seção) | 11px | 600 | Geist, `letter-spacing: 0.06em` |
+| Metadado / hint | 11–12px | 400 | Geist |
 
 ### Regras tipográficas
 
-- **Números de métrica sempre em Space Grotesk** — nunca em Inter.
+- **Números de métrica sempre em `var(--font-display)` (Geist)**.
 - **Labels uppercase de seção:** `font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3)`.
 - **Títulos hero:** `font-family: var(--font-display); font-weight: 700; letter-spacing: -0.03em`.
 - **Tracking negativo** apenas em títulos (20px+). Body sempre tracking neutro.
@@ -155,14 +155,14 @@ Tamanho: `height: 20px; padding: 0 8px; border-radius: var(--radius-pill); font-
 - Fundo: `var(--surface)`, borda `var(--border)`, `border-radius: var(--radius)`, `overflow: hidden`
 - Row: `padding: 13px 14px`, `border-bottom: 1px solid var(--hairline)`
 - Ícone: quadrado `28×28px`, `border-radius: 7px`, fundo semântico (tint da cor da métrica)
-- Trailing: valor à direita em Space Grotesk 600 14px, cor semântica
+- Trailing: valor à direita em Geist 600 14px, cor semântica
 
 ### Gauge (anel de medição)
 
 - SVG com dois `<circle>`: track (`--surface-3`) + fill (cor da fase)
 - `strokeDasharray={2πr}`, `strokeDashoffset = 2πr * (1 - progress)`, `strokeLinecap="round"`
 - Fase: label uppercase acima do número
-- Número: 72px Space Grotesk 700, `font-feature-settings: 'tnum'`
+- Número: 72px Geist 700, `font-feature-settings: 'tnum'`
 - Unidade: abaixo, 14px `--text-2`
 - Cores: DOWNLOAD → `--dl`, UPLOAD → `--ul`, LATÊNCIA → `--accent`
 
@@ -275,7 +275,7 @@ Antes de entregar qualquer tela ou componente novo:
 - [ ] Zero `box-shadow` ou `text-shadow`
 - [ ] Zero emoji em UI de produto
 - [ ] Cores via tokens (`var(--*)`) — sem valores hex hardcoded em `.tsx`/`.css`
-- [ ] Números de métrica em Space Grotesk
+- [ ] Números de métrica em Geist
 - [ ] Botão primário usa `btn-primary` com `--accent`
 - [ ] Labels uppercase de seção: 11px, 600, `letter-spacing: 0.06em`, `--text-3`
 - [ ] Cabeçalho de tela: padding `14px 16px 4px`, `‹ Início` (accent) + label (text-3)

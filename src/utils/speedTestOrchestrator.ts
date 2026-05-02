@@ -93,8 +93,9 @@ export async function runSpeedTestV2(
   mode: 'fast' | 'complete',
   onProgress: (p: SpeedTestProgress) => void,
   signal: AbortSignal,
-  _connectionType?: ConnectionType,
+  connectionType?: ConnectionType,
 ): Promise<SpeedTestResult> {
+  void connectionType;
   const ranges = PROGRESS_RANGES[mode];
   const dlConfig = mode === 'fast' ? DOWNLOAD_CONFIG_FAST : DOWNLOAD_CONFIG_COMPLETE;
   const ulConfig = mode === 'fast' ? UPLOAD_CONFIG_FAST   : UPLOAD_CONFIG_COMPLETE;

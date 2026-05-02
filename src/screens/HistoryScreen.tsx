@@ -9,6 +9,7 @@ import { clearHistory, loadHistory } from '../utils/history';
 import { buildHistoryInsights } from '../utils/historyInsights';
 import { formatDate, formatMbps, formatMs } from '../utils/format';
 import { exportHistoryPdf } from '../utils/pdfExport';
+import type { ConnectionProfile } from '../types';
 import './HistoryScreen.css';
 
 interface Props {
@@ -23,6 +24,11 @@ function qualityToChipVariant(quality: string): ChipVariant {
   if (quality === 'excellent' || quality === 'good') return 'good';
   if (quality === 'fair') return 'maybe';
   return 'bad';
+}
+
+function dominantProfile(records: TestRecord[]): ConnectionProfile {
+  const mobileCount = records.filter((r) => r.connectionProfile === 'mobile_broadband' || r.connectionType === 'mobile').length;
+  return mobileCount > records.length / 2 ? 'mobile_broadband' : 'fixed_broadband';
 }
 
 export function HistoryScreen({
@@ -66,7 +72,7 @@ export function HistoryScreen({
       packetLoss: Math.max(avgLos, syntheticLoss),
       timestamp: 0,
     };
-    const interpreted = interpretSpeedTestResult({ metrics: avgMetrics, profile: 'fixed_broadband', history: items });
+    const interpreted = interpretSpeedTestResult({ metrics: avgMetrics, profile: dominantProfile(items), history: items });
     const unstable = interpreted.stability.level === 'unstable' || interpreted.stability.level === 'oscillating';
     return {
       avgDl, avgUl, n,
@@ -92,7 +98,7 @@ export function HistoryScreen({
       packetLoss: sample.reduce((s, r) => s + r.packetLoss, 0) / n,
       timestamp:  mountTime,
     };
-    const interpreted = interpretSpeedTestResult({ metrics: avg, profile: 'fixed_broadband', history: sample });
+    const interpreted = interpretSpeedTestResult({ metrics: avg, profile: dominantProfile(sample), history: sample });
     const lines = interpreted.copyKeys.diagnosisKeys.map((k) => resolveCopy(k));
     return { lines: lines.slice(0, 2), windowLabel: recent.length > 0 ? '24h' : 'recente' };
   }, [items, mountTime]);

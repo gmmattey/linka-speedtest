@@ -52,7 +52,7 @@ export function BeforeAfterScreen({
   return (
     <div className="lk-ba">
       <div className="lk-ba__head">
-        <button className="lk-ba__back" onClick={onBack}>‹ Início</button>
+        <button className="lk-ba__back" onClick={onBack}>‹ Voltar</button>
         <span className="lk-ba__head-label">Antes e Depois</span>
       </div>
 
@@ -134,7 +134,7 @@ export function BeforeAfterScreen({
               <button className="btn-primary lk-ba__actions-primary" onClick={onRetry}>
                 Nova comparação
               </button>
-              <button className="btn-text" onClick={onBack}>Voltar ao início</button>
+              <button className="btn-text" onClick={onBack}>Voltar</button>
             </div>
           </div>
         )}

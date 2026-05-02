@@ -20,7 +20,7 @@
 |---|---|
 | [`GuiaOrganizacaoPastas.md`](GuiaOrganizacaoPastas.md) | Estrutura oficial de pastas; naming conventions; regras de criação de arquivos |
 | [`GuiaBranding.md`](GuiaBranding.md) | Identidade visual completa: cores, tipografia, espaçamento, componentes, copy, design direction iOS-Calma |
-| [`DocumentacaoFuncionalSistema.md`](DocumentacaoFuncionalSistema.md) | Descrição das 10 telas, fluxos de navegação, estados, UX |
+| [`DocumentacaoFuncionalSistema.md`](DocumentacaoFuncionalSistema.md) | Descrição das telas, fluxos de navegação, estados, UX |
 | [`DocumentacaoTecnicaSistema.md`](DocumentacaoTecnicaSistema.md) | Arquitetura, tipos, hooks, utils, componentes (Chip, IOSList, Gauge), deploy |
 | [`EvolucaoSpeedTest.md`](EvolucaoSpeedTest.md) | Roadmap e features futuras: diagnóstico avançado, comparativos, UX evolutiva |
 | [`EvolucaoTelaDesktop.md`](EvolucaoTelaDesktop.md) | Design de telas desktop — prototipagem aprovada (opção 3); layout para telas grandes |
@@ -37,11 +37,11 @@
 **Stack:** Vite 7 · React 19 · TypeScript · CSS Custom Properties · vite-plugin-pwa 1.2  
 **Deploy:** Cloudflare Pages (projeto `linka-speedtest`)  
 **Servidor de teste:** Cloudflare Speed Test (`speed.cloudflare.com`)  
-**Testes:** Vitest (24 testes unitários — `src/__tests__/`)
+**Testes:** Vitest (175 testes unitários — `src/__tests__/`)
 
 ## Estado atual (2026-04-30)
 
-### Telas implementadas (10)
+### Telas implementadas (14)
 
 - [x] **StartScreen** — orb pulsante, info de servidor/ISP, atalho para histórico
 - [x] **RunningScreen** — gauge SVG por fase (DL/UL/latência), frase narrativa, estado de erro com retry
@@ -53,11 +53,15 @@
 - [x] **BeforeAfterScreen** — comparativo antes/depois de uma ação (tabela com delta %)
 - [x] **ComparisonScreen** — comparativo entre dois pontos da casa (Prova Real — 3 testes consecutivos com média)
 - [x] **RoomTestScreen** — teste por cômodo com etiqueta de local associada ao resultado
+- [x] **ExploreScreen** — hub de ferramentas avançadas
+- [x] **DNSBenchmarkScreen** — verificação de servidores DNS por DoH
+- [x] **DNSGuideScreen** — guia de configuração de DNS
+- [x] **LocalWifiScreen** — diagnóstico Wi-Fi nativo, oculto no PWA comum
 
 ### Infraestrutura e design
 
 - [x] Design system iOS-Calma: superfícies neutras, zero sombras, accent restrito, IOSList + Chip
-- [x] Componentes: `Gauge` (SVG ring), `IOSList`, `Chip` (5 variantes), `Header` (legado), `LiveChart`, `IOSCard`
+- [x] Componentes: `Gauge` (SVG ring), `IOSList`, `Chip` (5 variantes), `HamburgerMenu`, `BottomSheet`, `PathRow`
 - [x] Algoritmo speedtest completo (DL/UL/latência/jitter/packetLoss)
 - [x] Presets de payload: ~400 MB em Wi-Fi/cabo, ~70 MB em rede móvel
 - [x] Classificador de qualidade (5 níveis, 5 tags, diagnóstico em linguagem leiga)

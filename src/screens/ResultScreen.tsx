@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IOSList } from '../components/IOSList';
-import { Chip } from '../components/Chip';
-import type { ChipVariant } from '../components/Chip';
 import { Icon } from '../components/icons';
 import { HamburgerMenu } from '../components/HamburgerMenu';
 import { generateShareCard } from '../utils/shareCard';
 import { buildShareText, shareResultText } from '../utils/share';
-import type { Quality, ServerInfo, SpeedTestResult, TestRecord } from '../types';
-import { interpretSpeedTestResult, resolveCopy } from '../core';
+import type { ServerInfo, SpeedTestResult, TestRecord } from '../types';
+import { interpretSpeedTestResult } from '../core';
 
 import type { UseCaseId } from '../core';
 import { loadHistory } from '../utils/history';
@@ -15,6 +13,7 @@ import { formatMbps, formatMs } from '../utils/format';
 import type { ConnectionType, GamingProfile } from '../types';
 import './ResultScreen.css';
 import { combineDiagnostics } from '../utils/combinedDiagnosis';
+import { toConnectionProfile } from '../utils/connectionProfile';
 
 interface Props {
   theme: 'dark' | 'light';
@@ -26,6 +25,7 @@ interface Props {
   onShowHistory: () => void;
   onDiagnostic?: () => void;
   onRecommend?: () => void;
+  onDetails?: () => void;
   onExplore?: () => void;
   onStartRoomTest?: () => void;
   unit?: 'mbps' | 'gbps';
@@ -38,41 +38,6 @@ interface Props {
 }
 
 type ShareStatus = 'idle' | 'copied';
-
-function qualityToChipVariant(q: Quality): ChipVariant {
-  if (q === 'excellent' || q === 'good') return 'good';
-  if (q === 'fair') return 'maybe';
-  return 'bad';
-}
-
-function qualityBadgeLabel(q: Quality): string {
-  if (q === 'excellent') return 'Excelente';
-  if (q === 'good') return 'Boa';
-  if (q === 'fair') return 'Regular';
-  if (q === 'slow') return 'Lenta';
-  return 'Sem conexão';
-}
-
-function bufferbloatGradeColor(grade: string): string {
-  if (grade === 'A') return 'var(--ul)';
-  if (grade === 'B') return 'var(--ul)';
-  if (grade === 'C') return 'var(--warn)';
-  return 'var(--error)';
-}
-
-function bufferbloatGradeLabel(grade: string): string {
-  if (grade === 'A') return 'Excelente';
-  if (grade === 'B') return 'Bom';
-  if (grade === 'C') return 'Moderado';
-  if (grade === 'D') return 'Ruim';
-  return 'Crítico';
-}
-
-function packetLossLabel(pct: number): { text: string; color: string } {
-  if (pct < 1)   return { text: 'Baixo', color: 'var(--ul)' };
-  if (pct < 2.5) return { text: 'Médio', color: 'var(--warn)' };
-  return { text: 'Alto', color: 'var(--error)' };
-}
 
 type GradeTier = 'a' | 'b' | 'c' | 'd' | 'f';
 
@@ -154,16 +119,20 @@ function ucChipLabel(status: string): string {
 
 export function ResultScreen({
   theme, onToggleTheme,
-  result, server,
+  result,
   onRetry, onShowHistory,
-  onDiagnostic, onRecommend, onExplore,
+  onDiagnostic, onRecommend, onDetails, onExplore,
   unit = 'mbps',
   connectionType, contractedDown = null, contractedUp = null, onUpdateContracted,
 }: Props) {
   const history = useMemo(() => loadHistory(), []);
   const interpreted = useMemo(
-    () => interpretSpeedTestResult({ metrics: result, profile: 'fixed_broadband', history }),
-    [result, history],
+    () => interpretSpeedTestResult({
+      metrics: result,
+      profile: toConnectionProfile(connectionType ?? undefined),
+      history,
+    }),
+    [result, connectionType, history],
   );
 
   const combined = useMemo(
@@ -226,23 +195,6 @@ export function ResultScreen({
     }
   }, [result, interpreted.quality, unit]);
 
-  const shortPhrase = resolveCopy(interpreted.copyKeys.shortPhraseKey);
-
-  const detailItems = [
-    {
-      icon: <Icon name="loss" size={14} color="var(--text-2)" />,
-      iconBg: 'var(--surface-3)',
-      title: 'Falhas na conexão',
-      trailing: <span className="lk-result__metric-sub">{result.packetLoss?.toFixed(1) ?? '—'}%</span>,
-    },
-    ...(server?.isp && server.isp !== '—' ? [{
-      icon: <Icon name="router" size={14} color="var(--text-2)" />,
-      iconBg: 'var(--surface-3)',
-      title: 'Provedor',
-      trailing: <span className="lk-result__metric-sub lk-result__metric-sub--truncate">{server.isp}</span>,
-    }] : []),
-  ];
-
   return (
     <div className="lk-result fade-in">
       <div className="lk-result__head">
@@ -259,14 +211,7 @@ export function ResultScreen({
       </div>
 
       <div className="lk-result__scroll">
-        {/* Quality chip */}
-        <div className="lk-result__hero">
-          <Chip variant={qualityToChipVariant(interpreted.quality)}>
-            {qualityBadgeLabel(interpreted.quality)}
-          </Chip>
-        </div>
-
-        {/* Metric grid 2×2 + verdict */}
+        {/* Metric grid 2×2 */}
         <div className="lk-result__metrics-block">
           <div className="lk-result__metric-grid">
             <div className="lk-result__metric-cell">
@@ -308,7 +253,6 @@ export function ResultScreen({
               </div>
             </div>
           </div>
-          <div className="lk-result__verdict">{shortPhrase}</div>
         </div>
 
         {/* Use cases row */}
@@ -338,125 +282,42 @@ export function ResultScreen({
         <div className="lk-result__combined">
           <p className="lk-result__combined-kicker">Diagnóstico da conexão</p>
           <p className="lk-result__combined-title">{combined.title}</p>
-          <p className="lk-result__combined-desc">{combined.explanation}</p>
           <div className="lk-result__combined-action">
             <span>O que fazer agora:</span>
             <strong>{combined.primaryAction}</strong>
           </div>
-          <p className="lk-result__combined-confidence">
-            Confiança:{' '}
-            {combined.confidence === 'high' ? 'alta' : combined.confidence === 'medium' ? 'média' : 'baixa'}
-          </p>
         </div>
-
-        {/* Secondary details */}
-        <div className="lk-result__details">
-          <IOSList items={detailItems} />
-        </div>
-
-        {/* Diagnostico avançado — visível quando há dados de bufferbloat */}
-        {(result.bufferbloatGrade || result.bufferbloatSeverity) && (
-          <div className="lk-result__advanced">
-            <p className="lk-result__advanced-label">Diagnóstico avançado</p>
-            <IOSList
-              items={[
-                ...(result.bufferbloatGrade ? [{
-                  icon: <Icon name="bolt" size={14} color={bufferbloatGradeColor(result.bufferbloatGrade)} />,
-                  iconBg: 'var(--surface-3)',
-                  title: 'Latência sob carga',
-                  subtitle: bufferbloatGradeLabel(result.bufferbloatGrade),
-                  trailing: (
-                    <span
-                      className="lk-result__metric-sub"
-                      style={{ color: bufferbloatGradeColor(result.bufferbloatGrade), fontWeight: 700, fontSize: 16 }}
-                    >
-                      {result.bufferbloatGrade}
-                    </span>
-                  ),
-                }] : []),
-                ...(result.latencyLoaded != null ? [{
-                  icon: <Icon name="ping" size={14} color="var(--text-2)" />,
-                  iconBg: 'var(--surface-3)',
-                  title: 'Latência carregada',
-                  trailing: (
-                    <span className="lk-result__metric-sub">
-                      {formatMs(result.latencyLoaded)} ms
-                      {result.bufferbloatDeltaMs != null && result.bufferbloatDeltaMs > 0 && (
-                        <span style={{ color: 'var(--warn)', fontSize: 11, marginLeft: 4 }}>
-                          +{formatMs(result.bufferbloatDeltaMs)} ms
-                        </span>
-                      )}
-                    </span>
-                  ),
-                }] : []),
-                ...(result.jitterLoaded != null ? [{
-                  icon: <Icon name="jitter" size={14} color="var(--text-2)" />,
-                  iconBg: 'var(--surface-3)',
-                  title: 'Oscilação carregada',
-                  trailing: <span className="lk-result__metric-sub">{formatMs(result.jitterLoaded)} ms</span>,
-                }] : []),
-                ...(result.dlP25 != null && result.dlP75 != null ? [{
-                  icon: <Icon name="download" size={14} color="var(--dl)" />,
-                  iconBg: 'var(--dl-tint, rgba(58,182,255,0.12))',
-                  title: 'Estabilidade download',
-                  subtitle: 'Intervalo p25–p75',
-                  trailing: (
-                    <span className="lk-result__metric-sub">
-                      {formatMbps(result.dlP25, unit)}–{formatMbps(result.dlP75, unit)} {unitLabel}
-                    </span>
-                  ),
-                }] : []),
-                ...(result.packetLoss != null ? (() => {
-                  const pl = packetLossLabel(result.packetLoss);
-                  return [{
-                    icon: <Icon name="loss" size={14} color={pl.color} />,
-                    iconBg: 'var(--surface-3)',
-                    title: 'Falhas na conexão',
-                    trailing: (
-                      <span className="lk-result__metric-sub" style={{ color: pl.color }}>
-                        {pl.text}
-                      </span>
-                    ),
-                  }];
-                })() : []),
-              ]}
-            />
-          </div>
-        )}
-
-        {/* Diagnóstico de texto — summaryText do motor v2 */}
-        {result.diagnostics?.summaryText && (
-          <div className="lk-result__summary-text">
-            {result.diagnostics.summaryText}
-          </div>
-        )}
 
         {/* Explorar */}
         <div className="lk-result__tools">
           <p className="lk-result__tools-label">Explorar</p>
           <IOSList
             items={[
-              ...(onRecommend ? [{
-                icon: <Icon name="bulb" size={14} color="#fff" />,
-                iconBg: 'var(--accent)',
-                title: 'Ver recomendações',
-                subtitle: 'Como melhorar sua internet',
-                showChevron: true,
-                onClick: onRecommend,
-              }] : []),
               ...(onDiagnostic ? [{
                 icon: <Icon name="shield" size={14} color="#fff" />,
                 iconBg: 'var(--accent)',
-                title: 'Mais detalhes',
-                subtitle: 'Análise de cada métrica',
+                title: 'Diagnóstico',
                 showChevron: true,
                 onClick: onDiagnostic,
               }] : []),
-              ...(onExplore ? [{
-                icon: <Icon name="cog" size={14} color="#fff" />,
+              ...(onRecommend ? [{
+                icon: <Icon name="bulb" size={14} color="#fff" />,
+                iconBg: 'var(--accent)',
+                title: 'Recomendações',
+                showChevron: true,
+                onClick: onRecommend,
+              }] : []),
+              ...(onDetails ? [{
+                icon: <Icon name="document" size={14} color="var(--text-2)" />,
                 iconBg: 'var(--surface-3)',
-                title: 'Explorar ferramentas',
-                subtitle: 'Modo Gamer, DNS e testes avançados',
+                title: 'Detalhes',
+                showChevron: true,
+                onClick: onDetails,
+              }] : []),
+              ...(onExplore ? [{
+                icon: <Icon name="cog" size={14} color="var(--text-2)" />,
+                iconBg: 'var(--surface-3)',
+                title: 'Ferramentas',
                 showChevron: true,
                 onClick: onExplore,
               }] : []),

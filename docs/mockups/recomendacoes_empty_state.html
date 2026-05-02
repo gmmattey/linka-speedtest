@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<title>linka SpeedTest — Recomendações (empty state) — atual × proposta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* ── Tokens (espelham src/tokens.css [data-theme='dark']) ───────────── */
+  :root {
+    --bg:                   #0A0A0F;
+    --bg-elev:              #0F0F14;
+    --surface:              #1A1A22;
+    --surface-2:            #22222B;
+    --border:               #2A2A35;
+    --border-strong:        #333342;
+    --hairline:             rgba(255, 255, 255, 0.06);
+    --accent:               #7C5FFF;
+    --accent-soft:          #9B7FFF;
+    --accent-tint:          rgba(124, 95, 255, 0.12);
+    --accent-tint-strong:   rgba(124, 95, 255, 0.28);
+    --accent-border:        rgba(124, 95, 255, 0.28);
+    --dl:                   #60A5FA;
+    --ul:                   #34D399;
+    --text:                 #FAFAF7;
+    --text-2:               #9A9A9A;
+    --text-3:               #6B6B6B;
+    --success:              #34D399;
+    --warn:                 #FBBF24;
+    --color-good-bg:        rgba(52, 211, 153, 0.10);
+    --color-good-border:    rgba(52, 211, 153, 0.22);
+    --color-warn-bg:        rgba(251, 191, 36, 0.08);
+    --color-warn-border:    rgba(251, 191, 36, 0.25);
+    --radius-sm: 8px;
+    --radius: 14px;
+    --radius-button: 12px;
+    --radius-pill: 999px;
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 24px;
+    --font-display: 'Geist', system-ui, -apple-system, sans-serif;
+    --font-body:    'Geist', system-ui, -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #050507;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .stage {
+    min-height: 100vh;
+    padding: 32px 24px 64px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .stage-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+    margin: 0 0 4px;
+    color: var(--text);
+  }
+  .stage-sub {
+    color: var(--text-2);
+    margin: 0 0 28px;
+    font-size: 13px;
+  }
+  .stage-sub code { font-family: ui-monospace, SFMono-Regular, monospace; color: var(--text); }
+
+  .frames {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  .frame-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .frame-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    color: var(--text);
+    text-transform: uppercase;
+  }
+  .frame-label .pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: var(--radius-pill);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .pill-current { background: rgba(248,113,113,0.12); color: #F87171; border: 1px solid rgba(248,113,113,0.25); }
+  .pill-proposal { background: var(--color-good-bg); color: var(--success); border: 1px solid var(--color-good-border); }
+
+  /* ── Phone frame ──────────────────────────────────────────────────── */
+  .phone {
+    width: 390px;
+    height: 780px;
+    border-radius: 44px;
+    background: #000;
+    padding: 12px;
+    border: 1px solid #1a1a1a;
+    position: relative;
+  }
+  .phone::after {
+    content: "";
+    position: absolute;
+    top: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 110px;
+    height: 28px;
+    background: #000;
+    border-radius: 999px;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .phone-screen {
+    background: var(--bg);
+    border-radius: 32px;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Reproduz RecommendScreen.css ─────────────────────────────────── */
+  .lk-rec-screen {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--bg);
+  }
+  .lk-rec-screen__head {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 50px 16px 4px; /* +safe-top fake */
+    flex-shrink: 0;
+  }
+  .lk-rec-screen__back {
+    color: var(--accent);
+    font-size: 16px;
+    font-weight: 500;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+    font-family: inherit;
+  }
+  .lk-rec-screen__head-label {
+    font-size: 15px;
+    color: var(--text-3);
+    text-align: center;
+  }
+  .lk-rec-screen__scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 16px 32px;
+  }
+  .lk-rec-screen__hero { padding: 4px 0 18px; }
+  .lk-rec-screen__title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-top: 10px;
+    color: var(--text);
+  }
+  .lk-rec-screen__sub {
+    font-size: 12px;
+    color: var(--text-2);
+    margin: 6px 0 0;
+  }
+  .lk-rec-screen__card {
+    display: flex;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .lk-rec-screen__card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--accent-tint);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .lk-rec-screen__card-body { flex: 1; min-width: 0; }
+  .lk-rec-screen__card-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .lk-rec-screen__card-desc {
+    font-size: 13px;
+    color: var(--text-2);
+    line-height: 1.45;
+    margin-top: 4px;
+  }
+  .lk-rec-screen__section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--text-3);
+    text-transform: uppercase;
+    margin: 24px 0 8px;
+  }
+
+  /* ── Componentes da proposta ──────────────────────────────────────── */
+
+  /* Hero card de validação */
+  .lk-validation {
+    background: var(--color-good-bg);
+    border: 1px solid var(--color-good-border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+  .lk-validation__top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .lk-validation__icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(52,211,153,0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .lk-validation__title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: var(--text);
+  }
+  .lk-validation__sub {
+    font-size: 13px;
+    color: var(--text-2);
+    margin: 0;
+    line-height: 1.45;
+  }
+  .lk-validation__metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-good-border);
+  }
+  .lk-metric { text-align: left; }
+  .lk-metric__label {
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .lk-metric__value {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--text);
+    line-height: 1;
+  }
+  .lk-metric__unit {
+    font-size: 11px;
+    color: var(--text-2);
+    font-weight: 500;
+    margin-left: 2px;
+  }
+
+  /* Card "casos de uso" — list w/ green pills */
+  .lk-section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+  .lk-section-card__title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text);
+    margin: 0 0 12px;
+    letter-spacing: -0.01em;
+  }
+  .lk-usecases { display: flex; flex-direction: column; gap: 10px; }
+  .lk-usecase {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .lk-usecase__left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .lk-usecase__icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--surface-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-2);
+  }
+  .lk-usecase__name {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .lk-pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--color-good-bg);
+    color: var(--success);
+    border: 1px solid var(--color-good-border);
+    white-space: nowrap;
+  }
+
+  /* Tips list (preventive) */
+  .lk-tips { display: flex; flex-direction: column; gap: 10px; }
+  .lk-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .lk-tip__bullet {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-3);
+    margin-top: 7px;
+    flex-shrink: 0;
+  }
+  .lk-tip__body { flex: 1; min-width: 0; }
+  .lk-tip__title {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .lk-tip__desc {
+    font-size: 12px;
+    color: var(--text-2);
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+
+  /* Comparativo histórico */
+  .lk-history-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .lk-history-card__icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--accent-tint);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .lk-history-card__body { flex: 1; min-width: 0; }
+  .lk-history-card__title {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 600;
+  }
+  .lk-history-card__sub {
+    font-size: 12px;
+    color: var(--text-2);
+    margin-top: 2px;
+  }
+  .lk-history-card__chev { color: var(--text-3); flex-shrink: 0; }
+
+  /* Botões */
+  .lk-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .lk-btn-primary {
+    height: 48px;
+    background: var(--accent);
+    color: #fff;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 15px;
+    border-radius: var(--radius-button);
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .lk-btn-outline {
+    height: 44px;
+    background: transparent;
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: var(--radius-button);
+    border: 1px solid var(--accent);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  /* ── Annotation list under the proposal ───────────────────────────── */
+  .legend {
+    margin-top: 28px;
+    max-width: 880px;
+    color: var(--text-2);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .legend h3 {
+    font-family: var(--font-display);
+    color: var(--text);
+    font-size: 15px;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .legend ol { margin: 0 0 16px; padding-left: 20px; }
+  .legend li { margin-bottom: 4px; }
+  .legend .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent-tint);
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 11px;
+    margin-right: 6px;
+  }
+
+  /* Numbered overlay markers on proposal */
+  .marker {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 3px var(--bg);
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  .phone-pos { position: relative; }
+
+  @media (max-width: 880px) {
+    .frames { flex-direction: column; align-items: center; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <h1 class="stage-title">linka SpeedTest — Recomendações (empty state)</h1>
+  <p class="stage-sub">Comparativo: <code>RecommendScreen.tsx</code> hoje × proposta. Mesmo arquivo, mesma stack (React/CSS tokens), mesma paleta dark.</p>
+
+  <div class="frames">
+    <!-- ════════════════════════════════════════════════════════════════
+         CURRENT (atual)
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="frame-wrap">
+      <div class="frame-label">
+        Atual
+        <span class="pill pill-current">renderiza ~85% vazio</span>
+      </div>
+
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="lk-rec-screen">
+            <div class="lk-rec-screen__head">
+              <button class="lk-rec-screen__back">‹ Resultados</button>
+              <span class="lk-rec-screen__head-label">Recomendações</span>
+              <span></span>
+            </div>
+            <div class="lk-rec-screen__scroll">
+              <div class="lk-rec-screen__hero">
+                <div class="lk-rec-screen__title">Sua conexão está em bom estado</div>
+                <p class="lk-rec-screen__sub">Não encontramos problemas no diagnóstico. Continue assim!</p>
+              </div>
+              <!-- nada mais é renderizado: linha 109 do RecommendScreen.tsx
+                   bloqueia STATIC_RECS quando isGoodConnection && !hasDynamic -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         PROPOSAL (proposta)
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="frame-wrap">
+      <div class="frame-label">
+        Proposta
+        <span class="pill pill-proposal">5 blocos · reaproveita tokens</span>
+      </div>
+
+      <div class="phone phone-pos">
+        <!-- markers -->
+        <div class="marker" style="top: 132px; left: -12px;">1</div>
+        <div class="marker" style="top: 360px; left: -12px;">2</div>
+        <div class="marker" style="top: 540px; left: -12px;">3</div>
+        <div class="marker" style="top: 678px; left: -12px;">4</div>
+
+        <div class="phone-screen">
+          <div class="lk-rec-screen">
+            <div class="lk-rec-screen__head">
+              <button class="lk-rec-screen__back">‹ Resultados</button>
+              <span class="lk-rec-screen__head-label">Recomendações</span>
+              <span></span>
+            </div>
+            <div class="lk-rec-screen__scroll">
+
+              <!-- Bloco 1 — Hero de validação positiva -->
+              <div class="lk-validation">
+                <div class="lk-validation__top">
+                  <div class="lk-validation__icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M9 12l2 2 4-4"/>
+                      <circle cx="12" cy="12" r="10"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="lk-validation__title">Tudo dentro do esperado</div>
+                  </div>
+                </div>
+                <p class="lk-validation__sub">Velocidade, latência e estabilidade passaram em todos os critérios para o seu uso atual.</p>
+
+                <div class="lk-validation__metrics">
+                  <div class="lk-metric">
+                    <div class="lk-metric__label">Download</div>
+                    <div class="lk-metric__value">248<span class="lk-metric__unit">Mbps</span></div>
+                  </div>
+                  <div class="lk-metric">
+                    <div class="lk-metric__label">Latência</div>
+                    <div class="lk-metric__value">14<span class="lk-metric__unit">ms</span></div>
+                  </div>
+                  <div class="lk-metric">
+                    <div class="lk-metric__label">Perda</div>
+                    <div class="lk-metric__value">0<span class="lk-metric__unit">%</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bloco 2 — Casos de uso suportados -->
+              <div class="lk-section-card">
+                <h4 class="lk-section-card__title">Pronto para</h4>
+                <div class="lk-usecases">
+                  <div class="lk-usecase">
+                    <div class="lk-usecase__left">
+                      <div class="lk-usecase__icon">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                      </div>
+                      <span class="lk-usecase__name">Streaming 4K</span>
+                    </div>
+                    <span class="lk-pill">Bom</span>
+                  </div>
+                  <div class="lk-usecase">
+                    <div class="lk-usecase__left">
+                      <div class="lk-usecase__icon">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M2 15a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-3a8 8 0 0 0-16 0Z"/></svg>
+                      </div>
+                      <span class="lk-usecase__name">Jogos online</span>
+                    </div>
+                    <span class="lk-pill">Bom</span>
+                  </div>
+                  <div class="lk-usecase">
+                    <div class="lk-usecase__left">
+                      <div class="lk-usecase__icon">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l5-3v10l-5-3v-4Z"/><rect x="2" y="6" width="13" height="12" rx="2"/></svg>
+                      </div>
+                      <span class="lk-usecase__name">Videochamada</span>
+                    </div>
+                    <span class="lk-pill">Bom</span>
+                  </div>
+                  <div class="lk-usecase">
+                    <div class="lk-usecase__left">
+                      <div class="lk-usecase__icon">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/></svg>
+                      </div>
+                      <span class="lk-usecase__name">Trabalho remoto</span>
+                    </div>
+                    <span class="lk-pill">Bom</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bloco 3 — Manutenção preventiva -->
+              <div class="lk-section-card">
+                <h4 class="lk-section-card__title">Mantenha esse padrão</h4>
+                <div class="lk-tips">
+                  <div class="lk-tip">
+                    <span class="lk-tip__bullet"></span>
+                    <div class="lk-tip__body">
+                      <div class="lk-tip__title">Reinicie o roteador a cada 30 dias</div>
+                      <div class="lk-tip__desc">Libera memória e renova sessões.</div>
+                    </div>
+                  </div>
+                  <div class="lk-tip">
+                    <span class="lk-tip__bullet"></span>
+                    <div class="lk-tip__body">
+                      <div class="lk-tip__title">Mantenha o firmware atualizado</div>
+                      <div class="lk-tip__desc">Correções e segurança vêm em atualizações da operadora.</div>
+                    </div>
+                  </div>
+                  <div class="lk-tip">
+                    <span class="lk-tip__bullet"></span>
+                    <div class="lk-tip__body">
+                      <div class="lk-tip__title">Refaça o teste se notar lentidão</div>
+                      <div class="lk-tip__desc">A causa pode aparecer só sob carga ou em horários de pico.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bloco 4 — Comparativo histórico -->
+              <div class="lk-history-card">
+                <div class="lk-history-card__icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C5FFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                </div>
+                <div class="lk-history-card__body">
+                  <div class="lk-history-card__title">12% acima da sua média de 30 dias</div>
+                  <div class="lk-history-card__sub">Resultado consistente · 18 testes</div>
+                </div>
+                <div class="lk-history-card__chev">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </div>
+              </div>
+
+              <!-- Bloco 5 — CTAs -->
+              <div class="lk-actions">
+                <button class="lk-btn-primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                  Refazer teste
+                </button>
+                <button class="lk-btn-outline">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Gerar laudo (PDF)
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ────────────────────────────────────────────────────────────────
+       Legenda
+  ──────────────────────────────────────────────────────────────── -->
+  <div class="legend">
+    <h3>Anatomia da proposta</h3>
+    <ol style="list-style: none; padding-left: 0;">
+      <li><span class="num">1</span><strong>Hero de validação</strong> — verde semântico (<code>--color-good-bg</code> / <code>--color-good-border</code>), check icon, número de cada métrica para confirmar de onde vem o "bom". Substitui o título solto.</li>
+      <li><span class="num">2</span><strong>Pronto para</strong> — usecases derivados do <code>SpeedTestResult</code> com pílulas verdes. Card padrão (<code>--surface</code> / <code>--border</code>).</li>
+      <li><span class="num">3</span><strong>Mantenha esse padrão</strong> — 3 dicas preventivas estáticas. Substitui a omissão atual sem ser as <code>STATIC_RECS</code> de problema (que falam em "mude o canal", "mesh", etc., e soariam contraditórias com o estado bom).</li>
+      <li><span class="num">4</span><strong>Comparativo histórico</strong> — só renderiza se <code>loadHistory().length ≥ 3</code>. Se não, oculta. Atalho para tela de qualidade ao longo do tempo.</li>
+      <li><span class="num">5</span><strong>CTAs no rodapé</strong> — primário <code>Refazer teste</code> (consistência com tela de Resultados); outline <code>Gerar laudo</code> aproveita o estado bom para gerar evidência.</li>
+    </ol>
+    <h3>Princípios respeitados</h3>
+    <ul>
+      <li>Zero token novo: tudo já existe em <code>src/tokens.css</code>.</li>
+      <li>Sem box-shadow (regra de branding).</li>
+      <li>"linka" minúsculo no header.</li>
+      <li>Reaproveita estrutura CSS existente (<code>.lk-rec-screen__*</code>) e adiciona apenas componentes da proposta (<code>.lk-validation</code>, <code>.lk-section-card</code>, <code>.lk-tips</code>, <code>.lk-history-card</code>, <code>.lk-pill</code>).</li>
+      <li>Métricas e comparativo são <em>derivados</em> de <code>result</code> e <code>loadHistory()</code> — nada inventado.</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

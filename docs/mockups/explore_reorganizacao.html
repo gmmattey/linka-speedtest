@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>ExploreScreen — Reorganização</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0A0A0F; --bg-elev: #0F0F14; --surface: #1A1A22; --surface-2: #22222B;
+    --surface-3: #2D2D38; --border: #2A2A35; --border-subtle: #1F1F2A;
+    --accent: #7C5FFF; --text: #FAFAF7; --text-2: #9A9A9A; --text-3: #6B6B6B;
+    --radius: 14px; --radius-sm: 8px;
+  }
+  body {
+    background: #111118; display: flex; flex-direction: column; align-items: center;
+    padding: 32px 16px 48px; font-family: system-ui, -apple-system, sans-serif;
+    color: #fff; gap: 20px;
+  }
+  h1 { font-size: 13px; font-weight: 500; color: #666; text-transform: uppercase; letter-spacing: .06em; }
+
+  .columns { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .col-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: #555; }
+  .col-label.after { color: #9B7FFF; }
+
+  .phone {
+    width: 360px; background: var(--bg); border-radius: 28px;
+    border: 1.5px solid #2A2A35; overflow: hidden;
+  }
+  .head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 16px 10px; border-bottom: 1px solid var(--border-subtle);
+  }
+  .head-back { color: var(--accent); font-size: 15px; font-weight: 500; }
+  .head-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .head-icon { color: #555; font-size: 18px; }
+
+  .scroll { padding: 16px; display: flex; flex-direction: column; gap: 20px; }
+
+  .section { display: flex; flex-direction: column; gap: 8px; }
+  .section-label {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--text-3); padding: 0 2px;
+  }
+
+  .ios-list {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .ios-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 14px; border-bottom: 1px solid var(--border-subtle);
+  }
+  .ios-item:last-child { border-bottom: none; }
+  .ios-icon {
+    width: 28px; height: 28px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 13px;
+  }
+  .bg-accent { background: var(--accent); }
+  .bg-muted  { background: var(--surface-3); }
+  .ios-body { flex: 1; min-width: 0; }
+  .ios-title { font-size: 14px; color: var(--text); font-weight: 500; }
+  .ios-sub { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+  .ios-chevron { color: var(--text-3); font-size: 13px; }
+
+  /* diff indicators */
+  .tag { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; letter-spacing: .04em; }
+  .tag-new   { background: rgba(52,211,153,.12); color: #34D399; }
+  .tag-moved { background: rgba(251,191,36,.08); color: #FBBF24; }
+
+  .legend { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<h1>ExploreScreen · Reorganização do menu</h1>
+
+<div class="legend">
+  <span class="tag tag-new">● label renomeado</span>
+  <span class="tag tag-moved">● reordenado / ícone novo</span>
+</div>
+
+<div class="columns">
+
+  <!-- ── ANTES ── -->
+  <div class="col">
+    <span class="col-label">Antes</span>
+    <div class="phone">
+      <div class="head">
+        <span class="head-back">‹ Voltar</span>
+        <span class="head-title">Explorar</span>
+        <span class="head-icon">⋯</span>
+      </div>
+      <div class="scroll">
+
+        <!-- só quando há resultado -->
+        <div class="section">
+          <p class="section-label">Entender meu resultado</p>
+          <div class="ios-list">
+            <div class="ios-item">
+              <div class="ios-icon bg-accent">🛡</div>
+              <div class="ios-body"><div class="ios-title">Diagnóstico completo</div><div class="ios-sub">Análise de cada métrica da sua conexão</div></div>
+              <span class="ios-chevron">›</span>
+            </div>
+            <div class="ios-item">
+              <div class="ios-icon bg-accent">💡</div>
+              <div class="ios-body"><div class="ios-title">Recomendações</div><div class="ios-sub">Como melhorar sua internet</div></div>
+              <span class="ios-chevron">›</span>
+            </div>
+            <div class="ios-item">
+              <div class="ios-icon bg-accent">🎮</div>
+              <div class="ios-body"><div class="ios-title">Modo Gamer</div><div class="ios-sub">Avaliação para jogos online e cloud gaming</div></div>
+              <span class="ios-chevron">›</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <p class="section-label">Testes avançados</p>
+          <div class="ios-list">
+            <div class="ios-item">
+              <div class="ios-icon bg-accent">↺</div>
+              <div class="ios-body"><div class="ios-title">Prova Real</div><div class="ios-sub">Média de 3 testes consecutivos</div></div>
+              <span class="ios-chevron">›</span>
+            </div>
+            <div class="ios-item">
+              <!-- mesmo ícone cmp -->
+              <div class="ios-icon bg-accent" style="font-size:11px">⇅</div>
+              <div class="ios-body"><div class="ios-title">Comparar locais</div><div class="ios-sub">Perto vs longe do roteador</div></div>
+              <span class="ios-chevron">›</span>
+            </div>
+            <div class="ios-item">
+              <!-- mesmo ícone cmp -->
+              <div class="ios-icon bg-muted" style="font-size:11px">⇅</div>
+              <div class="ios-body"><div class="ios-title">Antes e Depois</div><div class="ios-sub">Compare o impacto de uma mudança</div></div>
+              <span class="ios-chevron">›</span>
+            </div>
+            <div class="ios-item">
+              <div class="ios-icon bg-muted">📍</div>
+              <div class="ios-body"><div class="ios-title">Teste por local</div><div class="ios-sub">Meça o sinal em cada cômodo</div></div>
+              <span class="ios-chevron">›</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <p class="section-label">Ferramentas de rede</p>
+          <div class="ios-list">
+            <div class="ios-item">
+              <div class="ios-icon bg-accent">📶</div>
+              <div class="ios-body"><div class="ios-title">Diagnóstico Wi-Fi</div><div class="ios-sub">Sinal local, banda e qualidade do link</div></div>
+              <span class="ios-chevron">›</span>
+            </div>
+            <div class="ios-item">
+              <div class="ios-icon bg-accent">🔍</div>
+              <div class="ios-body"><div class="ios-title">Verificar DNS</div><div class="ios-sub">Teste os servidores DNS disponíveis</div></div>
+              <span class="ios-chevron">›</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DEPOIS ── -->
+  <div class="col">
+    <span class="col-label after">Depois</span>
+    <div class="phone">
+      <div class="head">
+        <span class="head-back">‹ Voltar</span>
+        <span class="head-title">Explorar</span>
+        <span class="head-icon">⋯</span>
+      </div>
+      <div class="scroll">
+
+        <!-- só quando há resultado -->
+        <div class="section">
+          <p class="section-label" style="color:#9B7FFF">Resultado <span class="tag tag-new">renomeado</span></p>
+          <div class="ios-list">
+            <div class="ios-item">
+              <div class="ios-icon bg-accent">🛡</div>
+              <div class="ios-body"><div class="ios-title">Diagnóstico completo</div><div class="ios-sub">Análise de cada métrica da sua conexão</div></div>
+              <span class="ios-chevron">›</span>
+            </div>
+            <div class="ios-item">
+              <div class="ios-icon bg-accent">💡</div>
+              <div class="ios-body"><div class="ios-title">Recomendações</div><div class="ios-sub">Como melhorar sua internet</div></div>
+              <span class="ios-chevron">›</span>
+            </div>
+            <div class="ios-item">
+              <div class="ios-icon bg-accent">🎮</div>
+              <div class="ios-body"><div class="ios-title">Modo Gamer</div><div class="ios-sub">Avaliação para jogos online e cloud gaming</div></div>
+              <span class="ios-chevron">›</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <p class="section-label" style="color:#9B7FFF">Medir <span class="tag tag-new">renomeado</span></p>
+          <div class="ios-list">
+            <div class="ios-item">
+              <div class="ios-icon bg-accent">↺</div>
+              <div class="ios-body"><div class="ios-title">Prova Real</div><div class="ios-sub">Média de 3 testes consecutivos</div></div>
+              <span class="ios-chevron">›</span>
+            </div>
+            <div class="ios-item">
+              <!-- ícone pin — reordenado -->
+              <div class="ios-icon bg-muted">📍</div>
+              <div class="ios-body">
+                <div class="ios-title">Teste por local <span class="tag tag-moved">reordenado</span></div>
+                <div class="ios-sub">Meça o sinal em cada cômodo</div>
+              </div>
+              <span class="ios-chevron">›</span>
+            </div>
+            <div class="ios-item">
+              <!-- ícone cmp vertical — Comparar locais -->
+              <div class="ios-icon bg-accent" style="font-size:11px">⇅</div>
+              <div class="ios-body">
+                <div class="ios-title">Comparar locais <span class="tag tag-moved">reordenado</span></div>
+                <div class="ios-sub">Perto vs longe do roteador</div>
+              </div>
+              <span class="ios-chevron">›</span>
+            </div>
+            <div class="ios-item">
+              <!-- ícone swap horizontal — DIFERENTE de cmp -->
+              <div class="ios-icon bg-muted" style="font-size:12px">⇄</div>
+              <div class="ios-body">
+                <div class="ios-title">Antes e Depois <span class="tag tag-moved">ícone novo</span></div>
+                <div class="ios-sub">Compare o impacto de uma mudança</div>
+              </div>
+              <span class="ios-chevron">›</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <p class="section-label" style="color:#9B7FFF">Rede <span class="tag tag-new">renomeado</span></p>
+          <div class="ios-list">
+            <div class="ios-item">
+              <div class="ios-icon bg-accent">📶</div>
+              <div class="ios-body"><div class="ios-title">Diagnóstico Wi-Fi</div><div class="ios-sub">Sinal local, banda e qualidade do link</div></div>
+              <span class="ios-chevron">›</span>
+            </div>
+            <div class="ios-item">
+              <div class="ios-icon bg-accent">🔍</div>
+              <div class="ios-body"><div class="ios-title">Verificar DNS</div><div class="ios-sub">Compare servidores DNS da sua rede</div></div>
+              <span class="ios-chevron">›</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

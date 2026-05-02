@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResultScreen — Antes vs Depois (texto espalhado)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:             #0A0A0F;
+    --bg-elev:        #0F0F14;
+    --surface:        #1A1A22;
+    --surface-2:      #22222B;
+    --surface-3:      #2D2D38;
+    --border:         #2A2A35;
+    --border-subtle:  #1F1F2A;
+    --accent:         #7C5FFF;
+    --accent-soft:    #9B7FFF;
+    --accent-tint:    rgba(124, 95, 255, 0.12);
+    --accent-border:  rgba(124, 95, 255, 0.28);
+    --dl:             #60A5FA;
+    --ul:             #34D399;
+    --ul-tint:        rgba(52, 211, 153, 0.16);
+    --text:           #FAFAF7;
+    --text-2:         #9A9A9A;
+    --text-3:         #6B6B6B;
+    --error:          #F87171;
+    --warn:           #FBBF24;
+    --success:        #34D399;
+    --color-good-bg:  rgba(52, 211, 153, 0.10);
+    --color-good-border: rgba(52, 211, 153, 0.22);
+    --color-warn-bg:  rgba(251, 191, 36, 0.08);
+    --color-bad-bg:   rgba(248, 113, 113, 0.08);
+    --grade-a:        #34D399;
+    --grade-b:        #86EFAC;
+    --radius:         14px;
+    --radius-sm:      8px;
+    --radius-button:  12px;
+    --font-mono:      'JetBrains Mono', ui-monospace, monospace;
+    --font-editorial: 'Instrument Serif', Georgia, serif;
+  }
+
+  body {
+    background: #111118;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px 48px;
+    font-family: system-ui, -apple-system, sans-serif;
+    color: #fff;
+    gap: 16px;
+    min-height: 100vh;
+  }
+
+  h1 {
+    font-size: 14px;
+    font-weight: 500;
+    color: #888;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .columns {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .col-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #555;
+  }
+  .col-label.depois { color: var(--accent-soft); }
+
+  /* Phone shell */
+  .phone {
+    width: 375px;
+    background: var(--bg);
+    border-radius: 28px;
+    border: 1.5px solid #2A2A35;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .phone-scroll {
+    padding: 8px 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* ── Header ── */
+  .head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 4px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .head-back { color: var(--accent); font-size: 16px; font-weight: 500; }
+  .head-icon { color: #555; font-size: 18px; }
+
+  /* ── Chip ── */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    margin: 10px 0 10px;
+  }
+  .chip-regular { background: var(--color-warn-bg); color: var(--warn); border: 1px solid rgba(251,191,36,0.25); }
+
+  /* ── Metrics block ── */
+  .metrics-block {
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .metric-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+  }
+  .metric-cell {
+    padding: 12px 14px;
+    background: var(--bg-elev);
+  }
+  .metric-lbl {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-3);
+  }
+  .metric-val-lg {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 26px;
+    line-height: 1.1;
+    margin-top: 3px;
+  }
+  .metric-val-md {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 1.1;
+    margin-top: 3px;
+    color: var(--text);
+  }
+  .metric-unit { font-family: var(--font-mono); font-size: 9px; color: var(--text-3); display: block; margin-top: 1px; }
+  .grade-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 600;
+    margin-top: 6px;
+  }
+  .g-a { background: rgba(52,211,153,0.10); color: #34D399; }
+  .g-b { background: rgba(134,239,172,0.10); color: #86EFAC; }
+
+  /* Verdict (antes only) */
+  .verdict {
+    padding: 12px 14px;
+    font-family: var(--font-editorial);
+    font-style: italic;
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--text);
+    background: var(--surface-2);
+  }
+
+  /* ── Use cases row ── */
+  .use-row {
+    display: flex;
+    justify-content: space-around;
+    padding: 14px 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+  }
+  .use-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .use-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--ul-tint); color: var(--ul); font-size: 16px;
+  }
+  .use-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--text-3); }
+  .use-chip {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+    padding: 2px 6px; border-radius: 10px;
+    background: var(--ul-tint); color: var(--ul);
+  }
+
+  /* ── Combined card ── */
+  .combined {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .combined-kicker {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-3); margin-bottom: 6px;
+  }
+  .combined-title {
+    font-size: 15px; font-weight: 600; color: var(--text);
+    line-height: 1.3; margin-bottom: 6px;
+  }
+  .combined-desc {
+    font-size: 13px; color: var(--text-2); line-height: 1.45; margin-bottom: 10px;
+  }
+  .combined-action {
+    display: flex; flex-direction: column; gap: 2px;
+    padding: 10px 12px; border-radius: var(--radius-sm);
+    background: var(--accent-tint); border: 1px solid var(--accent-border);
+    margin-bottom: 10px;
+  }
+  .combined-action span {
+    font-size: 11px; font-weight: 500; color: var(--accent-soft);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .combined-action strong {
+    font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.4;
+  }
+  .combined-confidence {
+    font-size: 11px; color: var(--text-3);
+  }
+
+  /* ── IOSList ── */
+  .ios-list {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .ios-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .ios-item:last-child { border-bottom: none; }
+  .ios-icon {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--surface-3); display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: var(--text-2); flex-shrink: 0;
+  }
+  .ios-title { font-size: 14px; color: var(--text); flex: 1; }
+  .ios-trailing { font-size: 13px; color: var(--text-2); }
+
+  /* ── Advanced section ── */
+  .advanced { margin-bottom: 20px; }
+  .section-label {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-3); margin-bottom: 8px;
+  }
+
+  /* Summary text (antes only) */
+  .summary-text {
+    font-size: 13px; color: var(--text-2); line-height: 1.5;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+  }
+
+  /* ── Explorar ── */
+  .tools { margin-bottom: 20px; }
+  .ios-item .ios-trailing-chevron { color: var(--text-3); font-size: 12px; }
+  .ios-icon-accent { background: var(--accent); color: #fff; }
+  .ios-icon-muted  { background: var(--surface-3); color: var(--text-2); }
+
+  /* ── Footer ── */
+  .footer { display: flex; flex-direction: column; gap: 8px; }
+  .btn-retry {
+    width: 100%; height: 50px; border-radius: var(--radius-button);
+    background: var(--accent); color: #fff;
+    font-weight: 700; font-size: 16px; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .footer-row { display: flex; justify-content: center; gap: 16px; }
+  .btn-text { color: var(--accent); font-size: 14px; font-weight: 500; }
+
+  /* ── Removed indicator ── */
+  .removed {
+    position: relative;
+    opacity: 0.18;
+  }
+  .removed::after {
+    content: 'REMOVIDO';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--error);
+    background: rgba(248,113,113,0.06);
+    border-radius: var(--radius);
+    border: 1px dashed rgba(248,113,113,0.3);
+  }
+
+  /* diff pill */
+  .diff-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    letter-spacing: 0.04em;
+  }
+  .diff-removed { background: rgba(248,113,113,0.12); color: var(--error); }
+  .diff-kept    { background: rgba(52,211,153,0.10);  color: var(--ul); }
+  .diff-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+</style>
+</head>
+<body>
+
+<h1>ResultScreen · Redução de texto espalhado</h1>
+
+<div class="diff-row">
+  <span class="diff-pill diff-removed">✕ Chip de qualidade (Regular)</span>
+  <span class="diff-pill diff-removed">✕ Verdict (frase cursiva)</span>
+  <span class="diff-pill diff-removed">✕ Explicação do diagnóstico</span>
+  <span class="diff-pill diff-removed">✕ Confiança: média</span>
+  <span class="diff-pill diff-removed">✕ Parágrafo summaryText</span>
+  <span class="diff-pill diff-kept">✓ Título do diagnóstico</span>
+  <span class="diff-pill diff-kept">✓ Box "O que fazer agora"</span>
+</div>
+
+<div class="columns">
+
+  <!-- ═══════════ ANTES ═══════════ -->
+  <div class="col">
+    <span class="col-label">Antes</span>
+    <div class="phone">
+      <div class="head">
+        <span class="head-back">Histórico</span>
+        <span class="head-icon">⋯</span>
+      </div>
+      <div class="phone-scroll">
+
+        <div class="chip chip-regular">Regular</div>
+
+        <!-- Metrics block -->
+        <div class="metrics-block">
+          <div class="metric-grid">
+            <div class="metric-cell">
+              <div class="metric-lbl">Download</div>
+              <div class="metric-val-lg" style="color:var(--dl)">604</div>
+              <span class="metric-unit">Mbps</span>
+              <div class="grade-badge g-a">A · Excelente</div>
+            </div>
+            <div class="metric-cell">
+              <div class="metric-lbl">Upload</div>
+              <div class="metric-val-lg" style="color:var(--ul)">662</div>
+              <span class="metric-unit">Mbps</span>
+              <div class="grade-badge g-a">A · Excelente</div>
+            </div>
+            <div class="metric-cell">
+              <div class="metric-lbl">Resposta</div>
+              <div class="metric-val-md">35<span style="font-size:11px;color:var(--text-3)"> ms</span></div>
+              <div class="grade-badge g-b">B · Bom</div>
+            </div>
+            <div class="metric-cell">
+              <div class="metric-lbl">Oscilação</div>
+              <div class="metric-val-md">6<span style="font-size:11px;color:var(--text-3)"> ms</span></div>
+              <div class="grade-badge g-b">B · Bom</div>
+            </div>
+          </div>
+          <!-- VERDICT — texto 1 (cursivo, longo) -->
+          <div class="verdict">
+            Conexão funcional — pode ter dificuldades com streaming ou múltiplos dispositivos.
+          </div>
+        </div>
+
+        <!-- Use cases -->
+        <div class="use-row">
+          <div class="use-item">
+            <div class="use-icon">🎮</div>
+            <span class="use-lbl">Jogos</span>
+            <span class="use-chip">Bom</span>
+          </div>
+          <div class="use-item">
+            <div class="use-icon">📺</div>
+            <span class="use-lbl">4K</span>
+            <span class="use-chip">Bom</span>
+          </div>
+          <div class="use-item">
+            <div class="use-icon">💼</div>
+            <span class="use-lbl">Office</span>
+            <span class="use-chip">Bom</span>
+          </div>
+          <div class="use-item">
+            <div class="use-icon">📹</div>
+            <span class="use-lbl">Vídeo</span>
+            <span class="use-chip">Bom</span>
+          </div>
+        </div>
+
+        <!-- Combined — completo (antes) -->
+        <div class="combined">
+          <div class="combined-kicker">Diagnóstico da conexão</div>
+          <div class="combined-title">Conexão saudável</div>
+          <!-- TEXTO 2 — explicação -->
+          <div class="combined-desc">
+            Sua internet está funcionando bem. Velocidade, resposta e qualidade do sinal dentro do esperado.
+          </div>
+          <div class="combined-action">
+            <span>O que fazer agora:</span>
+            <strong>Nenhuma ação necessária. Continue usando normalmente.</strong>
+          </div>
+          <!-- TEXTO 3 — confiança -->
+          <div class="combined-confidence">Confiança: média</div>
+        </div>
+
+        <!-- Detail list -->
+        <div class="ios-list">
+          <div class="ios-item">
+            <div class="ios-icon">📡</div>
+            <span class="ios-title">Falhas na conexão</span>
+            <span class="ios-trailing">0.0%</span>
+          </div>
+          <div class="ios-item">
+            <div class="ios-icon">🌐</div>
+            <span class="ios-title">Provedor</span>
+            <span class="ios-trailing">NC BRASIL TELECOM E…</span>
+          </div>
+        </div>
+
+        <!-- Advanced -->
+        <div class="advanced">
+          <div class="section-label">Diagnóstico avançado</div>
+          <div class="ios-list" style="margin-bottom:0">
+            <div class="ios-item">
+              <div class="ios-icon" style="color:var(--ul)">⚡</div>
+              <span class="ios-title">Falhas na conexão</span>
+              <span class="ios-trailing" style="color:var(--ul);font-weight:700">Baixo</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TEXTO 4 — summaryText flutuante -->
+        <div class="summary-text">
+          A velocidade é boa, mas a latência sobe muito durante o uso. Isso pode causar travamentos em jogos e chamadas.
+        </div>
+
+        <!-- Explorar -->
+        <div class="tools">
+          <div class="section-label">Explorar</div>
+          <div class="ios-list" style="margin-bottom:0">
+            <div class="ios-item">
+              <div class="ios-icon ios-icon-accent">💡</div>
+              <div style="flex:1">
+                <div class="ios-title">Ver recomendações</div>
+                <div style="font-size:11px;color:var(--text-3)">Como melhorar sua internet</div>
+              </div>
+              <span class="ios-trailing-chevron">›</span>
+            </div>
+            <div class="ios-item">
+              <div class="ios-icon ios-icon-accent">🛡</div>
+              <div style="flex:1">
+                <div class="ios-title">Mais detalhes</div>
+                <div style="font-size:11px;color:var(--text-3)">Análise de cada métrica</div>
+              </div>
+              <span class="ios-trailing-chevron">›</span>
+            </div>
+            <div class="ios-item">
+              <div class="ios-icon ios-icon-muted">⚙</div>
+              <div style="flex:1">
+                <div class="ios-title">Explorar ferramentas</div>
+                <div style="font-size:11px;color:var(--text-3)">Modo Gamer, DNS e testes avançados</div>
+              </div>
+              <span class="ios-trailing-chevron">›</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+          <button class="btn-retry">↺ Testar novamente</button>
+          <div class="footer-row">
+            <span class="btn-text">WhatsApp</span>
+            <span class="btn-text">Compartilhar texto</span>
+          </div>
+        </div>
+
+      </div><!-- /phone-scroll -->
+    </div><!-- /phone -->
+  </div><!-- /col antes -->
+
+
+  <!-- ═══════════ DEPOIS ═══════════ -->
+  <div class="col">
+    <span class="col-label depois">Depois</span>
+    <div class="phone">
+      <div class="head">
+        <span class="head-back">Histórico</span>
+        <span class="head-icon">⋯</span>
+      </div>
+      <div class="phone-scroll">
+
+        <!-- Metrics block — SEM chip, SEM verdict -->
+        <div class="metrics-block">
+          <div class="metric-grid">
+            <div class="metric-cell">
+              <div class="metric-lbl">Download</div>
+              <div class="metric-val-lg" style="color:var(--dl)">604</div>
+              <span class="metric-unit">Mbps</span>
+              <div class="grade-badge g-a">A · Excelente</div>
+            </div>
+            <div class="metric-cell">
+              <div class="metric-lbl">Upload</div>
+              <div class="metric-val-lg" style="color:var(--ul)">662</div>
+              <span class="metric-unit">Mbps</span>
+              <div class="grade-badge g-a">A · Excelente</div>
+            </div>
+            <div class="metric-cell">
+              <div class="metric-lbl">Resposta</div>
+              <div class="metric-val-md">35<span style="font-size:11px;color:var(--text-3)"> ms</span></div>
+              <div class="grade-badge g-b">B · Bom</div>
+            </div>
+            <div class="metric-cell">
+              <div class="metric-lbl">Oscilação</div>
+              <div class="metric-val-md">6<span style="font-size:11px;color:var(--text-3)"> ms</span></div>
+              <div class="grade-badge g-b">B · Bom</div>
+            </div>
+          </div>
+          <!-- sem verdict -->
+        </div>
+
+        <!-- Use cases -->
+        <div class="use-row">
+          <div class="use-item">
+            <div class="use-icon">🎮</div>
+            <span class="use-lbl">Jogos</span>
+            <span class="use-chip">Bom</span>
+          </div>
+          <div class="use-item">
+            <div class="use-icon">📺</div>
+            <span class="use-lbl">4K</span>
+            <span class="use-chip">Bom</span>
+          </div>
+          <div class="use-item">
+            <div class="use-icon">💼</div>
+            <span class="use-lbl">Office</span>
+            <span class="use-chip">Bom</span>
+          </div>
+          <div class="use-item">
+            <div class="use-icon">📹</div>
+            <span class="use-lbl">Vídeo</span>
+            <span class="use-chip">Bom</span>
+          </div>
+        </div>
+
+        <!-- Combined — compacto (depois) -->
+        <div class="combined">
+          <div class="combined-kicker">Diagnóstico da conexão</div>
+          <div class="combined-title">Conexão saudável</div>
+          <!-- sem desc, sem confidence -->
+          <div class="combined-action" style="margin-bottom:0">
+            <span>O que fazer agora:</span>
+            <strong>Nenhuma ação necessária. Continue usando normalmente.</strong>
+          </div>
+        </div>
+
+        <!-- Detail list -->
+        <div class="ios-list">
+          <div class="ios-item">
+            <div class="ios-icon">📡</div>
+            <span class="ios-title">Falhas na conexão</span>
+            <span class="ios-trailing">0.0%</span>
+          </div>
+          <div class="ios-item">
+            <div class="ios-icon">🌐</div>
+            <span class="ios-title">Provedor</span>
+            <span class="ios-trailing">NC BRASIL TELECOM E…</span>
+          </div>
+        </div>
+
+        <!-- Advanced — sem summaryText depois -->
+        <div class="advanced">
+          <div class="section-label">Diagnóstico avançado</div>
+          <div class="ios-list" style="margin-bottom:0">
+            <div class="ios-item">
+              <div class="ios-icon" style="color:var(--ul)">⚡</div>
+              <span class="ios-title">Falhas na conexão</span>
+              <span class="ios-trailing" style="color:var(--ul);font-weight:700">Baixo</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Explorar — direto após advanced, sem parágrafo no meio -->
+        <div class="tools">
+          <div class="section-label">Explorar</div>
+          <div class="ios-list" style="margin-bottom:0">
+            <div class="ios-item">
+              <div class="ios-icon ios-icon-accent">💡</div>
+              <div style="flex:1">
+                <div class="ios-title">Ver recomendações</div>
+                <div style="font-size:11px;color:var(--text-3)">Como melhorar sua internet</div>
+              </div>
+              <span class="ios-trailing-chevron">›</span>
+            </div>
+            <div class="ios-item">
+              <div class="ios-icon ios-icon-accent">🛡</div>
+              <div style="flex:1">
+                <div class="ios-title">Mais detalhes</div>
+                <div style="font-size:11px;color:var(--text-3)">Análise de cada métrica</div>
+              </div>
+              <span class="ios-trailing-chevron">›</span>
+            </div>
+            <div class="ios-item">
+              <div class="ios-icon ios-icon-muted">⚙</div>
+              <div style="flex:1">
+                <div class="ios-title">Explorar ferramentas</div>
+                <div style="font-size:11px;color:var(--text-3)">Modo Gamer, DNS e testes avançados</div>
+              </div>
+              <span class="ios-trailing-chevron">›</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+          <button class="btn-retry">↺ Testar novamente</button>
+          <div class="footer-row">
+            <span class="btn-text">WhatsApp</span>
+            <span class="btn-text">Compartilhar texto</span>
+          </div>
+        </div>
+
+      </div><!-- /phone-scroll -->
+    </div><!-- /phone -->
+  </div><!-- /col depois -->
+
+</div><!-- /columns -->
+
+</body>
+</html>

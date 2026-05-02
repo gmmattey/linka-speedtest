@@ -11,16 +11,16 @@ export interface UploadProbeConfig {
 
 export const UPLOAD_CONFIG_FAST: UploadProbeConfig = {
   durationMs:     7_000,
-  initialStreams:     2,
-  maxStreams:         3,
+  initialStreams:     4,
+  maxStreams:         4,
   sizeIndex:          2, // 5 MB
   warmupMs:       1_000,
 };
 
 export const UPLOAD_CONFIG_COMPLETE: UploadProbeConfig = {
   durationMs:    18_000,
-  initialStreams:     2,
-  maxStreams:         6,
+  initialStreams:     8,
+  maxStreams:         8,
   sizeIndex:          3, // 10 MB — mesma ordem do speed.cloudflare.com
   warmupMs:       2_000,
 };

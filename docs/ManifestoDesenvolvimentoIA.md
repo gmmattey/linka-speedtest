@@ -38,7 +38,7 @@ Antes de qualquer modificação, ler na ordem:
 - **Não pular hooks de commit** (`--no-verify`).
 - **Não fazer force push** sem confirmação dupla.
 - **Não criar branch paralela** — `claude/*`, `feat/*`, `fix/*`, ou qualquer outra. Trabalhe sempre em `main`. Ver [`PoliticaBranchUnico.md`](PoliticaBranchUnico.md).
-- **Não quebrar os 24 testes existentes** sem justificativa documentada.
+- **Não quebrar os testes existentes** sem justificativa documentada.
 
 ---
 

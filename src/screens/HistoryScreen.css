@@ -159,7 +159,6 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
 }
 
 .lk-history__item {
@@ -172,8 +171,13 @@
   transition: background var(--t-fast);
 }
 
+.lk-history__item:first-child {
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
 .lk-history__item:last-child {
   border-bottom: none;
+  border-radius: 0 0 var(--radius) var(--radius);
 }
 
 .lk-history__item:active {

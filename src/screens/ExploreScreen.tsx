@@ -47,7 +47,7 @@ export function ExploreScreen({
   const dnsHandler = onShowDNSBenchmark ?? onShowDNSGuide;
   const dnsLabel = onShowDNSBenchmark ? 'Verificar DNS' : 'Guia de DNS';
   const dnsSubtitle = onShowDNSBenchmark
-    ? 'Teste os servidores DNS disponíveis'
+    ? 'Compare servidores DNS da sua rede'
     : 'Veja como trocar o DNS do dispositivo';
 
   return (
@@ -70,7 +70,7 @@ export function ExploreScreen({
       <div className="lk-explore__scroll">
         {showResultSection && (
           <div className="lk-explore__section">
-            <p className="lk-explore__section-label">Entender meu resultado</p>
+            <p className="lk-explore__section-label">Resultado</p>
             <IOSList
               items={[
                 ...(onDiagnostic ? [{
@@ -104,7 +104,7 @@ export function ExploreScreen({
 
         {showAdvancedSection && (
           <div className="lk-explore__section">
-            <p className="lk-explore__section-label">Testes avançados</p>
+            <p className="lk-explore__section-label">Medir</p>
             <IOSList
               items={[
                 ...(onStartProvaReal ? [{
@@ -115,22 +115,6 @@ export function ExploreScreen({
                   showChevron: true,
                   onClick: onStartProvaReal,
                 }] : []),
-                ...(onStartComparison ? [{
-                  icon: <Icon name="cmp" size={14} color="#fff" />,
-                  iconBg: 'var(--accent)',
-                  title: 'Comparar locais',
-                  subtitle: 'Perto vs longe do roteador',
-                  showChevron: true,
-                  onClick: onStartComparison,
-                }] : []),
-                ...(onStartBeforeAfter ? [{
-                  icon: <Icon name="cmp" size={14} color="#fff" />,
-                  iconBg: 'var(--surface-3)',
-                  title: 'Antes e Depois',
-                  subtitle: 'Compare o impacto de uma mudança',
-                  showChevron: true,
-                  onClick: onStartBeforeAfter,
-                }] : []),
                 ...(onStartRoomTest ? [{
                   icon: <Icon name="pin" size={14} color="#fff" />,
                   iconBg: 'var(--surface-3)',
@@ -139,6 +123,22 @@ export function ExploreScreen({
                   showChevron: true,
                   onClick: onStartRoomTest,
                 }] : []),
+                ...(onStartComparison ? [{
+                  icon: <Icon name="cmp" size={14} color="#fff" />,
+                  iconBg: 'var(--accent)',
+                  title: 'Comparar locais',
+                  subtitle: 'Perto vs. longe do roteador',
+                  showChevron: true,
+                  onClick: onStartComparison,
+                }] : []),
+                ...(onStartBeforeAfter ? [{
+                  icon: <Icon name="swap" size={14} color="#fff" />,
+                  iconBg: 'var(--surface-3)',
+                  title: 'Antes e Depois',
+                  subtitle: 'Compare o impacto de uma mudança',
+                  showChevron: true,
+                  onClick: onStartBeforeAfter,
+                }] : []),
               ]}
             />
           </div>
@@ -146,7 +146,7 @@ export function ExploreScreen({
 
         {dnsHandler && (
           <div className="lk-explore__section">
-            <p className="lk-explore__section-label">Ferramentas de rede</p>
+            <p className="lk-explore__section-label">Rede</p>
             <IOSList
               items={[
                 ...(onShowLocalWifiDiagnostics ? [{
