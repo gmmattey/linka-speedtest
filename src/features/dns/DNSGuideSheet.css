@@ -269,6 +269,23 @@
   font-size: 11px;
   color: var(--text-2);
   white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast);
+  font: inherit;
+}
+
+.lk-dns-sheet__pill:hover {
+  background: var(--surface-3);
+  border-color: var(--border);
+}
+
+.lk-dns-sheet__pill--active {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+}
+
+.lk-dns-sheet__pill--active .lk-dns-sheet__pill-name {
+  color: var(--accent);
 }
 
 .lk-dns-sheet__pill-name {

@@ -79,8 +79,7 @@ function getSteps(platform: Platform, primary: string, secondary: string): strin
     case 'android':
       return [
         'Abra Configurações → Rede e internet → DNS privado.',
-        'Selecione "Hostname do provedor DNS privado".',
-        'Use o hostname DoT do servidor (ex.: 1dot1dot1dot1.cloudflare-dns.com).',
+        `Selecione "Hostname do provedor DNS privado" e defina para a resolução segura que preferir.`,
         `Alternativa: em Wi-Fi → rede → Avançado → IP estático, defina ${primary} e ${secondary}.`,
       ];
     case 'router':
@@ -115,6 +114,7 @@ export function DNSGuideSheet({ open, onClose, result, benchmark }: Props) {
   );
   const [running, setRunning] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [selectedServerId, setSelectedServerId] = useState<string | null>(null);
   const startedRef = useRef(false);
 
   // Mantém em sync com o benchmark vindo do pai — quando termina lá, espelha aqui.
@@ -173,15 +173,19 @@ export function DNSGuideSheet({ open, onClose, result, benchmark }: Props) {
     [currentLatencyMs, sortedServers],
   );
 
-  // Servidor selecionado para os steps. Preferimos o "fastest" do bench
-  // mesmo no estado already_good — quem decide trocar mesmo assim ainda
-  // precisa dos IPs. Sem bench, cai pro Cloudflare.
+  // Servidor selecionado para os steps. Se o usuário clicou em um pill,
+  // usa esse; senão, usa o "fastest" do bench mesmo no estado already_good.
+  // Quem decide trocar mesmo assim ainda precisa dos IPs. Sem bench, cai
+  // pro Cloudflare.
   const selectedServerStatic = useMemo(() => {
+    if (selectedServerId) {
+      return SERVERS[selectedServerId] ?? SERVERS.cloudflare;
+    }
     if (fastest) {
       return SERVERS[fastest.id] ?? SERVERS.cloudflare;
     }
     return SERVERS.cloudflare;
-  }, [fastest]);
+  }, [selectedServerId, fastest]);
 
   const steps = useMemo(
     () => getSteps(platform, selectedServerStatic.primary, selectedServerStatic.secondary),
@@ -322,11 +326,19 @@ export function DNSGuideSheet({ open, onClose, result, benchmark }: Props) {
           {pills.length > 0 && (
             <section className="lk-dns-sheet__pills" aria-label="Outros servidores">
               {pills.map((p) => (
-                <span key={p.id} className="lk-dns-sheet__pill">
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`lk-dns-sheet__pill${
+                    p.id === selectedServerId ? ' lk-dns-sheet__pill--active' : ''
+                  }`}
+                  onClick={() => setSelectedServerId(p.id)}
+                  aria-pressed={p.id === selectedServerId}
+                >
                   <span className="lk-dns-sheet__pill-name">{p.name}</span>
                   <span className="lk-dns-sheet__pill-dot">·</span>
                   <span className="lk-dns-sheet__pill-latency">{Math.round(p.p50)} ms</span>
-                </span>
+                </button>
               ))}
             </section>
           )}
