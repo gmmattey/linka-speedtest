@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:allowBackup="true"
@@ -40,10 +41,20 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Plugin LinkaWifiDiagnostics: leitura do estado/conexão Wi-Fi.
-         ACCESS_FINE_LOCATION é exigido a partir do Android 9 (API 28)
-         para que WifiManager#getConnectionInfo retorne SSID/BSSID reais. -->
+
+         API 28-32: ACCESS_FINE_LOCATION é exigido pelo WifiManager para
+         retornar SSID/BSSID reais.
+
+         API 33+ (Android 13): NEARBY_WIFI_DEVICES é uma alternativa que
+         dispensa o prompt de localização ao usuário. Mantemos ambas
+         declaradas — o usuário concede a que o sistema solicitar conforme
+         a versão. `neverForLocation` indica explicitamente que o dado
+         Wi-Fi NÃO é usado para inferir localização física. -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="33" />
 </manifest>

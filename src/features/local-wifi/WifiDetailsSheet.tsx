@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { WifiDiagnosticResult } from './types';
 import { ChannelQualityChart } from './ChannelQualityChart';
 import { wifiQualityLabel } from './LocalWifiService';
@@ -10,6 +10,15 @@ interface WifiDetailsSheetProps {
   onClose: () => void;
 }
 
+/**
+ * Bottom-sheet com detalhes Wi-Fi. 4 cards principais (Rede, Desempenho,
+ * Análise de Canais, Rede Local) + um toggle "Mais técnico" que expande
+ * dados secundários (padrão WiFi, número de redes próximas).
+ *
+ * O backdrop usa `backdrop-filter: blur` + opacidade 0.6 para garantir que
+ * o conteúdo da ResultScreen fique invisível (regressão fixada após
+ * primeiro APK ter mostrado popup transparente).
+ */
 export function WifiDetailsSheet({
   isOpen,
   diagnostics,
@@ -17,6 +26,7 @@ export function WifiDetailsSheet({
 }: WifiDetailsSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
+  const [showTechnical, setShowTechnical] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -46,7 +56,8 @@ export function WifiDetailsSheet({
 
   if (!isOpen) return null;
 
-  const bandText = diagnostics.band === 'unknown' ? '—' : diagnostics.band ?? '—';
+  const ssid = diagnostics.ssid && diagnostics.ssid.trim() ? diagnostics.ssid : 'Sua rede';
+  const bandText = diagnostics.band === 'unknown' || !diagnostics.band ? '—' : diagnostics.band;
   const channel = diagnostics.channel != null ? String(diagnostics.channel) : '—';
   const rssi = diagnostics.rssiDbm != null ? `${diagnostics.rssiDbm} dBm` : '—';
   const linkSpeed = diagnostics.linkSpeedMbps != null ? `${diagnostics.linkSpeedMbps} Mbps` : '—';
@@ -59,44 +70,51 @@ export function WifiDetailsSheet({
 
   return (
     <div ref={backdropRef} className="lk-wifi-sheet__backdrop">
-      <div ref={sheetRef} className="lk-wifi-sheet">
-        <div className="lk-wifi-sheet__handle" />
-        <button
-          className="lk-wifi-sheet__close"
-          onClick={onClose}
-          aria-label="Fechar detalhes"
-        >
-          ✕
-        </button>
+      <div ref={sheetRef} className="lk-wifi-sheet" role="dialog" aria-modal="true" aria-labelledby="lk-wifi-sheet-title">
+        <header className="lk-wifi-sheet__header">
+          <div className="lk-wifi-sheet__handle" aria-hidden="true" />
+          <div className="lk-wifi-sheet__title-row">
+            <h2 id="lk-wifi-sheet-title" className="lk-wifi-sheet__title">Detalhes Wi-Fi</h2>
+            <button
+              className="lk-wifi-sheet__close"
+              onClick={onClose}
+              aria-label="Fechar detalhes"
+              type="button"
+            >
+              ✕
+            </button>
+          </div>
+        </header>
 
         <div className="lk-wifi-sheet__content">
           {/* Rede */}
           <section className="lk-wifi-sheet__section">
-            <h2 className="lk-wifi-sheet__section-title">Rede</h2>
-            <div className="lk-wifi-sheet__list">
-              <Row label="Nome (SSID)" value={diagnostics.ssid ?? '—'} />
+            <h3 className="lk-wifi-sheet__section-title">Rede</h3>
+            <dl className="lk-wifi-sheet__list">
+              <Row label="Nome (SSID)" value={ssid} />
               <Row label="Frequência" value={bandText} />
               <Row label="Canal" value={channel} />
-              <Row label="Qualidade do Canal" value={capitalizeFirst(diagnostics.channelQuality ?? 'desconhecida')} />
-            </div>
+              <Row label="Qualidade do Canal" value={capitalizeFirst(diagnostics.channelQuality ?? '—')} />
+            </dl>
           </section>
 
           {/* Desempenho */}
           <section className="lk-wifi-sheet__section">
-            <h2 className="lk-wifi-sheet__section-title">Desempenho</h2>
-            <div className="lk-wifi-sheet__list">
+            <h3 className="lk-wifi-sheet__section-title">Desempenho</h3>
+            <dl className="lk-wifi-sheet__list">
               <Row label="Sinal" value={rssi} />
               <Row label="Velocidade do Link" value={linkSpeed} />
               <Row label="Qualidade da Conexão" value={qualityLabel} />
-            </div>
+            </dl>
           </section>
 
-          {/* Análise de Canais */}
+          {/* Análise de Canais — filtra pela banda atual */}
           <section className="lk-wifi-sheet__section">
-            <h2 className="lk-wifi-sheet__section-title">Análise de Canais</h2>
+            <h3 className="lk-wifi-sheet__section-title">Análise de Canais</h3>
             <ChannelQualityChart
               nearbyNetworks={diagnostics.nearbyNetworks}
               currentChannel={diagnostics.channel}
+              currentBand={diagnostics.band}
               suggestedChannel={diagnostics.suggestedChannel}
               isLoading={false}
             />
@@ -104,21 +122,33 @@ export function WifiDetailsSheet({
 
           {/* Rede Local */}
           <section className="lk-wifi-sheet__section">
-            <h2 className="lk-wifi-sheet__section-title">Rede Local</h2>
-            <div className="lk-wifi-sheet__list">
+            <h3 className="lk-wifi-sheet__section-title">Rede Local</h3>
+            <dl className="lk-wifi-sheet__list">
               <Row label="Gateway" value={gateway} />
               <Row label="IP Local" value={ipAddress} />
-            </div>
+            </dl>
           </section>
 
-          {/* Técnico */}
-          <section className="lk-wifi-sheet__section">
-            <h2 className="lk-wifi-sheet__section-title">Técnico</h2>
-            <div className="lk-wifi-sheet__list">
-              <Row label="Padrão WiFi" value={wifiStandard} />
-              <Row label="Redes Próximas" value={`${nearbyNetworksCount}`} />
-            </div>
-          </section>
+          {/* Toggle "Mais técnico" */}
+          <button
+            type="button"
+            className={`lk-wifi-sheet__more-toggle ${showTechnical ? 'lk-wifi-sheet__more-toggle--open' : ''}`}
+            onClick={() => setShowTechnical((v) => !v)}
+            aria-expanded={showTechnical}
+          >
+            <span>Informações técnicas</span>
+            <span className="lk-wifi-sheet__more-toggle-arrow" aria-hidden="true">▾</span>
+          </button>
+
+          {showTechnical && (
+            <section className="lk-wifi-sheet__section">
+              <h3 className="lk-wifi-sheet__section-title">Técnico</h3>
+              <dl className="lk-wifi-sheet__list">
+                <Row label="Padrão WiFi" value={wifiStandard} />
+                <Row label="Redes Próximas" value={`${nearbyNetworksCount}`} />
+              </dl>
+            </section>
+          )}
         </div>
       </div>
     </div>

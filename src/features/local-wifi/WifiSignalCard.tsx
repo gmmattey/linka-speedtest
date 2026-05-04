@@ -71,7 +71,10 @@ interface AvailableProps {
 
 function WifiSignalCardAvailable({ data, onOpen }: AvailableProps) {
   const channel = data.channel != null ? String(data.channel) : '—';
-  const ssid = data.ssid ?? 'Rede desconhecida';
+  // SSID pode vir vazio em Android 13+ sem NEARBY_WIFI_DEVICES; usamos
+  // "Sua rede" como fallback neutro em vez de "Rede desconhecida" para
+  // não soar como erro técnico ao usuário final.
+  const ssid = data.ssid && data.ssid.trim() ? data.ssid : 'Sua rede';
   const wifiStandard = data.wifiStandard ? formatWifiStandard(data.wifiStandard) : '—';
 
   const quality = data.quality ?? 'unknown';

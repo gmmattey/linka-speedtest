@@ -2,28 +2,35 @@
    WifiDetailsSheet — Popup bottom-sheet que abre ao clicar no WifiSignalCard.
    Mostra 5 seções: Rede, Desempenho, Análise de Canais, Rede Local, Técnico.
 
-   Animação: slide-up from bottom com backdrop fade.
+   Animação: slide-up from bottom com backdrop fade + blur.
    ESC: fecha. Click fora: fecha.
    Body scroll: locked quando aberto.
+
+   z-index alto (9998/9999) para cobrir TopBar (50), HamburgerMenu (100)
+   e demais surfaces. Mantém-se abaixo de PwaUpdatePrompt (9999) por
+   convenção de prioridade — update do app é mais crítico.
    ────────────────────────────────────────────────────────────────────── */
 
 .lk-wifi-sheet__backdrop {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 999;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 9998;
   animation: lk-wifi-sheet--backdrop-in 200ms ease;
 }
 
 @keyframes lk-wifi-sheet--backdrop-in {
   from {
     background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0);
+    -webkit-backdrop-filter: blur(0);
   }
   to {
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
   }
 }
 
@@ -32,13 +39,16 @@
   bottom: 0;
   left: 0;
   right: 0;
-  max-height: 90vh;
-  background: var(--bg-primary);
-  border-radius: 16px 16px 0 0;
+  max-height: 92vh;
+  background: var(--surface-deep);
+  border-top: 1px solid var(--border-subtle);
+  border-radius: 20px 20px 0 0;
   display: flex;
   flex-direction: column;
-  z-index: 1000;
-  animation: lk-wifi-sheet--slide-up 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 9999;
+  animation: lk-wifi-sheet--slide-up 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Padding top safe-area para notch/status bar quando o sheet ocupa altura quase total */
+  padding-top: env(safe-area-inset-top, 0);
 }
 
 @keyframes lk-wifi-sheet--slide-up {
@@ -50,48 +60,84 @@
   }
 }
 
-/* Handle (drag indicator no topo) */
-.lk-wifi-sheet__handle {
-  width: 40px;
-  height: 4px;
-  background: var(--border-color);
-  border-radius: 2px;
-  margin: 12px auto 0;
+/* Header sticky com handle, título e botão fechar */
+.lk-wifi-sheet__header {
+  position: sticky;
+  top: 0;
+  background: var(--surface-deep);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 8px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 2;
   flex-shrink: 0;
 }
 
-/* Close button */
+/* Drag handle */
+.lk-wifi-sheet__handle {
+  width: 40px;
+  height: 4px;
+  background: var(--border-strong);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.lk-wifi-sheet__title-row {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+}
+
+.lk-wifi-sheet__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
 .lk-wifi-sheet__close {
   position: absolute;
-  top: 12px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: none;
-  font-size: 20px;
-  color: var(--text);
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 50%;
+  font-size: 16px;
+  color: var(--text-2);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  z-index: 10;
-  transition: opacity 150ms ease;
+  transition: background 150ms ease, color 150ms ease;
 }
 
-.lk-wifi-sheet__close:hover {
-  opacity: 0.7;
+.lk-wifi-sheet__close:hover,
+.lk-wifi-sheet__close:focus-visible {
+  background: var(--surface-3);
+  color: var(--text);
+  outline: none;
 }
 
 /* Scrollable content */
 .lk-wifi-sheet__content {
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   flex: 1;
-  padding: 24px 16px 24px;
+  padding: 20px 16px calc(24px + env(safe-area-inset-bottom, 0));
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
 /* Seções */
@@ -99,14 +145,18 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
 }
 
 .lk-wifi-sheet__section-title {
   margin: 0;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--text-3);
 }
 
@@ -114,12 +164,12 @@
 .lk-wifi-sheet__list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .lk-wifi-sheet__row {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: minmax(120px, auto) 1fr;
   gap: 12px;
   align-items: baseline;
 }
@@ -129,30 +179,71 @@
   font-weight: 500;
   color: var(--text-2);
   margin: 0;
-  white-space: nowrap;
 }
 
 .lk-wifi-sheet__row-value {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--text);
   margin: 0;
   word-break: break-word;
+  text-align: right;
 }
 
-/* Responsive adjustments */
+/* Toggle "Mais técnico" */
+.lk-wifi-sheet__more-toggle {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.lk-wifi-sheet__more-toggle:hover,
+.lk-wifi-sheet__more-toggle:focus-visible {
+  background: var(--surface-2);
+  color: var(--text);
+  outline: none;
+}
+
+.lk-wifi-sheet__more-toggle-arrow {
+  transition: transform 200ms ease;
+  color: var(--text-3);
+}
+
+.lk-wifi-sheet__more-toggle--open .lk-wifi-sheet__more-toggle-arrow {
+  transform: rotate(180deg);
+}
+
+/* Responsive adjustments — desktop centra com largura máxima */
 @media (min-width: 600px) {
   .lk-wifi-sheet {
-    max-width: 500px;
-    margin: 0 auto;
+    max-width: 520px;
     left: 50%;
     right: auto;
     transform: translateX(-50%);
+    border-radius: 20px 20px 0 0;
+  }
+
+  @keyframes lk-wifi-sheet--slide-up {
+    from {
+      transform: translate(-50%, 100%);
+    }
+    to {
+      transform: translate(-50%, 0);
+    }
   }
 
   .lk-wifi-sheet__content {
-    padding: 28px 20px 28px;
+    padding: 24px 20px calc(28px + env(safe-area-inset-bottom, 0));
   }
 }

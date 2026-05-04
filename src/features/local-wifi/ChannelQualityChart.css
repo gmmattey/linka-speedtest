@@ -1,13 +1,39 @@
+/* ──────────────────────────────────────────────────────────────────────
+   ChannelQualityChart — gráfico de barras por canal Wi-Fi.
+   Filtra automaticamente pela banda atual (2.4GHz / 5GHz / 6GHz) para
+   evitar barras de 1px quando há mistura.
+
+   Tokens corretos: --text, --text-2, --text-3, --border, --border-subtle,
+   --surface, --surface-2, --success, --warn, --error.
+   ────────────────────────────────────────────────────────────────────── */
+
 .lk-channel-chart {
-  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .lk-channel-chart--loading,
 .lk-channel-chart--empty {
-  padding: 20px;
+  padding: 16px;
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--text-2);
   font-size: 13px;
+  background: var(--surface-2);
+  border-radius: 8px;
+}
+
+/* Header com banda atual */
+.lk-channel-chart__band-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  letter-spacing: 0.04em;
+}
+
+.lk-channel-chart__band-label strong {
+  color: var(--text);
+  font-weight: 600;
 }
 
 /* Container das barras */
@@ -15,11 +41,10 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-around;
-  height: 120px;
-  gap: 8px;
-  margin-bottom: 16px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border-color);
+  height: 110px;
+  gap: 4px;
+  padding: 8px 4px 0;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 /* Container de cada barra */
@@ -27,140 +52,169 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex: 1;
   min-width: 0;
 }
 
-/* Barra vertical */
-.lk-channel-chart__bar {
+/* Barra vertical (track) */
+.lk-channel-chart__bar-track {
   width: 100%;
-  border-radius: 4px 4px 0 0;
-  position: relative;
-  transition: opacity 150ms ease;
+  height: 100%;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  font-size: 11px;
+  position: relative;
+}
+
+/* Barra preenchida */
+.lk-channel-chart__bar {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  transition: opacity 150ms ease;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  font-size: 10px;
   font-weight: 600;
-  color: white;
+  color: var(--text);
+  padding-top: 2px;
+  min-height: 4px;
 }
 
 /* Qualidades de cor */
 .lk-channel-chart__bar--excellent {
-  background: var(--color-good, #2e7d32);
+  background: var(--success);
 }
 
 .lk-channel-chart__bar--good {
-  background: var(--color-good, #2e7d32);
-  opacity: 0.8;
+  background: var(--success);
+  opacity: 0.7;
 }
 
 .lk-channel-chart__bar--fair {
-  background: var(--color-warn, #f57c00);
+  background: var(--warn);
 }
 
 .lk-channel-chart__bar--weak {
-  background: var(--color-bad, #c62828);
-  opacity: 0.8;
+  background: var(--error);
+  opacity: 0.7;
 }
 
 .lk-channel-chart__bar--critical {
-  background: var(--color-bad, #c62828);
+  background: var(--error);
 }
 
-/* Indicador de canal atual */
+/* Indicador de canal atual: borda branca */
 .lk-channel-chart__bar--current {
-  border: 2px solid var(--text-primary);
-  box-shadow: 0 0 0 1px var(--bg-primary);
+  outline: 2px solid var(--text);
+  outline-offset: -2px;
 }
 
-/* Indicador de canal recomendado */
+/* Indicador de canal recomendado: brilho interno */
 .lk-channel-chart__bar--suggested {
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5);
 }
 
-/* Label dentro da barra */
+/* Label do número de APs dentro da barra */
 .lk-channel-chart__bar-label {
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   line-height: 1;
+  pointer-events: none;
 }
 
-/* Rótulo do canal (número) */
+/* Rótulo do canal abaixo da barra */
 .lk-channel-chart__channel-label {
-  font-size: 12px;
+  font-family: var(--font-display);
+  font-size: 11px;
   font-weight: 600;
-  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
   text-align: center;
+  line-height: 1.2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 
 /* Badges (Atual, Recomendado) */
 .lk-badge {
   display: inline-block;
-  margin-top: 2px;
-  padding: 2px 6px;
-  background: var(--bg-secondary);
+  padding: 1px 5px;
+  background: var(--surface-3);
   border-radius: 3px;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-2);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .lk-badge--suggested {
-  background: var(--color-warn-bg, #fff3e0);
-  color: var(--color-warn, #f57c00);
+  background: rgba(251, 191, 36, 0.18);
+  color: var(--warn);
+}
+
+.lk-badge--current {
+  background: var(--accent-tint);
+  color: var(--accent-soft);
 }
 
 /* Legenda */
 .lk-channel-chart__legend {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 16px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border-color);
+  gap: 6px 12px;
+  padding-top: 8px;
 }
 
 .lk-channel-chart__legend-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--text-secondary);
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-2);
 }
 
 .lk-channel-chart__legend-color {
   display: inline-block;
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 2px;
   flex-shrink: 0;
 }
 
 .lk-channel-chart__legend-color--excellent {
-  background: var(--color-good, #2e7d32);
+  background: var(--success);
 }
 
 .lk-channel-chart__legend-color--good {
-  background: var(--color-good, #2e7d32);
-  opacity: 0.8;
+  background: var(--success);
+  opacity: 0.7;
 }
 
 .lk-channel-chart__legend-color--fair {
-  background: var(--color-warn, #f57c00);
+  background: var(--warn);
 }
 
 .lk-channel-chart__legend-color--weak {
-  background: var(--color-bad, #c62828);
-  opacity: 0.8;
+  background: var(--error);
+  opacity: 0.7;
 }
 
 /* Recomendação textual */
 .lk-channel-chart__recommendation {
-  padding: 12px;
-  background: var(--color-warn-bg, #fff3e0);
-  border-left: 3px solid var(--color-warn, #f57c00);
-  border-radius: 4px;
-  font-size: 13px;
-  color: var(--color-warn, #f57c00);
+  padding: 10px 12px;
+  background: rgba(251, 191, 36, 0.10);
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--warn);
+  line-height: 1.4;
+}
+
+.lk-channel-chart__recommendation strong {
+  color: var(--warn);
 }
