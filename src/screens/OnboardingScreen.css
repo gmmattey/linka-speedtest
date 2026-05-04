@@ -1,0 +1,197 @@
+/* OnboardingScreen — overlay full-screen exibido na primeira execução.
+   Sem box-shadow (regra de branding). Tipografia Geist via tokens. */
+
+.lk-onb {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg);
+  background-image: var(--bg-radial);
+  color: var(--text);
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  overflow: hidden;
+}
+
+/* ── Botão "Pular" (top-right) ───────────────────────────── */
+
+.lk-onb__skip {
+  position: absolute;
+  top: calc(var(--safe-top) + 12px);
+  right: var(--space-lg);
+  z-index: 2;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-2);
+  padding: 8px 12px;
+  border-radius: var(--radius-button);
+  background: transparent;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.lk-onb__skip:hover,
+.lk-onb__skip:focus-visible {
+  color: var(--text);
+  background: var(--surface-2);
+  outline: none;
+}
+
+/* ── Viewport / track ────────────────────────────────────── */
+
+.lk-onb__viewport {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.lk-onb__track {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lk-onb__track { transition: none; }
+}
+
+/* ── Card individual ─────────────────────────────────────── */
+
+.lk-onb__card {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 28px 24px;
+  text-align: center;
+  gap: 24px;
+}
+
+.lk-onb__art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.lk-onb__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin: 0;
+  max-width: 360px;
+}
+
+.lk-onb__sub {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--text-2);
+  margin: 0;
+  max-width: 360px;
+}
+
+/* ── Bullets do card de permissões ───────────────────────── */
+
+.lk-onb__bullets {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 360px;
+  text-align: left;
+  width: 100%;
+}
+
+.lk-onb__bullet {
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--text-2);
+  padding: 14px 16px;
+  background: var(--surface-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.lk-onb__bullet-label {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.lk-onb__bullet-sep {
+  color: var(--text-3);
+}
+
+.lk-onb__bullet-body {
+  color: var(--text-2);
+}
+
+/* ── Footer: dots + CTA ──────────────────────────────────── */
+
+.lk-onb__footer {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0 24px 24px;
+  gap: 18px;
+}
+
+.lk-onb__dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.lk-onb__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  transition: background var(--transition-fast), transform var(--transition-fast), width var(--transition-fast);
+}
+
+.lk-onb__dot--active {
+  background: var(--accent);
+  width: 22px;
+  border-radius: 999px;
+}
+
+.lk-onb__cta {
+  height: 52px;
+  padding: 0 24px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 16px;
+  border-radius: var(--radius-button);
+  transition: background var(--transition-fast), transform var(--transition-fast);
+}
+
+.lk-onb__cta:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.lk-onb__cta:active {
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lk-onb__cta:active { transform: none; }
+  .lk-onb__dot { transition: none; }
+}

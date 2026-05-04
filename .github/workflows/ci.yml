@@ -1,0 +1,62 @@
+# CI — linka SpeedTest PWA
+#
+# Dispara em qualquer push (todas as branches) e em PRs contra `main`.
+# A política do projeto exige trabalho em `main`, mas o gatilho generoso
+# protege colaboradores externos (forks) e sessões locais experimentais.
+#
+# Etapas:
+#   1. Checkout do repositório.
+#   2. Setup Node 20 com cache de `npm`.
+#   3. `npm ci` — instalação reprodutível.
+#   4. `npm run lint` — opcional (`--if-present`); falha se script existir e quebrar.
+#   5. `npm test`  — Vitest run (175+ testes unitários).
+#   6. `npm run build` — gera `dist/` (Vite + tsc -b).
+#   7. Upload do `dist/` como artefato (retido por 7 dias por padrão do GitHub).
+
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['main']
+
+concurrency:
+  # Cancela runs anteriores do mesmo branch quando um novo push chega.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lint, test e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7

@@ -263,12 +263,35 @@ Espelho do `downloadProbe`, usando `cfUploadChunk` (XHR sem listeners em `xhr.up
 |---|---|---|---|---|---|
 | `UPLOAD_CONFIG_FAST` | 7.000 | 4 | 4 | 2 (5 MB) | 1.000 |
 | `UPLOAD_CONFIG_COMPLETE` | 18.000 | 8 | 8 | 3 (10 MB) | 2.000 |
-| `UPLOAD_CONFIG_MOBILE_FAST` | 7.000 | 3 | 3 | 0 (256 KB) | 1.000 |
-| `UPLOAD_CONFIG_MOBILE_COMPLETE` | 18.000 | 4 | 4 | 1 (1 MB) | 2.000 |
 
 Mesma lógica de janela estável (65%) e fallback com `UL_SIZES[i−1]`.
 
-**Preset por perfil de conexão (Bug-fix 2026-05 — upload mobile):** o orchestrator seleciona `UPLOAD_CONFIG_MOBILE_*` quando `toConnectionProfile(connectionType) === 'mobile_broadband'`. Razão: `cfUploadChunk` só contabiliza bytes ao **completar** o XHR (preflight CORS impede `xhr.upload` progress). Em uplink celular típico (5–15 Mbps), o chunk de 10 MB partido entre 8 streams (~1,25 Mbps cada) leva ≈ 64 s — bem além dos 18 s de `durationMs`. Resultado: nenhum chunk completa, `samples` fica vazio, probe lança `upload_failed`. Os presets mobile reduzem o chunk para 256 KB / 1 MB e o paralelismo para 3–4 streams, garantindo conclusão dentro da janela mesmo em ~3 Mbps.
+**Os antigos presets `UPLOAD_CONFIG_MOBILE_FAST/COMPLETE` (256 KB×3 / 1 MB×4) ficaram obsoletos** após o Bug-fix 2026-05 (upload mobile <2 Mbps). Continuam exportados em `uploadProbe.ts` para inspeção, mas não são mais consumidos pelo orchestrator. O perfil `mobile_broadband` agora usa o motor adaptativo descrito abaixo.
+
+**`runAdaptiveUploadProbe(signal, onInstant)` — modo adaptativo (Bug-fix 2026-05, upload mobile <2 Mbps):**
+
+```ts
+runAdaptiveUploadProbe(signal: AbortSignal, onInstant: (mbps: number) => void): Promise<UploadProbeResult>
+```
+
+Estratégia em rodadas progressivas. Cada rodada faz N uploads paralelos de buffers idênticos; mede `roundDuration`. Se `roundDuration < 2s` e ainda há margem → escala (chunk×4, +1 stream). 2 rodadas lentas consecutivas → para. Limites: 4 rodadas máximas, 25 s totais, timeout de 6 s por rodada.
+
+| Rodada típica em uplink ~10 Mbps | chunk | streams | duração esperada |
+|---|---|---|---|
+| 1 | 64 KB | 1 | ~0,06 s |
+| 2 | 256 KB | 2 | ~0,4 s |
+| 3 | 1 MB | 3 | ~2,4 s |
+| 4 | 2 MB | 4 | ~6,4 s (timeout) |
+
+Em uplink ~0,5 Mbps:
+
+| Rodada | chunk | streams | duração esperada |
+|---|---|---|---|
+| 1 | 64 KB | 1 | ~1,0 s |
+| 2 | 64 KB | 1 (não escalou) | ~1,0 s |
+| 2× lento → para | | | |
+
+Em ambos os cenários retorna `samples` reais. Lança `upload_failed` apenas quando NENHUMA rodada produz amostras (rede catastroficamente offline — não simplesmente lenta).
 
 ---
 
@@ -289,7 +312,13 @@ runSpeedTestV2(mode: 'fast' | 'complete', onProgress, signal, connectionType?): 
 4. **Diagnóstico** — `dlDelta = max(0, latencyDownload − latencyUnloaded)`; `ulDelta` idem; `severity = classifyBufferbloatSeverity(max(dlDelta, ulDelta))`; `buildDiagnostics(partialResult)`
 5. Retorna `SpeedTestResult` completo com campos v2 (inclui `elapsedMs = Date.now() - testStartTime`, capturado no início do passo 1 — duração total do teste exposta no accordion "Avançado", item "Tempo total do teste")
 
-**Seleção de preset de upload por perfil (Bug-fix 2026-05):** antes de iniciar a fase 1, o orchestrator chama `toConnectionProfile(connectionType)` e escolhe entre `UPLOAD_CONFIG_*` (fixed) ou `UPLOAD_CONFIG_MOBILE_*` (mobile_broadband). Download e latência seguem os mesmos presets em ambos os perfis (download grande não falha em mobile — o motor `runDownloadProbe` contabiliza bytes via `ReadableStream.read()` em tempo real, sem depender de conclusão).
+**Seleção da estratégia de upload por perfil (Bug-fix 2026-05):** antes de iniciar a fase 1, o orchestrator chama `toConnectionProfile(connectionType)` e ramifica:
+- `fixed_broadband` → `runUploadProbe(UPLOAD_CONFIG_FAST|COMPLETE, ...)` (preset fixo).
+- `mobile_broadband` → `runAdaptiveUploadProbe(signal, ...)` (rodadas progressivas, ver §3.1d).
+
+Download e latência seguem os mesmos presets em ambos os perfis — o motor `runDownloadProbe` contabiliza bytes via `ReadableStream.read()` em tempo real, sem depender de conclusão.
+
+O `ulProgressBudget` (mapeamento da fase de upload no `overallProgress`) é o `durationMs` do preset em fixa e fixo em 25 s no modo adaptativo (teto do orçamento adaptativo).
 
 **Resultado parcial em falha de upload (Bug-fix 2026-05):** se `runUploadProbe` lançar (ex.: nenhum chunk completou em uplink celular saturado, mesmo com presets mobile), o orchestrator:
 - Distingue abort externo (`AbortError`) e offline (`navigator.onLine === false`) — esses **continuam** lançando `SpeedTestError`.
@@ -719,6 +748,21 @@ formatDate(ts: number): string // dd/MM/yyyy HH:mm
 formatDateIsoLike(ts: number): string // YYYY-MM-DD para nome de arquivo
 ```
 
+### 3.13.1 `appRefresh.ts` — Orquestrador do pull-to-refresh (2026-05)
+
+```ts
+performAppRefresh(opts: { reloadDeviceInfo: () => Promise<void> | void }): Promise<void>
+```
+
+Executado pelo gesto pull-to-refresh nas telas `StartScreen` e `HistoryScreen`. Estratégia em duas tentativas, na ordem:
+
+1. **Service Worker update.** Pega `navigator.serviceWorker.getRegistration()`, chama `registration.update()` para forçar re-check de `/sw.js`. Se houver `registration.waiting` (nova versão já baixada), envia `postMessage({ type: 'SKIP_WAITING' })`, aguarda `controllerchange` (com timeout failsafe de 1.2s) e dispara `window.location.reload()`. Se reload acontece, a função nem chega ao fim.
+2. **Reload deviceInfo.** Se o passo 1 não rodou (sem registration, sem versão pendente, ou Capacitor APK), chama `reloadDeviceInfo()` — geralmente `useDeviceInfo.reload`, que bumpa o `reloadKey` e dispara re-fetch do trace Cloudflare (IP/colo/ISP) + re-execução do effect Capacitor (`getLocalWifiRawInfoFromBridge`).
+
+**Min duration de 600ms.** O spinner muito rápido fica feio ("piscou e sumiu"). A função aguarda `MIN_DURATION_MS - elapsed` antes de resolver. Gera feedback visual sólido mesmo quando o refresh é cache-hit instantâneo.
+
+**Nunca lança.** Pull-to-refresh é UX, não lógica de negócio. Erros do SW (offline, transient) e do `reloadDeviceInfo` são engolidos — o spinner some e o usuário pode tentar de novo.
+
 ### 3.14 `relativeTime.ts` — Tempo relativo pt-BR (pacote premium 2026-05)
 
 ```ts
@@ -781,9 +825,83 @@ A UI deve interpretar `null` como "voltar ao comportamento neutro" — no caso d
 
 `profile` chega no ResultScreen via `toConnectionProfile(connectionType ?? undefined)` — mesma derivação já consumida pelo motor de interpretação. Quando `connectionType` é `undefined` (caso "Não identificada" do iOS Safari sem `navigator.connection`), o default conservador `fixed_broadband` se aplica.
 
+**Supressão em mobile_broadband (Bug-fix 2026-05):** a `ResultScreen` força `dlAnatel = ulAnatel = null` quando `profile === 'mobile_broadband'`, mesmo que o usuário tenha cadastrado plano. Razão: a noção regulatória de "velocidade contratada" é diferente em banda larga móvel — planos celulares vendem cota de dados, não taxa garantida em Mbps. A função `anatelGrade()` continua funcional para móvel (60/20%) — esta é uma decisão de **renderização**, não do modelo. As cores revertem para `--dl` / `--ul` de marca e a linha `/ X Mbps · Y%` é suprimida (volta a aparecer "Mbps" como unidade). Em paralelo, o `HamburgerMenu` já oculta os campos de plano contratado quando `connectionType === 'mobile'` (prop `showContracted`).
+
 Não cria tokens novos — reusa `--success` / `--warn` / `--error` (cores) e `--success-glow` / `--warn-glow` / `--error-glow` (glows), todos já existentes em `tokens.css` (criados pelo card de Diagnóstico).
 
 Ver: `src/utils/anatelColor.ts` + `src/__tests__/anatelColor.test.ts`.
+
+### 3.14.2 `historyTrends.ts` — Comparação inteligente entre testes (2026-05)
+
+```ts
+interface TrendComparison {
+  current:  { dlAvg: number; ulAvg: number; latencyAvg: number; testCount: number };
+  previous: { dlAvg: number; ulAvg: number; latencyAvg: number; testCount: number };
+  dlChangePct: number;        // positivo = melhorou (DL/UL)
+  ulChangePct: number;
+  latencyChangePct: number;   // positivo = piorou (latência maior)
+  windowLabel: string;        // "essa semana" | "esse mês"
+}
+
+computeWeeklyTrend(records: TestRecord[], now?): TrendComparison | null
+computeMonthlyTrend(records: TestRecord[], now?): TrendComparison | null
+
+describeTrend(trend): {
+  headline: string;     // "Sua média essa semana é 580 Mbps"
+  comparison: string;   // "▼ 12% pior que a semana passada."
+  severity: 'good' | 'neutral' | 'bad';
+}
+
+isTrendSignificant(trend): boolean   // true quando algum delta >= 10%
+```
+
+Particiona o histórico em duas janelas adjacentes (atual: últimos N dias; anterior: N-2N dias atrás) e calcula delta percentual de DL/UL/latência. Mínimo de 5 testes em cada janela; abaixo disso retorna `null`. Convenção de sinais: positivo = melhorou (DL/UL); positivo na latência = piorou. `describeTrend()` inverte o sinal da latência na exibição para que `▼` sempre signifique "piora" do ponto de vista do usuário.
+
+Thresholds:
+- `>= 10%` (`SIGNIFICANT_PCT`) — variação suficiente para renderizar o card.
+- `>= 20%` (`SEVERE_PCT`) — adjetivo "bem melhor" / "bem pior" (em vez de "melhor" / "pior" simples).
+
+**Consumo:** `HistoryScreen` chama `computeWeeklyTrend(items)` e cai para `computeMonthlyTrend(items)` quando a janela semanal não tem amostras significativas. Se nenhuma das duas é significativa, o card não aparece. O delta entra como border-left colorido pelo `severity` (`good`/`bad`/`neutral`) — sem box-shadow.
+
+Testes: `src/__tests__/historyTrends.test.ts` cobre janelas insuficientes, mudanças positivas/negativas/zero, severidade, narrativa por DL e por latência, formatação Mbps→Gbps.
+
+### 3.14.3 `anatelReport.ts` — Relatório de denúncia Anatel (2026-05)
+
+```ts
+interface AnatelComplaintData {
+  contractedDownMbps: number;
+  contractedUpMbps:   number;
+  testRecords:        TestRecord[];   // janela analisada
+  belowThresholdCount: number;        // < 80% do plano
+  belowCriticalCount:  number;        // < 40% do plano
+  averageDeliveredPct: number;        // % média entregue
+  windowDays:          number;        // 30 (default)
+}
+
+isAnatelComplaintEligible(records, contractedDl, contractedUl, now?): AnatelComplaintData | null
+generateAnatelReport(data, isp): Promise<void>   // dispara download de PDF A4
+```
+
+`isAnatelComplaintEligible` retorna `null` (não há reclamação) quando:
+
+- plano não cadastrado (`contractedDl <= 0`);
+- menos de 5 testes nos últimos 30 dias;
+- entrega média ≥ 80% (Resolução Anatel 717/2019 — limite para banda larga fixa).
+
+Caso contrário retorna o snapshot de evidências. `HistoryScreen` consome o snapshot para renderizar o card "Anatel — entrega abaixo do contratado" (ícone de escudo `--warn`, descrição com a % média + contagem de testes, CTA "Gerar relatório"). O card é suprimido em planos móveis (`dominantProfile(items) === 'mobile_broadband'`) — a Resolução 717/2019 trata banda larga fixa de modo distinto.
+
+`generateAnatelReport` produz PDF A4 retrato via `jsPDF` + `html2canvas` (mesma infra de `pdfExport.ts`):
+
+1. Header com logo `linka` + título + linha "Resolução Anatel 717/2019".
+2. Identificação: provedor (ISP dominante), plano contratado, período avaliado, número de medições.
+3. Headline com border-left `--error`: "Entrega média: X% do plano contratado" + parágrafo legal.
+4. Estatísticas 4-col: média/mediana de DL e UL.
+5. Tabela cronológica: cada teste com data, DL, UL, latência e % do plano (cor do % por threshold: vermelho `< 40%`, amarelo `< 80%`, verde `≥ 80%`).
+6. Rodapé com instruções de uso (operadora + Procon + Anatel) + ressalva de "não substitui aferição EAQ".
+
+O PDF respeita multi-página (loop com `addPage` quando o canvas excede a altura A4). Nome do arquivo: `linka-anatel-YYYY-MM-DD.pdf`.
+
+Não usa libs novas — reusa `jspdf`, `html2canvas` e `format.ts`.
 
 ---
 
@@ -936,12 +1054,13 @@ Usado por `GamingVerdict` na ResultScreen para avaliar se as métricas do teste 
 **Retorno:** `{ device, server, loading, error, reload }`
 
 **Fluxo:**
-1. `detectDevice()` → analisa UA + viewport → `DeviceInfo`
-2. `navigator.connection?.type` e `?.effectiveType` → `connectionType`
-3. `provider.getInfo()` → busca `ServerInfo` (trace + meta Cloudflare)
-4. `provider.checkAvailability()` → HEAD request de verificação
-5. AbortController no cleanup do useEffect (`cancelled = true`)
-6. `reload()` → incrementa `reloadKey` para re-executar o efeito
+1. `detectDevice()` (síncrono) → analisa UA + viewport → `DeviceInfo` inicial.
+2. Em paralelo, se `Capacitor.isNativePlatform()` for true → `getLocalWifiRawInfoFromBridge()` refina `connectionType` (Bug-fix 2026-05, ver "Cascata de detecção" abaixo).
+3. `navigator.connection?.type` e `?.effectiveType` → `connectionType` (na versão síncrona).
+4. `provider.getInfo()` → busca `ServerInfo` (trace + meta Cloudflare).
+5. `provider.checkAvailability()` → HEAD request de verificação.
+6. AbortController no cleanup do useEffect (`cancelled = true`).
+7. `reload()` → incrementa `reloadKey` para re-executar o efeito (e o effect Capacitor escuta `reloadKey`, então re-checa o plugin a cada teste).
 
 **Estratégia de refresh do ISP (Bug-fix 2026-05):** o `ServerInfo` (IP, colo, ISP) era resolvido **uma única vez** no mount do App e ficava congelado mesmo após troca de rede (Wi-Fi → 4G ou troca de operadora). Três gatilhos de refresh foram adicionados:
 
@@ -951,14 +1070,24 @@ Usado por `GamingVerdict` na ResultScreen para avaliar se as métricas do teste 
 
 A combinação garante: (a) StartScreen mostra ISP correto após troca de rede mesmo sem iniciar teste; (b) o registro persistido em histórico (`TestRecord.isp`) reflete a rede ativa no momento da medição.
 
-**Heurística de `connectionType`** (em ordem):
-1. `connection.type === 'wifi'` → `'wifi'`
-2. `connection.type === 'cellular'` → `'mobile'`
-3. `connection.type === 'ethernet' | 'wimax' | 'other'` → `'cable'`
-4. Sem `type` mas `effectiveType` em `'2g' | '3g' | 'slow-2g'` → `'mobile'`
-5. **Fallback iOS Safari** (sem `navigator.connection`): se `deviceType === 'mobile'` → assume `'mobile'`. Caso contrário → `'cable'`.
+**Cascata de detecção de `connectionType`** (Bug-fix 2026-05 — rede móvel/Wi-Fi):
 
-> O override manual em **Configurações → Conexão** sempre vence (ver `App.tsx::effectiveConnection`).
+Antes da correção, a heurística tentava `navigator.connection.type` e, se ausente (Safari iOS / Firefox / Capacitor com `type='unknown'`), caía em "se for mobile device → assume mobile" — o que classificava erroneamente PWA iOS em casa (Wi-Fi) como `mobile`. APK Capacitor, idem. A nova ordem é:
+
+1. **Capacitor APK** (`Capacitor.isNativePlatform() === true`): `getLocalWifiRawInfoFromBridge()` → se `available && ssid` → `wifi`; caso contrário (sem Wi-Fi visível, permissão negada, etc.) → `mobile` (no APK não há cabo). Este é um effect async paralelo: o state inicial vem da heurística web (passo 2-4) e é refinado pelo plugin nativo logo depois. O effect re-executa quando `reloadKey` é bumpado (App.tsx faz isso no início de cada teste — ver §`useDeviceInfo` passo 7).
+2. `connection.type === 'wifi'` → `wifi`
+3. `connection.type === 'cellular'` → `mobile`
+4. `connection.type === 'ethernet' | 'wimax'` → `cable`
+5. `connection.type === 'bluetooth'` → `mobile` (tethering)
+6. Sem `type` mas `effectiveType` em `'2g' | '3g' | 'slow-2g'` → `mobile`
+7. **Fallback final**: `deviceType === 'desktop'` → `cable`; mobile/tablet → `wifi` (PWA standalone em casa é o caso mais comum). Log `console.warn` para diagnóstico.
+
+> O override manual em **Configurações → Conexão** sempre vence (ver `App.tsx::effectiveConnection`) — não passa pela cascata.
+
+**Listeners de mudança de rede:**
+- `navigator.connection.change` (Chrome Android, confiável) → re-detecta + bumpa `reloadKey`.
+- `window.online` / `window.offline` (caso clássico iOS Safari: avião → 5G) → idem.
+- Início de cada teste (`App.tsx` ouve `test.phase === 'latency'` e chama `deviceInfoReloadRef.current()`) → bumpa `reloadKey`, dispara re-fetch do ISP **e** re-execução do effect Capacitor.
 
 **`serverId`** é passado como prop de `App.tsx`. Atualmente fixo em `'cloudflare'`.
 
@@ -1009,7 +1138,35 @@ Chave localStorage: `linka.speedtest.settings.v1`
 
 > **Bloco 6 — UX uniforme (2026-05):** o campo órfão `scale` foi removido do tipo `Settings` e dos `DEFAULTS`. `load()` continua usando `{ ...DEFAULTS, ...stored }`, que tolera silenciosamente o campo extra em localStorage de usuários antigos — o spread copia a chave para o objeto runtime sem efeito (não há leitor) e ela é descartada na próxima escrita parcial via `update()` se este reescrever só campos válidos. Sem migração explícita, sem risco de quebra.
 
-### 4.4 `useCountUp(target, durationMs?, decimals?)` — Bloco Motion
+### 4.4 `usePullToRefresh(scrollContainerRef, onRefresh, options?)` — Pull-to-refresh universal (2026-05)
+
+Hook que habilita o gesto "puxar pra atualizar" sobre qualquer scroll container. Funciona idêntico em PWA web (mobile/desktop) e APK Capacitor — o caminho touch trata mobile com `preventDefault` confiável; o caminho pointer (apenas `pointerType !== 'touch'`) cobre mouse no desktop sem mexer com scroll do navegador.
+
+**Assinatura:**
+
+```ts
+usePullToRefresh(
+  scrollContainerRef: RefObject<HTMLElement | null>,
+  onRefresh: () => Promise<void>,
+  options?: { threshold?: number; resistanceFactor?: number; enabled?: boolean },
+): { pullDistance: number; isRefreshing: boolean; isReady: boolean }
+```
+
+**Defaults:** `threshold = 80px` (pull em px após resistência para entrar em "ready"), `resistanceFactor = 0.5` (puxar 100px no dedo move 50px no spinner).
+
+**Lógica do gesto:**
+
+1. `touchstart`/`pointerdown` arma SOMENTE quando: (a) `scrollContainer.scrollTop === 0`; (b) o alvo NÃO está dentro de `.lk-dsheet` (sheet aberto rouba o gesto). Se já scrollou pra baixo ou está sob um sheet, o hook deixa o gesto passar inteiro.
+2. `touchmove`/`pointermove`: se `dy > 0` (puxando pra baixo), aplica resistência e chama `preventDefault()` (`touchmove` apenas, e só quando armado) — anula rubber-band do iOS Safari sem comprometer scroll normal.
+3. `touchend`/`pointerup`: `pullDistance < threshold` → snap back animado, no-op. `pullDistance ≥ threshold` → entra em `isRefreshing`, aguarda `onRefresh()`, snap back.
+
+**Co-existência com `useScrollHeader`:** ambos os hooks operam sobre o mesmo `scrollContainerRef` (StartScreen / HistoryScreen) sem conflito — um lê `scroll`, o outro intercepta `touchmove`/`pointermove`. As listeners são adicionadas via `addEventListener` direto (sem React synthetic events), com `touchmove` em `{ passive: false }` para permitir `preventDefault`.
+
+**Co-existência com `DraggableSheet`:** o predicado `target.closest('.lk-dsheet')` é avaliado no `touchstart`/`pointerdown` — se o gesto começou dentro de um sheet aberto, o hook não arma e o sheet processa o drag-to-resize normalmente. Importante: o `.lk-dsheet__backdrop` cobre 100% da tela quando aberto, então mesmo que o usuário toque "fora" do pill do sheet, o evento alvo é o backdrop, que NÃO tem `.lk-dsheet` como ancestor — neste caso o pull-to-refresh do scroll container abaixo armaria. Para evitar isso, telas que possam abrir sheets passam `enabled: !!onRefresh && !sheetIsOpen` quando aplicável (ex.: HistoryScreen desliga o gesto quando `selected` — detalhe de registro — está aberto).
+
+**Co-existência com swipe lateral do `App.tsx`:** o swipe para `goBack`/`goForward` exige `dx > dy * 1.5` (mais horizontal que vertical) — gesto vertical do pull-to-refresh nunca dispara navegação por engano.
+
+### 4.5 `useCountUp(target, durationMs?, decimals?)` — Bloco Motion
 
 Hook RAF puro que anima um número de 0 (ou do último valor renderizado) até `target`, com easing `easeOutCubic`. Retorna sempre um `number` — o caller continua chamando `formatMbps` / `formatMs` com o valor animado.
 
@@ -1141,6 +1298,99 @@ A velocidade é medida entre o último e o penúltimo `pointermove` (janela curt
 
 **Acessibilidade.** `role="dialog"` + `aria-modal="true"` no container; o consumidor passa `ariaLabel` ou `ariaLabelledBy` apontando para o título do header.
 
+### 5.3.4 `PullToRefreshIndicator` — pill flutuante do pull-to-refresh (2026-05)
+
+Props:
+
+```ts
+interface Props {
+  pullDistance: number;
+  isRefreshing: boolean;
+  isReady: boolean;
+  threshold?: number; // default 80
+}
+```
+
+Componente em `src/components/PullToRefreshIndicator.tsx` + `.css`. Renderiza um pill 36×36 com spinner SVG inline, posicionado `position: fixed; top: calc(var(--safe-top) + 56px)` (logo abaixo do TopBar), centralizado horizontalmente. A `transform: translate(-50%, …px)` é controlada via inline style — segue o dedo durante o pull e segura na posição "ready" durante `isRefreshing`.
+
+**Spinner pre-refresh.** Arco SVG (`<circle r="9" stroke="…" />`) cuja `stroke-dashoffset` cresce conforme `pullDistance / threshold` (0 → 270° de arco). Cor: `var(--accent)` (decisão consciente — accent é a cor de "ação ativa" do produto; mais alinhado com o feedback de "algo está acontecendo" do que `var(--text)`). Quando `isReady`, a borda do pill ganha `var(--accent-border)` para sinalizar "solte agora".
+
+**Spinner refreshing.** SVG inteiro recebe `animation: lk-ptr-spin 1s linear infinite` (rotação contínua). O arco usa `dashoffset = perimeter * 0.25` (¾ visíveis), produzindo o efeito clássico de spinner indeterminado.
+
+**Sem box-shadow.** Regra do projeto. A separação visual do conteúdo abaixo vem de `background: var(--surface-deep)` + `border 1px var(--border)`.
+
+**`prefers-reduced-motion`.** Para a rotação contínua via `@media (prefers-reduced-motion: reduce)`. O arco do pre-refresh continua reagindo ao input do usuário (não é animação automática) — não foi suprimido.
+
+**Acessibilidade.** `role="status"` + `aria-live="polite"` no container; texto sr-only alterna entre "Puxe para atualizar" / "Solte para atualizar" / "Atualizando" conforme estado.
+
+### 5.3.5 `Skeleton` — placeholder com shimmer (loading states, 2026-05)
+
+```tsx
+interface SkeletonProps {
+  width?: string | number;     // default '100%'
+  height?: string | number;    // default 16
+  variant?: 'rect' | 'pill' | 'circle';  // default 'rect'
+  className?: string;
+  style?: React.CSSProperties;
+  ariaBusy?: boolean;
+}
+```
+
+Placeholder visual com animação shimmer linear. Substitui textos "Carregando…" por retângulos animados que dão pista do shape do conteúdo a vir. Sem box-shadow (regra do projeto). Cores via `--surface` e `--surface-2`.
+
+**Visual.** Background gradient `linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%)` com `background-size: 200% 100%`. Animação `lk-skeleton-shimmer` 1.5s linear infinite translada o gradient (200% → -200% no eixo X).
+
+**Variants.**
+- `rect` (default) — `border-radius: var(--radius-sm)`. Card placeholders.
+- `pill` — `border-radius: 999px`. Texto inline e badges.
+- `circle` — `border-radius: 50%`. Avatares e ícones.
+
+**`prefers-reduced-motion`.** Override em `@media`: animação removida, fica estático em `--surface-2`.
+
+**Acessibilidade.** Por default `aria-hidden="true"` — o componente é ornamental e o parent dita o estado de loading. Quando o caller passa `ariaBusy`, o Skeleton ganha `role="status"` + `aria-busy="true"` (raro — em geral o parent gerencia via `aria-busy` no container).
+
+**Locais de uso (2026-05).**
+
+| Local | Estado de loading | Skeleton render |
+|---|---|---|
+| `App.tsx` → `ScreenLoadingFallback` | Chunk lazy de tela secundária baixando | TopBar pill 36×36 + título central 140×16 + 2 cards (80px e 60px) |
+| `WifiSignalSection` | `useWifiDiagnostics` em `loading` | 3 linhas: kicker pill 40×12 + label pill 120×16 + barra rect 8×100% |
+| `DNSGuideSheet` | `running && !effectiveBench` (benchmark sem seed) | 5 rows com nome do server + skeleton pill 32×16 — cada row se "completa" individualmente conforme o callback `onServerComplete` do `runDNSBenchmark` reporta o servidor |
+| `HistoryScreen` | `records === undefined` (edge case) | Não implementado — `useState(() => loadHistory())` é síncrono; o estado nunca é `undefined` na prática |
+
+**`runDNSBenchmark` — callback `onServerComplete` (2026-05).** Adicionado para alimentar o skeleton incremental do DNSGuideSheet. Assinatura:
+
+```ts
+runDNSBenchmark(
+  signal: AbortSignal,
+  onProgress?: (done: number, total: number, current: string) => void,
+  onServerComplete?: (server: DnsServerResult) => void,
+): Promise<DnsBenchmarkResult>
+```
+
+Disparado dentro do loop de servers logo após `benchmarkServer` resolver — antes do `MIN_SERVER_PACING`. Permite à UI remover o placeholder de cada server progressivamente sem esperar o benchmark completo.
+
+### 5.3.6 `InfoTooltip` — botão `?` educacional (a11y, 2026-05)
+
+```tsx
+interface InfoTooltipProps {
+  label: string;          // texto explicativo, 1-2 frases pt-BR
+  ariaLabel?: string;     // texto alternativo p/ screen readers
+}
+```
+
+Botão `?` 16×16 inline com balão flutuante explicativo. Click ou Enter/Space alterna; click fora ou ESC fecha. Posicionamento: padrão abaixo do `?`; se overflow no viewport bottom, aparece acima (calculado via `getBoundingClientRect` no momento da abertura). A11y: `<button aria-expanded>` real (não div fake) com `aria-describedby` apontando para o balão `role="tooltip"`. Sem dependência de hover (mobile-friendly).
+
+**Consumo (2026-05).**
+
+| Tela / Sheet | Métricas com tooltip |
+|---|---|
+| `ResultScreen` SECONDARY | Resposta, Oscilação, Falhas |
+| `AdvancedSheet` | Latência sob carga (Bufferbloat A-F), Latência sob carga (valor), Oscilação carregada, Estabilidade do download |
+| `WifiDetailsSheet` | Sinal (RSSI), Velocidade do link, Banda |
+
+`IOSList` foi estendido com a prop opcional `titleAfter?: ReactNode` para encaixar o tooltip ao lado do label sem mudar o tipo de `title` (que continua `string`). Consumidores legados ignoram a prop.
+
 ### 5.4 `IOSList`
 
 ```tsx
@@ -1148,6 +1398,7 @@ interface IOSListItem {
   icon?: ReactNode;       // conteúdo do quadrado 28×28
   iconBg?: string;        // cor de fundo do ícone (CSS var ou hex)
   title: string;
+  titleAfter?: ReactNode; // conteúdo opcional após o título (ex.: <InfoTooltip>)
   subtitle?: string;
   trailing?: ReactNode;   // valor ou chip à direita
   showChevron?: boolean;
@@ -1205,6 +1456,13 @@ Todos os ícones são SVGs inline. Componente primitivo `<Icon name={...} size={
 | `signal` | Sinal |
 
 Componentes nomeados mantidos para compatibilidade com PathRow e BottomSheet: `DeviceIcon`, `ConnectionIcon`, `IconServer`, `IconBuilding`, `IconGames`, `IconStream`, `IconWork`, `IconVideoCall`, `IconPdf`, `IconShare`, `IconWhatsApp`.
+
+**`ConnectionIcon` (consumo expandido em 2026-05 — Bug-fix rede móvel):** o componente já existia e era usado em `PathRow` e `HistoryScreen` (lista). Após o Bug-fix de detecção/UX de rede móvel, passou a ser consumido também em:
+
+- `ResultScreen` — banner de contexto, canto direito (size 16, cor `var(--text-2)`). Renderizado quando `connectionType ∈ {wifi, mobile, cable}`. `aria-label` `"Conexão: <Wi-Fi|Rede móvel|Cabo>"`.
+- `HistoryScreen` (HistoryDetail) — hero do detalhe, abaixo do subtítulo (size 20, cor `var(--text-2)`), com label textual ao lado.
+
+Assinatura do componente (`{ kind: ConnectionType; size?: number }`) não mudou — `'unknown'` é tratado pelo consumer (Result/HistoryDetail só renderiza para os 3 tipos canônicos).
 
 ### 5.7 Bloco 5 — TopBar System (2026-05)
 
@@ -1393,6 +1651,25 @@ Um `useEffect` sem deps (executa só na montagem) chama `previousRecord()` e pop
 
 ---
 
+## 6.bis Acessibilidade (a11y, 2026-05)
+
+Auditoria conduzida em maio/2026. Pontos cobertos:
+
+1. **Skip-to-main-content** — `<a class="lk-skip-link" href="#main-content">` no topo do `App.tsx`. Invisível visualmente (translate -200%), materializa-se ao receber foco por teclado. Pula TopBar/back/menu e leva direto pro container principal (`<div id="main-content">`).
+2. **Focus visível** — regra global em `tokens.css` (`:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }`). Ativada apenas quando o foco vem do teclado (não polui clique). Cobre todos os elementos focáveis sem precisar de override por componente.
+3. **`<button>` real onde havia `<div role="button">`** — DNS cell na ResultScreen (cell SECONDARY 4ª coluna) e itens do Histórico. Substituem o par `role="button" + tabIndex + onKeyDown` manual por `<button>` nativo com keyboard activation gratuita.
+4. **`aria-live="polite"` em status dinâmico** — frase narrativa da `RunningScreen` ("Medindo download…"/"Medindo upload…"), banner de upload parcial da `ResultScreen` (`ulFailed=true`), banner "Nova versão disponível" do `PwaUpdatePrompt`.
+5. **`aria-busy`** — `Skeleton` aceita prop `ariaBusy`; `WifiSignalSection` no estado `loading` aplica `aria-busy="true"` no container.
+6. **`aria-modal="true"`** — `DraggableSheet` (base universal de sheets) já renderiza `role="dialog" aria-modal="true"` com `aria-labelledby` apontando para o título da sheet. Body scroll lock + ESC fecha vivem no DraggableSheet, herdados pelos consumidores (AdvancedSheet, GamerSheet, DNSGuideSheet, WifiDetailsSheet, WifiOptimizeSheet).
+7. **Inputs sem label visível** — campos de plano contratado em `HamburgerMenu` ganharam `aria-label` ("Velocidade contratada de download em Mbps", idem upload) e `inputMode="numeric"` para teclado correto em mobile.
+8. **`aria-label` em botões só com ícone** — `BackButton`, `IconButton`, `IconPdf`/`IconShare` no TopBar. Já existiam; auditoria confirmou.
+9. **SVGs decorativos com `aria-hidden`** — primitivos `SVG` e `Icon` em `icons.tsx` agora setam `aria-hidden="true" focusable="false"` por default. Os labels textuais ao lado já comunicam significado; sem isso, o screen reader leria "imagem · texto" em duplicidade.
+10. **`IOSList` rows clicáveis** — `role="button"` + `tabIndex={0}` + `onKeyDown` (Enter/Space) padronizado dentro do componente, eliminando a necessidade de cada caller adicionar handlers manuais.
+
+`prefers-reduced-motion: reduce` é respeitado pelo `screen-enter`, `Skeleton`, `LiveChart`, `useCountUp` e `InfoTooltip`.
+
+---
+
 ## 7. CSS e tokens (`src/tokens.css`)
 
 ### Temas
@@ -1491,9 +1768,91 @@ manifest: {
     { src: '/icon-512.png',          sizes: '512x512', type: 'image/png', purpose: 'any' },
     { src: '/icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
     { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    { src: '/icon.svg',              sizes: 'any',     type: 'image/svg+xml', purpose: 'any' },
   ]
 }
 ```
+
+#### 8.0 Audit de ícones e manifest (2026-05)
+
+**Inventário de assets** (`public/` e `android/app/src/main/res/mipmap-*`):
+
+| Categoria | Tamanho | Arquivo | Status |
+|---|---|---|---|
+| PWA web (any) | 192×192 | `public/icon-192.png` | ✅ presente, declarado |
+| PWA web (any) | 512×512 | `public/icon-512.png` | ✅ presente, declarado |
+| PWA web (maskable) | 192×192 | `public/icon-maskable-192.png` | ✅ presente, declarado |
+| PWA web (maskable) | 512×512 | `public/icon-maskable-512.png` | ✅ presente, declarado |
+| PWA web (vetor) | any | `public/icon.svg` | ✅ presente, declarado (2026-05) |
+| Favicon | 16/32 | `public/favicon.ico` | ✅ presente, declarado em `index.html` (2026-05) |
+| Apple touch icon | 180×180 | `public/apple-touch-icon.png` | ✅ presente, declarado (2026-05 — antes apontava para `icon-maskable-192.png`, tamanho errado) |
+| Apple touch icon | 152×152 | `public/touch-icon/ios/AppIcon@2x~ipad.png` | ✅ presente, declarado (2026-05) |
+| Apple touch icon | 167×167 | `public/touch-icon/ios/AppIcon-83.5@2x~ipad.png` | ✅ presente, declarado (2026-05) |
+| Apple touch icon | 120×120 | `public/touch-icon/ios/AppIcon@2x.png` | ✅ presente, declarado (2026-05) |
+| iOS legacy | 76, 60, 40, 29, 20 | `public/touch-icon/ios/*.png` | ✅ presentes, **não declarados em index.html** (cobertos por size mais próximo) |
+| Splash iOS standalone | múltiplos | — | ❌ **GAP** — `apple-touch-startup-image` não declarado; iOS standalone mostra splash branco |
+| Android Adaptive (mdpi→xxxhdpi) | 48→192 | `android/.../res/mipmap-*/ic_launcher.png` | ✅ presentes |
+| Android foreground | 108→432 | `android/.../res/mipmap-*/ic_launcher_foreground.png` | ✅ presentes |
+| Android background | cor sólida | `android/.../res/values/ic_launcher_background.xml` | ✅ presente (drawable em XML) |
+| Android adaptive (anydpi-v26) | — | `android/.../res/mipmap-anydpi-v26/ic_launcher.xml` | ✅ presente |
+| Android Play Store | 512×512 | `public/android/play_store_512.png` | ✅ presente (uso para upload de Play Store) |
+
+**Bugs corrigidos no audit (2026-05).**
+
+1. `<link rel="apple-touch-icon" sizes="192x192" href="/icon-maskable-192.png">` — tamanho declarado errado (192) e arquivo errado (maskable, que iOS renderiza com cantos quadrados, não circulares). Corrigido para `sizes="180x180" href="/apple-touch-icon.png"`.
+2. `index.html` não declarava `<link rel="icon" href="/favicon.ico" sizes="any">` mesmo com o arquivo presente — alguns user agents (Edge legacy, Safari macOS) usam o ICO como fallback de bookmark.
+3. `<meta name="apple-mobile-web-app-title">` ausente — quando o usuário adiciona à home screen no iOS, o nome curto sai como "linka SpeedTest" inteiro. Adicionado com valor `"linka Speed"`.
+
+**Pendências conhecidas.**
+
+- **Splash screens iOS standalone** — sem `apple-touch-startup-image`, o PWA iOS adicionado à home screen mostra splash branco antes do `--bg`. Solução simples: gerar 1 splash 2048×2732 com logo centralizado e declarar como genérico. Solução completa: gerar 8+ splashes específicos por device (1290×2796 iPhone 15 Pro Max, 1284×2778 iPhone 14 Plus, 1170×2532 iPhone 13/14, 750×1334 iPhone SE, etc.) com `media` queries.
+- **Android monochrome icon** (Android 13+ themed icons) — existe `public/android/res/mipmap-*/ic_launcher_monochrome.png` mas não está copiado para `android/app/src/main/res/mipmap-*`. Pendência: copiar os 5 PNGs e declarar `<monochrome>` no `mipmap-anydpi-v26/ic_launcher.xml`.
+
+#### Comando ImageMagick para regenerar ícones a partir do SVG mestre
+
+`public/icon.svg` é o mestre (logo branco arco + ponto sobre fundo `#5B3FE8`, 100×100 viewBox). Quando precisar regenerar PNGs em qualquer tamanho ou trocar o branding, rodar a partir da raiz do repo:
+
+```bash
+# Requer ImageMagick 7+ (`magick` em vez de `convert` desde IM 7) e librsvg
+# (mais fiel a SVG complexo que o renderer interno do IM).
+
+# PWA web base (any)
+magick -background none -resize 192x192 public/icon.svg public/icon-192.png
+magick -background none -resize 512x512 public/icon.svg public/icon-512.png
+
+# Maskable (Android adaptive). Padding interno de 20% (área "safe zone"
+# que mascara não corta). Renderiza o SVG num canvas 80% do tamanho final
+# centralizado, com fundo da cor da marca.
+magick -background "#5B3FE8" -resize 154x154 public/icon.svg \
+       -gravity center -extent 192x192 public/icon-maskable-192.png
+magick -background "#5B3FE8" -resize 410x410 public/icon.svg \
+       -gravity center -extent 512x512 public/icon-maskable-512.png
+
+# Apple touch icon (iPhone moderno)
+magick -background "#5B3FE8" -resize 180x180 public/icon.svg public/apple-touch-icon.png
+
+# Favicon multi-resolução
+magick -background none public/icon.svg \
+       -define icon:auto-resize=16,32,48,64 public/favicon.ico
+
+# Android Play Store
+magick -background "#5B3FE8" -resize 512x512 public/icon.svg public/android/play_store_512.png
+```
+
+Para os Android Adaptive Icons (`mipmap-*/ic_launcher_foreground.png`), o foreground precisa ser 432×432 com a área visível centralizada num círculo de raio ~132 (264×264). Comando:
+
+```bash
+# Foreground com safe-zone 264×264 centralizada em canvas 432×432 transparente
+for density in mdpi:108 hdpi:162 xhdpi:216 xxhdpi:324 xxxhdpi:432; do
+  IFS=: read -r d size <<< "$density"
+  inner=$((size * 264 / 432))
+  magick -background none -resize ${inner}x${inner} public/icon.svg \
+         -gravity center -extent ${size}x${size} \
+         android/app/src/main/res/mipmap-${d}/ic_launcher_foreground.png
+done
+```
+
+Importante: rodar `npx cap sync android` após substituir ícones em `public/` ou `android/.../res/` se o build for via Capacitor — para sincronizar `dist/` e `capacitor.config.ts`.
 
 Service worker gerado automaticamente. Sem runtime caching configurado (app não tem assets dinâmicos para cachear além do shell).
 
@@ -1751,20 +2110,39 @@ Cancela atualização de estado se o componente desmontar antes da resposta. Nã
 
 Não duplica lógica: `runLocalWifiDiagnostics` segue como ponto único de classificação (banda, qualidade, canal).
 
-### Card embutido (`WifiSignalCard.tsx`, `WifiDetailsSheet.tsx`) — 2026-05+
+### Seção embutida (`WifiSignalSection.tsx` + `WifiSignalBar.tsx`, `WifiDetailsSheet.tsx`) — refator 2026-05
 
 Componente puro renderizado pela `ResultScreen` quando `connectionType === 'wifi'`. A própria `ResultScreen` controla o gating; o componente só monta se for visível, evitando fetch desnecessário quando o usuário está em cabo ou rede móvel.
 
-**Estados do card compacto:**
+**Refator 2026-05 (barra horizontal):** a representação INLINE no card unificado deixou de ser um card de 4 cells (SSID + chip canal color-coded + WiFi std) e virou uma barra horizontal de qualidade do sinal — `<WifiSignalBar>`. O orquestrador `<WifiSignalSection>` substitui o antigo `<WifiSignalCard>` (que está marcado `@deprecated` mas preservado no repo).
+
+**Estados da seção (`WifiSignalSection`):**
 - `status === 'loading'` — placeholder discreto ("Lendo informações do Wi-Fi…").
 - `status === 'permission-denied'` — mensagem específica em pt-BR: **"Permissão de localização necessária para diagnóstico Wi-Fi. Habilite nas configurações do app."** Cor `var(--warn)`.
-- `status === 'unavailable'` — mensagem única hardcoded em pt-BR: **"Wi-Fi: detalhes disponíveis somente no app instalado."**.
-- `status === 'available'` — card compacto clicável exibindo **SSID + Canal (color-coded) + WiFi Standard**. Ao clicar, abre popup bottom-sheet com 5 seções de detalhes.
+- `status === 'unavailable'` ou `data.rssiDbm == null` — mensagem única hardcoded em pt-BR: **"Wi-Fi: detalhes disponíveis somente no app instalado."**.
+- `status === 'available'` com `rssiDbm` numérico — `<WifiSignalBar>` clicável (abre `<WifiDetailsSheet>`).
 
-**Cores do canal (refletem qualidade da conexão via `classifyWifiQuality`):**
-- **Verde** (good/excellent): `var(--color-good)`
-- **Amarelo** (fair): `var(--color-warn)`
-- **Vermelho** (weak/critical): `var(--color-bad)`
+**Componente `<WifiSignalBar>` (substitui o card 4-cells inline):**
+
+Layout em 3 linhas dentro do bloco do card unificado (padding `14px 16px`, `border-top: 1px solid var(--border-subtle)` — paridade com `.lk-result__use-row`):
+
+1. **Header** — `[WI-FI label]` à esquerda (uppercase 11px tracking 0.08em, `var(--text-3)`) + ícone Wi-Fi sutil 14px à direita (`color: var(--text-3); opacity: 0.65`).
+2. **Linha info** — `SSID · Canal X` em Geist body 14–15px. SSID em weight 600; separador `·` em `var(--text-3)`; "Canal X" em `var(--text-2)` com `tabular-nums`. Quando `ssid` é null/vazio, fallback "Sua rede"; quando `channel` é null, suprime " · Canal X" inteiro.
+3. **Barra + %** — flex row com gap 12px:
+   - Container 8px de altura, `background: var(--surface-2)`, `border-radius: 999px`, `overflow: hidden`.
+   - Fill com `width: ${pct}%` inline, `transition: width 600ms cubic-bezier(0.2, 0.7, 0.2, 1)`. Cor por threshold: `var(--success)` ≥80%, `var(--warn)` 50–79%, `var(--error)` <50%.
+   - `% numérico` à direita, peso 600, `tabular-nums`, cor matching o fill.
+
+**Helpers (`wifiSignal.ts`) — 2026-05:**
+
+- `rssiToPercent(rssiDbm: number | null | undefined): number | null` — fórmula linear `2 * (rssi + 100)` clamped 0–100. Retorna `null` quando o input é null/undefined (consumidor decide o fallback).
+- `signalQualityColor(pct: number): 'good' | 'warn' | 'bad'` — threshold visual da barra (≥80 / 50–79 / <50).
+
+A separação para um módulo dedicado (em vez de `LocalWifiService`) é proposital: a conversão dBm→% e o mapeamento de cor da barra são preocupações puramente de UI. O `classifyWifiQuality` (técnico, mistura RSSI + linkSpeed + banda em 5 níveis) continua sendo a fonte de verdade do copy do diagnóstico — não é substituído pelo `signalQualityColor`.
+
+**Animação de mount:** `WifiSignalBar` usa `useState(0)` + `useEffect` com `requestAnimationFrame` para setar `width` ao percentual final no próximo frame — a CSS transition cuida do desliza. O `% numérico` cristaliza no valor final desde o 1º render (não anima count-up) para acessibilidade: leitor de tela / pausa de motion-reduce mostra o valor correto. `prefers-reduced-motion: reduce` desliga a transição.
+
+**Decisão: representação inline vs sheet:** o card unificado mostra apenas qualidade visual (SSID curto + canal + barra colorida + %) — leitura imediata sem fricção. Ao clicar, a `<WifiDetailsSheet>` abre com os 4 dados completos (banda, link speed, padrão WiFi, gráfico de canais vizinhos, recomendações). O usuário que só quer saber "tá bom?" lê a barra; o usuário que precisa otimizar abre a sheet.
 
 **Componente: `WifiDetailsSheet.tsx` (refator "premium" 2026-05)**
 
@@ -1879,6 +2257,83 @@ Quando o diagnóstico retorna canal, a tela exibe:
 - `Canal atual: X`
 - `Qualidade do canal: bom/médio/ruim` com cor semântica (`--ul`/`--warn`/`--error`)
 - `Canal sugerido: Y` somente quando a qualidade do canal é ruim
+
+---
+
+## 11.bis Plugin nativo `PacketLoss` (Android, 2026-05)
+
+Plugin Capacitor interno que mede packet loss real via UDP em vez da heurística HTTP/CORS do PWA web.
+
+### Arquivos
+
+- `android/app/src/main/java/br/com/linka/speedtest/packetloss/PacketLossPlugin.java` — plugin Java registrado em `MainActivity.onCreate` via `registerPlugin(PacketLossPlugin.class)`.
+- `src/utils/packetLoss.ts` — bridge web `measurePacketLossNative()`.
+
+### Contrato
+
+Plugin Capacitor expõe `Capacitor.Plugins.PacketLoss.measurePacketLoss(opts)`:
+
+```ts
+measurePacketLoss(opts?: {
+  host?: string;        // default '1.1.1.1'
+  port?: number;        // default 53 (DNS)
+  packetCount?: number; // default 50
+  timeoutMs?: number;   // default 1000
+  spacingMs?: number;   // default 20
+}): Promise<{
+  sent: number;
+  received: number;
+  lossPercent: number;  // arredondado 0..100
+  avgRttMs: number;     // -1 quando nenhum pacote voltou
+  platform: 'android';
+}>
+```
+
+### Funcionamento
+
+Para cada pacote (default 50): cria um `DatagramSocket`, envia uma query DNS minimal (12 bytes) para `host:port`, espera resposta com timeout (default 1000ms). Pacote sem resposta no timeout é contado como perdido. Roda em thread separada (`new Thread(...)`) — UDP I/O bloqueante não pode ficar na main thread Android.
+
+Permissão necessária: `android.permission.INTERNET` (já declarada no `AndroidManifest.xml`).
+
+### Integração no orchestrator
+
+`src/utils/speedTestOrchestrator.ts` dispara `measurePacketLossNative()` em paralelo com a fase de upload (mesmo padrão do `probeDnsResolver`). Quando o resultado nativo está disponível, sobrescreve o `packetLoss` heurístico no `SpeedTestResult` final. O campo `packetLossSource` registra a origem:
+
+| Valor | Significado |
+|---|---|
+| `'native'` | Plugin Capacitor PacketLoss (UDP real, Android APK) |
+| `'estimated'` | Heurística do PWA web (timeouts de ping HTTP/CORS) |
+| `undefined` | Registro legado ou origem desconhecida |
+
+A UI (`ResultScreen` cell "Falhas" + `AdvancedSheet` row "Falhas na conexão") mostra label sutil "estimado" — `font-size: 10px`, cor `--text-3`, italic — quando `packetLossSource !== 'native'`. Transparência ao usuário: o número está lá, mas é estimativa.
+
+`packetLossSource` é propagado pelo `appendRecord` para `TestRecord` e devolvido pelo `recordToResult`, mantendo o label "estimado" coerente em revisitas pelo histórico.
+
+### Limitações
+
+- **iOS:** plugin é apenas Android. Para iOS é preciso plugin Capacitor separado em Swift (Network framework / NWConnection) com provisioning Apple. **Pendente** — o bridge `measurePacketLossNative()` retorna `{ available: false }` no PWA iOS e o orchestrator preserva a estimativa.
+- **NAT/CGNAT pesado em rede móvel:** RTT médio pode incluir buffer da operadora; contagem de perda permanece confiável.
+- **Roteadores que bloqueiam respostas DNS UDP:** o teste retornará 100% de perda. Reduzir o `packetCount` ou apontar para outro `host:port` (ex.: 8.8.8.8:53) é o workaround.
+
+### Bridge `src/utils/packetLoss.ts`
+
+```ts
+type PacketLossPlatform = 'android' | 'ios' | 'web';
+
+interface PacketLossResult {
+  available: boolean;
+  sent?: number;
+  received?: number;
+  lossPercent?: number;
+  avgRttMs?: number;
+  platform?: PacketLossPlatform;
+}
+
+export async function measurePacketLossNative(opts?: { ... }): Promise<PacketLossResult>;
+export function isPacketLossNativeAvailable(): boolean;
+```
+
+`measurePacketLossNative` é tolerante a falhas — sempre resolve, nunca lança; em caso de erro do plugin retorna `{ available: false }` e o caller (orchestrator) cai pra estimativa.
 
 ---
 
@@ -2054,6 +2509,111 @@ A lógica `evaluateGames(result)` foi migrada do `ResultScreen.tsx` integralment
 ### Por que separar das tabs Wi-Fi (`features/local-wifi/`)
 
 A pasta `local-wifi` é específica do diagnóstico Wi-Fi nativo (com plugin Capacitor associado). As sheets `AdvancedSheet` e `GamerSheet` consomem só o `SpeedTestResult` puro (sem capabilities nativas) — separação por domínio justifica a pasta nova.
+
+---
+
+## 14. Onboarding (primeira execução, 2026-05)
+
+### Objetivo
+Apresentar o app a quem abre pela primeira vez sem prejudicar quem já o conhece. Carousel de 3 cards exibido como overlay full-screen apenas na primeira execução; não é uma rota e não bloqueia o histórico de back/forward.
+
+### Componentes
+- **`src/screens/OnboardingScreen.tsx` + `OnboardingScreen.css`** — overlay puramente apresentacional. Recebe `onComplete: () => void` e dispara quando o usuário avança após o último card OU clica "Pular". Estado interno (`index`) controla qual card aparece. Animação: `translateX(-${index * 100}%)` com `transition: 320ms cubic-bezier(0.32, 0.72, 0, 1)`. Respeita `prefers-reduced-motion: reduce`.
+- **3 cards (conteúdo hardcoded em pt-BR):**
+  1. Gauge SVG inline + "Mede sua internet com precisão"
+  2. Trio gamepad/tv/briefcase + "Descubra se serve pra Jogos, 4K, Trabalho"
+  3. Cadeado + "Permissões necessárias" com 2 bullets (Localização, Notificações)
+- **Footer:** dots indicators (3 pílulas pequenas, ativa em `--accent`) + botão CTA `Avançar` que vira `Começar` no último card. Topo direito: "Pular" text-link.
+- **Swipe horizontal interno** entre cards (threshold 60px, ratio 1.4 — não conflita com o swipe lateral global do `App.tsx` porque o overlay tem z-index alto e captura o touch primeiro).
+- **SVGs inline** seguem o padrão dos icons em `src/components/icons.tsx` — `stroke="currentColor"`, `strokeWidth=1.6/2.2`, sem dependências externas.
+
+### Gate em `App.tsx`
+- Constante `ONBOARDING_KEY = 'linka.onboarding.done'` em localStorage.
+- `readOnboardingDone()` lê `'1'` de forma síncrona no init do state `onboardingDone`.
+- Render condicional FORA do `view` principal (acima da árvore de telas, abaixo do `<PwaUpdatePrompt />`):
+  ```tsx
+  {!onboardingDone && (
+    <Suspense fallback={null}>
+      <OnboardingScreen onComplete={handleOnboardingComplete} />
+    </Suspense>
+  )}
+  ```
+- `handleOnboardingComplete`: `localStorage.setItem(ONBOARDING_KEY, '1')` + `setOnboardingDone(true)`.
+- `handleResetOnboarding`: `localStorage.removeItem(ONBOARDING_KEY)` + `setOnboardingDone(false)`. Repassado para a `ExploreScreen` → `HamburgerMenu` como prop opcional `onResetOnboarding`.
+
+### "Ver tutorial novamente"
+- `HamburgerMenu` ganhou prop opcional `onResetOnboarding?: () => void`. Quando presente, renderiza um item `Ver tutorial novamente` (ícone `bulb`) acima da seção "Velocidade contratada". O item aparece atualmente só na `ExploreScreen` (Settings hub). Pode ser propagado para outros consumers do menu sem mudar a API.
+
+### Acessibilidade e travas
+- `role="dialog"`, `aria-modal="true"`, `aria-label="Bem-vindo à linka"`.
+- Trava `document.body.style.overflow = 'hidden'` enquanto o overlay está montado (cleanup no unmount).
+- Dots são `role="tab"` com `aria-selected` para refletir o card ativo.
+
+### Risco
+Em iOS standalone, o body do app já está com `overflow: hidden` (regra global em `tokens.css`). A trava local do overlay é redundante mas inofensiva — protege em browsers desktop usados para QA/dev.
+
+---
+
+## 15. Code splitting (2026-05)
+
+### Decisão
+Bundle principal pré-refator era ~1.2 MB. Telas e sheets que não fazem parte do caminho principal são lazy-imported via `React.lazy` + `Suspense`, com chunks separados pelo Vite/Rollup default.
+
+### Componentes lazy
+**App.tsx (screens secundárias):**
+- `ComparisonScreen`
+- `BeforeAfterScreen`
+- `RoomTestScreen`
+- `ExploreScreen`
+- `LocalWifiScreen` (em `features/local-wifi/`)
+- `OnboardingScreen` (overlay, exibido apenas na 1ª execução)
+
+**ResultScreen.tsx (sheets de "Mais detalhes"):**
+- `AdvancedSheet`
+- `GamerSheet`
+- `DNSGuideSheet`
+
+**WifiSignalSection.tsx:**
+- `WifiDetailsSheet`
+
+**WifiDetailsSheet.tsx:**
+- `WifiOptimizeSheet`
+
+### Eager (não lazy, intencional)
+- `StartScreen` — entrypoint frio
+- `RunningScreen` — precisa estar pronta no instante em que o teste inicia (delay seria visível)
+- `HistoryScreen` — uso muito frequente
+- `ResultScreen` — caminho principal pós-teste; manter eager evita um Suspense fallback no fluxo "abriu app → resultado anterior"
+
+### Padrão de wrapper
+Todos os componentes lazy têm `export function NomeComponente` (named export). React.lazy exige um módulo com `default`. O wrapper:
+```tsx
+const X = lazy(() => import('./X').then((m) => ({ default: m.X })));
+```
+
+### Mount condicional × always-mounted
+Antes do refator, sheets como `AdvancedSheet` ficavam sempre montadas, com prop `open` controlando a visibilidade (e o `DraggableSheet` interno retornando `null` quando fechado). Para que o lazy realmente difira o download do chunk, o pattern foi convertido para:
+```tsx
+{activeSheet === 'advanced' && (
+  <Suspense fallback={null}>
+    <AdvancedSheet open onClose={...} ... />
+  </Suspense>
+)}
+```
+Sem isso, o `import()` dispararia já no mount da `ResultScreen` e o ganho seria zero.
+
+### Fallback `<ScreenLoadingFallback>`
+Componente local em `App.tsx`, full-screen com `var(--bg)` + texto "Carregando…" centralizado. Sem TopBar/PageHeader — qualquer esqueleto mais elaborado tende a piscar em conexões rápidas. Sheets usam `fallback={null}` (aparecem rápido o suficiente; um placeholder atrapalharia o gesto).
+
+### Verificação esperada após `npm run build`
+- Chunk principal cai para ~600–800 KB (alvo: ≥ 20% de redução).
+- Chunks novos com nomes derivados do componente: `ComparisonScreen-XXXX.js`, `AdvancedSheet-XXXX.js`, etc.
+- Primeiro click em uma sheet/tela secundária pode ter 100–200 ms de delay aceitável (chunk + parse).
+
+### Risco e mitigação
+- **Imports circulares:** os componentes lazy não importam `App.tsx` nem componentes eager que voltariam para si. Cada um depende só de `components/`, `hooks/`, `utils/`, `core/`, `types/`.
+- **Tipos compartilhados:** `ComparisonStep` e `BeforeAfterStep` continuam importados de forma estática como `import type {...}` — não puxam runtime.
+- **Service Worker:** o Workbox precachea `**/*.{js,css,...}` por glob, então os novos chunks entram no precache normalmente.
 
 ---
 

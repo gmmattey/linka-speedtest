@@ -219,7 +219,13 @@ export function RunningScreen({
           })}
         </div>
 
-        <p className="lk-running__phrase">{phraseFor(phase)}</p>
+        {/* A11y (2026-05): a frase narrativa muda conforme a fase do teste
+            avança. role="status" + aria-live="polite" notifica screen
+            readers a cada transição (ex.: "Medindo download…" →
+            "Medindo upload…") sem interromper a leitura corrente. */}
+        <p className="lk-running__phrase" role="status" aria-live="polite">
+          {phraseFor(phase)}
+        </p>
         {sessionLabel && <p className="lk-running__session-label">{sessionLabel}</p>}
         <div className="lk-running__footer">
           <button className="btn-text lk-running__cancel" onClick={onCancel}>Cancelar</button>

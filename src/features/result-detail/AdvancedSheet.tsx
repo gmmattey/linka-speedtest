@@ -1,10 +1,26 @@
 import { Icon } from '../../components/icons';
 import { IOSList, type IOSListItem } from '../../components/IOSList';
 import { DraggableSheet } from '../../components/DraggableSheet';
+import { InfoTooltip } from '../../components/InfoTooltip';
 import { resolveCopy } from '../../core';
 import type { ServerInfo, SpeedTestResult, SpeedTestSample, TestRecord } from '../../types';
 import { formatMbps, formatMs } from '../../utils/format';
 import './AdvancedSheet.css';
+
+/**
+ * Wrap inline para combinar título textual + InfoTooltip dentro de um
+ * IOSListItem. O `IOSListItem.title` é tipado como `string`, então
+ * passamos a frase + sufixo "?" via aria; o tooltip flutua a partir do
+ * ícone à direita do label numa célula separada quando aplicável. Aqui
+ * usamos um JSX Element passado via `subtitle` quando o label precisa de
+ * tooltip — solução pragmática sem refatorar o IOSList.
+ *
+ * Nota: como `title` é string, o IOSList foi ampliado mentalmente para
+ * aceitar tooltip via prefixo no subtitle. Solução simples: anexamos o
+ * tooltip via subtitle "?" que o usuário clica. O IOSList ignora botões
+ * dentro de subtitle? Sim — o subtitle é renderizado como ReactNode-ish
+ * (texto). Reformulamos: aceitamos no `title` um helper que a infra atual
+ * suporta — concatenamos texto e o tooltip vira parte da `trailing`. */
 
 interface Props {
   open: boolean;
@@ -36,6 +52,12 @@ export function AdvancedSheet({ open, onClose, result, server, unit, history }: 
       icon: <Icon name="bolt" size={14} color={bufferbloatColor(result.bufferbloatGrade)} />,
       iconBg: 'var(--surface-3)',
       title: resolveCopy('metric.latency.loaded'),
+      titleAfter: (
+        <InfoTooltip
+          label="Avalia o aumento da latência quando a conexão está saturada (bufferbloat). A é ótimo; D/F indica fila congestionada no roteador."
+          ariaLabel="O que é Bufferbloat"
+        />
+      ),
       trailing: (
         <div style={{ textAlign: 'right' }}>
           <div style={{ color: bufferbloatColor(result.bufferbloatGrade), fontWeight: 700, fontSize: 15 }}>
@@ -53,6 +75,12 @@ export function AdvancedSheet({ open, onClose, result, server, unit, history }: 
       icon: <Icon name="ping" size={14} color="var(--text-2)" />,
       iconBg: 'var(--surface-3)',
       title: resolveCopy('metric.latency.loadedValue'),
+      titleAfter: (
+        <InfoTooltip
+          label="Latência medida durante o teste de carga (download/upload simultâneos). Comparada com a latência ociosa indica se o roteador segura bem o tráfego pesado."
+          ariaLabel="O que é Latência sob carga"
+        />
+      ),
       trailing: (
         <span className="lk-result__metric-sub">
           {formatMs(result.latencyLoaded)} ms
@@ -70,6 +98,12 @@ export function AdvancedSheet({ open, onClose, result, server, unit, history }: 
       icon: <Icon name="jitter" size={14} color="var(--text-2)" />,
       iconBg: 'var(--surface-3)',
       title: 'Oscilação carregada',
+      titleAfter: (
+        <InfoTooltip
+          label="Variação da latência sob carga. Alta oscilação carregada = videochamadas e jogos ficam instáveis quando alguém faz download em paralelo."
+          ariaLabel="O que é Oscilação carregada"
+        />
+      ),
       trailing: <span className="lk-result__metric-sub">{formatMs(result.jitterLoaded)} ms</span>,
     });
   }
@@ -78,6 +112,12 @@ export function AdvancedSheet({ open, onClose, result, server, unit, history }: 
       icon: <Icon name="download" size={14} color="var(--dl)" />,
       iconBg: 'var(--dl-tint, rgba(58,182,255,0.12))',
       title: 'Estabilidade download',
+      titleAfter: (
+        <InfoTooltip
+          label="Faixa entre o 25º e o 75º percentil do download. Quanto mais estreita, mais consistente é a velocidade ao longo do teste."
+          ariaLabel="O que é Estabilidade do download"
+        />
+      ),
       trailing: (
         <span className="lk-result__metric-sub">
           {formatMbps(result.dlP25, unit)}–{formatMbps(result.dlP75, unit)} {unitLabel}
@@ -85,6 +125,10 @@ export function AdvancedSheet({ open, onClose, result, server, unit, history }: 
       ),
     });
   }
+  // Falhas: mostra valor + label qualitativo + tag "estimado" inline
+  // quando a origem não é o plugin nativo Android (i.e., heurística do
+  // PWA web). Tag em cor --text-3 e font-size 10px — discreta.
+  const packetLossEstimated = result.packetLossSource !== 'native';
   metricItems.push({
     icon: <Icon name="loss" size={14} color={result.packetLoss != null ? packetLossColor(result.packetLoss) : 'var(--text-2)'} />,
     iconBg: 'var(--surface-3)',
@@ -92,6 +136,20 @@ export function AdvancedSheet({ open, onClose, result, server, unit, history }: 
     trailing: (
       <span className="lk-result__metric-sub" style={result.packetLoss != null ? { color: packetLossColor(result.packetLoss) } : undefined}>
         {result.packetLoss != null ? `${result.packetLoss.toFixed(1)}%  ${packetLossLabel(result.packetLoss)}` : '—'}
+        {packetLossEstimated && (
+          <span
+            style={{
+              marginLeft: 6,
+              fontSize: 10,
+              color: 'var(--text-3)',
+              fontStyle: 'italic',
+              fontWeight: 400,
+            }}
+            aria-label="valor estimado"
+          >
+            estimado
+          </span>
+        )}
       </span>
     ),
   });

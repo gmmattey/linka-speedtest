@@ -6,6 +6,10 @@ export interface IOSListItem {
   icon?: ReactNode;
   iconBg?: string;
   title: string;
+  /** Conteúdo opcional renderizado após o título no mesmo line-box. Útil
+   *  para encaixar `<InfoTooltip>` ao lado do label sem refatorar o tipo
+   *  `title` (string) que muitos consumidores usam. */
+  titleAfter?: ReactNode;
   subtitle?: string;
   trailing?: ReactNode;
   showChevron?: boolean;
@@ -26,6 +30,15 @@ export function IOSList({ items }: Props) {
           onClick={item.onClick}
           role={item.onClick ? 'button' : undefined}
           tabIndex={item.onClick ? 0 : undefined}
+          /* A11y (2026-05): role="button" + tabIndex sem onKeyDown deixa o
+             screen reader anunciar como botão mas Enter/Space não ativa.
+             Adicionamos handler manual idêntico ao default de <button>. */
+          onKeyDown={item.onClick ? (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              item.onClick!();
+            }
+          } : undefined}
         >
           {item.icon != null && (
             <div
@@ -36,7 +49,10 @@ export function IOSList({ items }: Props) {
             </div>
           )}
           <div className="lk-ios-list__text">
-            <div className="lk-ios-list__title">{item.title}</div>
+            <div className="lk-ios-list__title">
+              {item.title}
+              {item.titleAfter}
+            </div>
             {item.subtitle && (
               <div className="lk-ios-list__sub">{item.subtitle}</div>
             )}

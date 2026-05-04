@@ -17,6 +17,10 @@ interface Props {
   // ambas as props vêm definidas, renderiza o toggle "Vibração" no menu.
   useHaptics?: boolean;
   onToggleHaptics?: (next: boolean) => void;
+  // Onboarding (2026-05): callback opcional para resetar a flag
+  // `linka.onboarding.done` e exibir o tutorial novamente. Quando
+  // presente, renderiza o item "Ver tutorial novamente" no menu.
+  onResetOnboarding?: () => void;
 }
 
 /**
@@ -42,6 +46,7 @@ export function HamburgerMenu({
   showContracted = true,
   useHaptics,
   onToggleHaptics,
+  onResetOnboarding,
 }: Props) {
   const [downVal, setDownVal] = useState(contractedDown !== null ? String(contractedDown) : '');
   const [upVal, setUpVal] = useState(contractedUp !== null ? String(contractedUp) : '');
@@ -128,6 +133,16 @@ export function HamburgerMenu({
         </div>
       )}
 
+      {onResetOnboarding && (
+        <button
+          className="lk-ham__action"
+          onClick={() => { onResetOnboarding(); onClose(); }}
+        >
+          <Icon name="bulb" size={16} color="var(--text)" />
+          <span>Ver tutorial novamente</span>
+        </button>
+      )}
+
       {showContracted && (
         <div className="lk-ham__section">
           <span className="lk-ham__section-label">Velocidade contratada</span>
@@ -144,6 +159,8 @@ export function HamburgerMenu({
                   onBlur={commitContracted}
                   min="1"
                   max="100000"
+                  aria-label="Velocidade contratada de download em Mbps"
+                  inputMode="numeric"
                 />
                 <span className="lk-ham__speed-unit">Mbps</span>
               </div>
@@ -160,6 +177,8 @@ export function HamburgerMenu({
                   onBlur={commitContracted}
                   min="1"
                   max="100000"
+                  aria-label="Velocidade contratada de upload em Mbps"
+                  inputMode="numeric"
                 />
                 <span className="lk-ham__speed-unit">Mbps</span>
               </div>

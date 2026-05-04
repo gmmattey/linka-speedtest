@@ -1,0 +1,43 @@
+/* ──────────────────────────────────────────────────────────────────────
+   WifiSignalSection — estados não-disponíveis (loading, permission-denied,
+   unavailable) da seção Wi-Fi do card unificado de resultado.
+
+   O estado "available" delega o render para `<WifiSignalBar>`, que tem o
+   próprio CSS (`WifiSignalBar.css`).
+   ────────────────────────────────────────────────────────────────────── */
+
+.lk-wifi-section {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.lk-wifi-section__kicker {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+
+.lk-wifi-section__msg {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+
+.lk-wifi-section__msg--warn {
+  color: var(--warn);
+}
+
+/* Skeleton placeholder (2026-05) — usado no estado loading. Linhas
+   empilhadas com gap pequeno mimetizam o shape do estado available. */
+.lk-wifi-section__skeleton-row {
+  display: flex;
+  align-items: center;
+}
+
+.lk-wifi-section__skeleton-row + .lk-wifi-section__skeleton-row {
+  margin-top: 6px;
+}

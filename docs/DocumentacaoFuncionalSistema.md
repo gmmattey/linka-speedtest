@@ -8,6 +8,7 @@
 
 ```
 App (estado global)
+├── OnboardingScreen    ← overlay full-screen exibido APENAS na primeira execução (gate `linka.onboarding.done`)
 ├── StartScreen         ← tela inicial (padrão)
 │   └── ExploreScreen   ← hub de ferramentas avançadas
 ├── RunningScreen       ← durante o teste (todos os modos)
@@ -75,6 +76,7 @@ ExploreScreen → [Diagnóstico Wi-Fi]     → LocalWifiScreen (somente app nati
 
 - **Swipe horizontal** (→ volta · ← avança): App mantém pilha de telas em `App.tsx` (`backStackRef` / `forwardStackRef`). Threshold: 80 px com razão `|Δx| > |Δy| × 1,5` para evitar conflito com scroll vertical. Início de gesto sobre `.lk-sheet`, `.lk-history__list`, botões ou inputs é ignorado.
 - **Swipe vertical no BottomSheet**: arrastar a alça para cima abre; para baixo, fecha.
+- **Pull-to-refresh** (StartScreen e HistoryScreen — 2026-05): com a tela rolada até o topo, puxar pra baixo aciona um spinner que cresce progressivamente conforme o dedo desce. Threshold 80 px (após resistência 0.5×): abaixo dele, soltar volta sem efeito; igual ou acima, soltar dispara `performAppRefresh` — força reload se há nova versão pendente do Service Worker, senão re-fetcha IP/ISP/tipo de conexão. Min duration 600ms para o spinner não "piscar". O gesto NÃO arma quando: a tela já está rolada para baixo (`scrollTop > 0`), o toque começou dentro de um `DraggableSheet` aberto, ou o detalhe de registro do Histórico está visível. Respeita `prefers-reduced-motion: reduce` (sem rotação contínua durante refresh). ResultScreen e ComparisonScreen NÃO recebem o gesto — Result tem o workflow do `DraggableSheet` (que rouba o drag), Comparison tem fluxo guiado por etapas (puxar lá causaria mais estranhamento que valor).
 - O Header não traz mais o botão "X / Voltar" — a volta é feita por swipe ou pelo botão de cancelar das próprias telas (RunningScreen tem "Cancelar"; HistoryScreen tem botão de voltar no detalhe interno).
 
 ---
@@ -98,6 +100,53 @@ Sistema de cabeçalho universal aplicado em todas as telas. Substitui os headers
 - **ResultScreen** e **ExploreScreen**: o `HamburgerMenu` ficou **controlled** (Bloco 6 — UX uniforme, 2026-05). O trigger é um `<IconButton>` padrão no `rightActions` (pill 36×36, ícone "menu"), e o painel flutua via `position: fixed` quando `open=true`. Visualmente uniforme com os demais ícones do TopBar (PDF, share, history).
 
 **Componentes:** `<TopBar>`, `<BackButton>`, `<IconButton>`, `<PageHeader>` (em `src/components/`) + hook `useScrollHeader` (em `src/hooks/`). Detalhes técnicos em `DocumentacaoTecnicaSistema.md` seção 5.7.
+
+---
+
+## 0. OnboardingScreen (primeira execução, 2026-05)
+
+### Finalidade
+
+Apresentar o app a quem abre pela primeira vez, sem incomodar quem já é usuário. Carousel de **3 cards full-screen** exibidos como overlay (acima de qualquer tela) **somente na 1ª execução**.
+
+### Fluxo do usuário
+
+1. **Primeira abertura** — overlay aparece sobre a `StartScreen` (ou sobre a `ResultScreen` quando há um teste anterior cacheado).
+2. Usuário pode:
+   - Tocar **"Avançar"** → vai para o próximo card.
+   - **Swipe horizontal** entre cards (esquerda avança, direita volta).
+   - Tocar em um dos **dots** para pular direto para outro card.
+   - Tocar **"Pular"** (top-right) a qualquer momento → fecha o overlay imediatamente.
+3. No último card, o botão "Avançar" vira **"Começar"**. Tocar nele fecha o overlay.
+4. Em qualquer caminho de fechamento (Começar ou Pular), a flag `linka.onboarding.done = '1'` é gravada em `localStorage`. **A partir daí, o overlay nunca mais aparece automaticamente.**
+
+### Conteúdo dos cards
+
+1. **"Mede sua internet com precisão"** — ilustração de gauge/speedometer (SVG inline) + sub "Download, upload, latência e oscilação em poucos segundos."
+2. **"Descubra se serve pra Jogos, 4K, Trabalho"** — trio de ícones (gamepad + tv + briefcase) + sub "A linka traduz os números em respostas práticas para o seu dia a dia."
+3. **"Permissões necessárias"** — ícone de cadeado + lista compacta:
+   - **Localização** — necessária pra ver detalhes do seu Wi-Fi (banda, canal, sinal). Android exige isso por privacidade.
+   - **Notificações** — opcional, pra avisar se sua conexão piorar.
+
+> Importante: o card 3 só **explica** as permissões; ele não dispara prompts de sistema. As permissões reais são pedidas no momento de uso (por exemplo, ao abrir o Diagnóstico Wi-Fi).
+
+### "Ver tutorial novamente"
+
+A `ExploreScreen` ganhou um item no `HamburgerMenu` (canto superior direito) chamado **"Ver tutorial novamente"**. Tocar nele limpa a flag e reabre o overlay imediatamente. Item opcional — só aparece na Explore (Settings hub) por enquanto; outros consumers do menu podem receber a mesma capability sem mudança de API.
+
+### Detalhes visuais e motion
+
+- Cada card ocupa a tela inteira; transição entre cards via slide horizontal (320 ms, curva iOS-Calma).
+- Dots indicators na base: 3 pílulas (8×8 px); ativa cresce para 22×8 px e troca a cor para `--accent`.
+- CTA `Avançar`/`Começar` em `--accent` background, peso 500, padding 14×24, sem box-shadow.
+- "Pular" no top-right é text-only (`--text-2`).
+- Respeita `prefers-reduced-motion: reduce` (sem transição entre cards e sem scale no active do CTA).
+
+### Estado e persistência
+
+- Flag: `localStorage.linka.onboarding.done` ∈ `{'1', null}`.
+- Reset programático: limpar a chave (manual via DevTools ou via item "Ver tutorial novamente" do menu).
+- Em ambientes onde `localStorage` falha (modo privado restrito), o overlay aparece toda vez. Trade-off aceitável e raro.
 
 ---
 
@@ -450,6 +499,10 @@ A cor é injetada via custom property inline `style={{ '--ribbon-color': ... }}`
 
 A cor é aplicada em três pontos de cada cell: (a) o número grande (52/64px), (b) o glow ao redor do número (text-shadow muda para a mesma família — verde/amarelo/vermelho-glow — pra evitar "número verde com aura azul"), e (c) o percentual `97%` na sub-linha do plano (apenas o número; a fração `/ 600 Mbps` permanece neutra). Sem plano cadastrado, todo o comportamento original é preservado (cor `--dl` / `--ul`, glow `--dl-glow` / `--ul-glow`, `97%` em `--text-2`). O perfil é derivado do `connectionType` corrente via `toConnectionProfile()` (default conservador `fixed_broadband` quando o tipo é desconhecido — caso "Não identificada" do iOS Safari sem `navigator.connection`). Implementação em `src/utils/anatelColor.ts` — ver §3.14.1 da DocumentacaoTecnicaSistema.
 
+**Em rede móvel, a UI de plano é suprimida (Bug-fix 2026-05).** Quando `connectionType === 'mobile'` (perfil `mobile_broadband`), a sub-linha `/ X Mbps · Y%` não aparece, mesmo que o usuário tenha cadastrado plano contratado, e os números voltam ao azul/verde de marca. O motivo é regulatório/UX: planos móveis vendem cota de dados, não taxa garantida em Mbps — comparar entrega vs contratado em rede móvel induz leitura errada. Em paralelo, o `HamburgerMenu` já oculta os campos de plano quando `connectionType === 'mobile'` (prop `showContracted`). Resultado: experiência consistente — usuário em 4G/5G nunca vê referência a velocidade contratada.
+
+**Ícone de tipo de conexão no canto direito (Bug-fix 2026-05).** Logo abaixo do TopBar, no banner de contexto, um ícone discreto de 16px (`var(--text-2)`) sinaliza o tipo de rede atual: Wi-Fi (waves), Móvel (barras de antena) ou Cabo (plug). Renderizado quando `connectionType ∈ {wifi, mobile, cable}` — `unknown` não exibe ícone para evitar afirmação errada. `aria-label` `"Conexão: Wi-Fi"`/`"Rede móvel"`/`"Cabo"`.
+
 ### Bloco SECONDARY — Resposta, Oscilação, Falhas, DNS (2026-05)
 
 `lk-result__secondary-block`: grid **3 ou 4 colunas** com Resposta (latency), Oscilação (jitter), Falhas (packet loss) e — opcionalmente — **DNS** (latência de resolução DNS). Padronização Polimento UX: o terceiro card é **"Falhas"** (versão curta de `metric.packetLoss`).
@@ -472,6 +525,18 @@ Latência e jitter recebem `Math.max(0.1, valorAnimado)` quando o target é posi
 
 **Animação count-up (Bloco Motion, 2026-05):** ao montar a tela, os 5 números (DL, UL, latência, jitter, packetLoss) animam de 0 até o valor final em ~700 ms com easing `easeOutCubic`. Usa o hook `useCountUp` (RAF puro, sem libs). A formatação é aplicada sobre o valor animado a cada frame.
 
+**Label "estimado" na cell Falhas (2026-05).** Quando `result.packetLossSource !== 'native'` (PWA web, sem plugin Capacitor), a label da cell Falhas ganha um sufixo `estimado` em italic, font-size 9px, cor `--text-3`. Transparência ao usuário: o packet loss no web é heurística (timeouts de ping HTTP/CORS), não medição UDP real — o número está exibido normalmente, mas o sufixo indica que é estimativa. No APK Android com `PacketLossPlugin` registrado, o orchestrator obtém valor real via UDP e o sufixo desaparece. A mesma marcação aparece, em formato discreto inline, no row "Falhas na conexão" do `AdvancedSheet`.
+
+**Tooltips educacionais (2026-05).** As labels "Resposta", "Oscilação" e "Falhas" recebem um botão `?` 16×16 inline (`<InfoTooltip>`) que abre um balão flutuante de 240px com 1-2 frases pt-BR explicando a métrica em linguagem leiga:
+
+| Cell | Tooltip |
+|---|---|
+| Resposta | "Tempo até a primeira resposta do servidor. Quanto menor, melhor pra jogos e videochamadas." |
+| Oscilação | "Variação no tempo de resposta. Alta oscilação causa lag mesmo com latência baixa." |
+| Falhas | "% de pacotes que não chegaram ao destino. Mais que 1% afeta jogos e chamadas." |
+
+A cell DNS **não** recebe tooltip — clicar nela abre o `DNSGuideSheet` que já é a explicação. O mesmo componente `<InfoTooltip>` é aplicado em `AdvancedSheet` (Bufferbloat, latência sob carga, oscilação carregada, estabilidade do download) e `WifiDetailsSheet` (Sinal RSSI, Velocidade do link, Banda).
+
 ### Linha de cenários (`lk-result__use-row`) — grades A-F por use case (2026-05)
 
 4 ícones SVG em flex horizontal. Cada item: ícone circular (cor por `verdict.status` — good/maybe/limited) + label curto do use case + chip `<grade> · <label>` (ex.: `B · Bom`). Visível apenas quando `interpreted.useCases.length > 0`. Casos de uso: Jogos (`game`), 4K (`stream`), Home Office (`work`), Vídeo (`videoCall`).
@@ -491,27 +556,35 @@ Métricas relevantes por use case (espelha `buildUseCaseEvaluators()` em `interp
 - `streaming_4k` → dl, jitter, packetLoss
 - `home_office` / `video_call` → dl, ul, latency, jitter, packetLoss
 
-### Card Wi-Fi (`lk-wifi-card`) — somente em conexão Wi-Fi (2026-05+)
+### Seção Wi-Fi (`lk-wifi-signal-bar`) — somente em conexão Wi-Fi (refator 2026-05)
 
-Card compacto e clicável embutido entre a linha de cenários (`lk-result__use-row`) e o "Diagnóstico da conexão", renderizado apenas quando `connectionType === 'wifi'`. Componente `<WifiSignalCard />` em `src/features/local-wifi/`. Lê dados nativos via bridge `LinkaWifiDiagnostics` (Capacitor) com auto-fetch no mount (`useWifiDiagnostics`).
+Bloco embutido entre a linha de cenários (`lk-result__use-row`) e o "Diagnóstico da conexão", renderizado apenas quando `connectionType === 'wifi'`. Componente `<WifiSignalSection />` em `src/features/local-wifi/`. Lê dados nativos via bridge `LinkaWifiDiagnostics` (Capacitor) com auto-fetch no mount (`useWifiDiagnostics`).
 
-**Design compacto (refator 2026-05+):**
+**Refator 2026-05 (barra horizontal):** a representação INLINE saiu do card de 4 cells (SSID + chip canal color-coded + WiFi std) para uma barra horizontal de qualidade do sinal. O usuário lê a qualidade na hora; quem precisa de detalhes técnicos abre a sheet com clique.
 
-Exibe apenas: **SSID** + **Canal (color-coded)** + **WiFi Standard** (ex., "WiFi 6").
+**Design da barra (`<WifiSignalBar>`):**
+
 ```
-┌────────────────────┐
-│ Wi-Fi              │
-│ Casa do Luiz       │  ← SSID
-│ Canal 6 • WiFi 6   │  ← canal com cor + tecnologia
-└────────────────────┘
+┌──────────────────────────────────────────────┐
+│ WI-FI                                  [📶]  │  ← header pequeno + ícone sutil
+│ Casa-5G · Canal 36                           │  ← SSID + canal
+│ ████████████████░░░░░░░░░░░░░░░  72%         │  ← barra colorida + %
+└──────────────────────────────────────────────┘
 ```
 
-Cores do canal refletem qualidade da conexão (via `classifyWifiQuality({ rssiDbm, linkSpeedMbps, band })`):
-- **Verde** (good/excellent): `var(--color-good)`
-- **Amarelo** (fair): `var(--color-warn)`
-- **Vermelho** (weak/critical): `var(--color-bad)`
+- **Header** — kicker `WI-FI` em uppercase 11px tracking 0.08em (paridade com outros section labels) + ícone Wi-Fi 14px sutil à direita.
+- **Linha info** — `SSID · Canal X` em Geist 14–15px. Fallback "Sua rede" quando SSID é null/vazio (Android 13+ sem `NEARBY_WIFI_DEVICES`); suprime " · Canal X" quando o canal é null.
+- **Barra horizontal** — height 8px, border-radius pill, fundo `var(--surface-2)`, fill animando de 0% ao valor real em 600ms `cubic-bezier(0.2, 0.7, 0.2, 1)` no mount.
+- **Cor da barra + %** — por threshold visual (`signalQualityColor`):
+  - **Verde** (≥80%): `var(--success)`
+  - **Amarelo** (50–79%): `var(--warn)`
+  - **Vermelho** (<50%): `var(--error)`
 
-**Clicável:** ao clicar, abre popup bottom-sheet (`<WifiDetailsSheet>`).
+**Conversão RSSI → %:** fórmula linear `2 * (rssi + 100)` clamped 0–100 (`rssiToPercent`). Referência: −100 dBm → 0%, −75 dBm → 50%, −50 dBm → 100%, valores acima de −50 dBm clampados a 100% (não há ganho perceptível).
+
+**Acessibilidade:** `<div role="progressbar">` com `aria-valuenow/min/max`; `aria-label` no contêiner descreve "Wi-Fi {SSID}, Canal X, sinal NN%". `prefers-reduced-motion: reduce` desliga a animação de width.
+
+**Clicável:** ao clicar, abre popup bottom-sheet (`<WifiDetailsSheet>`) com os 4 dados completos.
 
 #### WifiDetailsSheet — refator "premium" 2026-05
 
@@ -557,14 +630,14 @@ cada (em pt-BR, conteúdo fixo):
 
 CTA único "Fechar".
 
-**Quatro estados de renderização:**
+**Quatro estados de renderização (orquestrados pelo `<WifiSignalSection>`):**
 
 - **`loading`** — placeholder discreto: "Lendo informações do Wi-Fi…".
-- **`available` (bridge respondendo, APK com plugin)** — card compacto clicável conforme descrito acima.
+- **`available` com `rssiDbm` numérico** (bridge respondendo, APK com plugin) — `<WifiSignalBar>` clicável conforme descrito acima.
 - **`permission-denied`** (Android, usuário negou ACCESS_FINE_LOCATION) — mensagem: **"Permissão de localização necessária para diagnóstico Wi-Fi. Habilite nas configurações do app."** Cor `var(--warn)`.
-- **`unavailable` (bridge indisponível: PWA puro ou APK sem plugin)** — mensagem: **"Wi-Fi: detalhes disponíveis somente no app instalado."** Cor `var(--text-2)`.
+- **`unavailable` ou sem `rssiDbm`** (bridge indisponível: PWA puro ou APK sem plugin) — mensagem: **"Wi-Fi: detalhes disponíveis somente no app instalado."** Cor `var(--text-2)`.
 
-A classificação de qualidade reusa integralmente `classifyWifiQuality` em `LocalWifiService.ts` — zero duplicação entre `LocalWifiScreen` e o card.
+A classificação de qualidade técnica (5 níveis com banda + link speed) reusa integralmente `classifyWifiQuality` em `LocalWifiService.ts` — usada pela `WifiDetailsSheet` e pela `LocalWifiScreen`. A barra horizontal usa o threshold visual independente (`signalQualityColor`, 3 níveis) — preocupação de UI, não substitui o classifier técnico.
 
 ### Bloco Diagnóstico (`lk-result__combined`) — refator 2026-05
 
@@ -1305,6 +1378,48 @@ Lista os últimos 50 testes com gráfico de evolução, resumo de médias e deta
 └──────────────────────────────────┘
 ```
 
+### Trend card (2026-05) — comparação inteligente entre janelas
+
+Card sutil renderizado no topo da lista (acima do bloco de diagnóstico de 24h) quando há mudança ≥10% entre duas janelas consecutivas (semana atual vs. semana passada; ou mês atual vs. mês passado). A janela menor (semana) é priorizada — se não há amostras significativas no recorte semanal, cai para mensal.
+
+**Visual.** Border-left de 3px colorido pelo `severity`:
+- `--success` (verde) — variação ≥10% favorável (DL/UL subiu, ou latência caiu).
+- `--error` (vermelho) — variação ≥10% desfavorável.
+- `--text-3` (neutro) — placeholder; nunca aparece (só renderiza com `isTrendSignificant`).
+
+Sem box-shadow.
+
+**Conteúdo.** Headline + comparação:
+- Headline: "Sua média essa semana é 580 Mbps" (DL prioritário) ou "Resposta média essa semana: 28 ms" (latência quando DL é estável e lat mudou).
+- Comparação: "▲ 18% melhor que a semana passada." ou "▼ 24% bem pior que o mês passado." (`bem melhor`/`bem pior` para deltas ≥20%).
+
+Mínimo de 5 testes em cada janela. Se uma das duas tem menos de 5 amostras, o card não aparece. Implementação: `src/utils/historyTrends.ts`.
+
+### Card Anatel — entrega abaixo do contratado (2026-05)
+
+Card de denúncia renderizado **após a lista** quando o histórico atende a **três condições simultâneas**:
+
+1. Plano contratado de download cadastrado em "Velocidade contratada" (HamburgerMenu da ResultScreen);
+2. Pelo menos **5 testes** nos últimos **30 dias**;
+3. **Entrega média < 80%** do plano (limite da Resolução Anatel 717/2019 — banda larga fixa).
+
+Suprimido em planos móveis (`dominantProfile(items) === 'mobile_broadband'`) — a Resolução 717/2019 trata banda larga fixa de modo distinto.
+
+**Visual.** Border-left `--warn`, ícone de escudo amarelo no chip 32×32 à esquerda, descrição:
+
+> Você recebeu **65%** do plano em média nos últimos **12** testes (**30 dias**).
+
+CTA `btn-outline` "Gerar relatório" — ao clicar, dispara `generateAnatelReport(data, isp)` que produz PDF A4 retrato com:
+
+- Header com logo linka + linha "Resolução Anatel 717/2019".
+- Identificação: provedor (ISP dominante), plano contratado, período avaliado, número de medições.
+- Headline com border-left vermelho: "Entrega média: X% do plano contratado" + parágrafo legal.
+- Estatísticas 4-col: média/mediana de DL e UL.
+- Tabela cronológica: cada teste com data, DL, UL, latência e % do plano (cor do % por threshold).
+- Rodapé com instruções: anexar à reclamação na operadora (protocolo 30 dias), Procon (consumidor.gov.br) ou Anatel (anatel.gov.br/consumidor); ressalva de "não substitui aferição EAQ".
+
+Nome do arquivo: `linka-anatel-YYYY-MM-DD.pdf`. Botão fica em estado "Gerando relatório…" enquanto o PDF é renderizado (~2-3s); restaurado após `save()` ou erro.
+
 ### Bloco de diagnóstico (topo da tela)
 
 ### Seção de insights
@@ -1593,6 +1708,20 @@ A tabela de comparação (Perto / Longe / Queda) teve `.lk-cmp__val` (display 60
 
 ## 10. Comportamentos globais
 
+### Loading states com skeleton (2026-05)
+
+Substituição de textos "Carregando…" por placeholders visuais com shimmer (`Skeleton` em `src/components/Skeleton.tsx`). Reduz percepção de espera ao dar pista do shape do conteúdo a vir.
+
+| Local | Antes | Depois |
+|---|---|---|
+| `App.tsx → ScreenLoadingFallback` (chunk lazy de tela secundária baixando) | Texto "Carregando…" centralizado | Esqueleto: TopBar pill 36×36 + título central pill 140×16 + 2 cards (80px e 60px) |
+| `WifiSignalSection` em `loading` | Texto "Lendo informações do Wi-Fi…" | 3 linhas: kicker pill 40×12 + label pill 120×16 + barra rect 8×100% |
+| `DNSGuideSheet` quando o benchmark roda **sem seed do localStorage** | Hero com "Medindo…" e pills vazios | 5 rows verticais (Cloudflare/Google/AdGuard/Quad9/OpenDNS) com nome + skeleton pill 32×16; cada row "completa" individualmente conforme cada server termina |
+| `HistoryScreen` quando `records === undefined` | — | Não implementado: `loadHistory()` é síncrono, o estado nunca é `undefined` na prática |
+| `PullToRefreshIndicator` durante refresh | Spinner SVG | Mantido (skeleton seria redundante) |
+
+`prefers-reduced-motion: reduce` desliga o shimmer; o placeholder fica estático em `var(--surface-2)`.
+
 ### Tema dark/light
 
 - Toggle no Header (ícone sol/lua)
@@ -1737,15 +1866,24 @@ Anteriormente, o ISP exibido na `RunningScreen` e persistido no histórico era c
 
 ### Upload em Conexão Mobile
 
-**Comportamento melhorado em conexões celulares:**
-- Presets de upload adaptados: chunks menores (256 KB / 1 MB) em vez dos 10 MB padrão
-- Paralelismo reduzido: 3–4 streams vs 8 padrão
-- Se o upload falhar mesmo assim (uplink saturado < ~3 Mbps):
-  - Download e latência são **preservados**
-  - `result.ulFailed = true`
-  - ResultScreen exibe `"—" + "não medido"` na cell de upload
-  - Banner informativo: `"Upload não pôde ser medido. Resultado parcial."`
-  - **O teste não é invalidado** — mede o que consegue
+**Comportamento adaptativo em conexões celulares (atualizado 2026-05 — uplink <2 Mbps):**
+
+Em vez de presets fixos, conexões móveis (`mobile_broadband`) usam um motor adaptativo em rodadas progressivas:
+
+- Round 1: 64 KB × 1 stream (baseline garantido para qualquer rede ligada).
+- A cada round que fechar em <2s, o motor escala (chunk×4, +1 stream) até 2 MB × 4 streams.
+- 2 rounds lentos consecutivos → para. Total máximo: 4 rodadas, 25 s.
+
+**Garantia:** mesmo em uplink ~0,5 Mbps, o round 1 (64 KB / ~1 s) completa e produz amostra real. O motor só lança erro de upload em rede catastroficamente offline (toda rodada falha por erro de rede, não por timeout).
+
+**Se ainda assim o upload falhar** (offline ou abort externo durante a fase):
+- Download e latência são **preservados**
+- `result.ulFailed = true`
+- ResultScreen exibe `"—" + "não medido"` na cell de upload
+- Banner informativo: `"Upload não pôde ser medido. Resultado parcial."`
+- **O teste não é invalidado** — mede o que consegue
+
+A seleção da estratégia depende do `connectionType` detectado em cascata: Capacitor APK → plugin nativo Wi-Fi (presença de SSID = Wi-Fi, ausência = mobile); PWA web → `navigator.connection.type`; fallback final → Wi-Fi em mobile (mais comum em PWA standalone). Override manual em **HamburgerMenu** sempre vence.
 
 ### Branding Android
 

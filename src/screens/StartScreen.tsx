@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { DeviceInfo, ServerInfo, TestRecord } from '../types';
 import type { Settings } from '../hooks/useSettings';
 import { IOSList } from '../components/IOSList';
 import { Icon } from '../components/icons';
 import { TopBar } from '../components/TopBar';
+import { PullToRefreshIndicator } from '../components/PullToRefreshIndicator';
 import { useScrollHeader } from '../hooks/useScrollHeader';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { resolveCopy } from '../core';
 import { formatMbps } from '../utils/format';
 import './StartScreen.css';
@@ -25,6 +27,12 @@ interface Props {
   onShowLastResult: () => void;
   onShowHistory: () => void;
   onExplore?: () => void;
+  /**
+   * Callback do pull-to-refresh. Recebe `performAppRefresh` já
+   * pré-amarrado com `deviceInfo.reload` em App.tsx. Quando ausente, o
+   * gesto fica visualmente desabilitado (hook `enabled: false`).
+   */
+  onRefresh?: () => Promise<void>;
 }
 
 export function StartScreen({
@@ -43,6 +51,7 @@ export function StartScreen({
   onShowLastResult,
   onShowHistory,
   onExplore,
+  onRefresh,
 }: Props) {
   const [selectedMode, setSelectedMode] = useState<'fast' | 'complete'>(settings.defaultMode ?? 'complete');
 
@@ -51,6 +60,21 @@ export function StartScreen({
   // hook não tinha alvo. Hoje fica idêntico (sem rolagem, sem glass);
   // se a tela ganhar conteúdo no futuro, o glass passa a aparecer.
   const { scrolled, scrollContainerRef, sentinelRef } = useScrollHeader();
+
+  // Pull-to-refresh universal (2026-05). `useScrollHeader` expõe um
+  // callback ref; `usePullToRefresh` consome um RefObject. Mantemos uma
+  // RefObject local e um callback ref combinado que atualiza ambos.
+  const ptrContainerRef = useRef<HTMLElement | null>(null);
+  const setScrollContainer = useCallback((el: HTMLElement | null) => {
+    ptrContainerRef.current = el;
+    scrollContainerRef(el);
+  }, [scrollContainerRef]);
+  const noopRefresh = useCallback(() => Promise.resolve(), []);
+  const ptr = usePullToRefresh(
+    ptrContainerRef,
+    onRefresh ?? noopRefresh,
+    { enabled: !!onRefresh },
+  );
 
   const handleModeChange = (mode: 'fast' | 'complete') => {
     setSelectedMode(mode);
@@ -78,7 +102,14 @@ export function StartScreen({
   const serverSub = server?.loc ? server.loc : 'Servidor mais próximo';
 
   return (
-    <div className="lk-start" data-theme={theme} ref={scrollContainerRef}>
+    <div className="lk-start" data-theme={theme} ref={setScrollContainer}>
+      {/* Pull-to-refresh (2026-05): pill flutuante abaixo do TopBar. Só
+          renderiza quando o gesto está armado pelo usuário. */}
+      <PullToRefreshIndicator
+        pullDistance={ptr.pullDistance}
+        isRefreshing={ptr.isRefreshing}
+        isReady={ptr.isReady}
+      />
       {/* Bloco 6 — UX uniforme (2026-05): sentinel sintético posicionado
           logo abaixo da altura do TopBar. No-op visual hoje (a tela
           não rola), mas mantém o useScrollHeader funcional caso a tela

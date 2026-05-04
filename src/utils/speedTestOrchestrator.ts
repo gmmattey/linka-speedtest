@@ -8,15 +8,15 @@ import {
 } from './downloadProbe';
 import {
   runUploadProbe,
+  runAdaptiveUploadProbe,
   UPLOAD_CONFIG_FAST,
   UPLOAD_CONFIG_COMPLETE,
-  UPLOAD_CONFIG_MOBILE_FAST,
-  UPLOAD_CONFIG_MOBILE_COMPLETE,
   type UploadProbeResult,
 } from './uploadProbe';
 import { getDnsLatencyMs } from './dnsTiming';
 import { probeDnsResolver, type DnsProbeResult } from './dnsProbe';
 import { toConnectionProfile } from './connectionProfile';
+import { measurePacketLossNative, type PacketLossResult } from './packetLoss';
 
 // =============================================================================
 // Erro classificado
@@ -133,15 +133,17 @@ export async function runSpeedTestV2(
   const testStartTime = Date.now();
   const ranges = computeRanges(mode);
   const dlConfig = mode === 'fast' ? DOWNLOAD_CONFIG_FAST : DOWNLOAD_CONFIG_COMPLETE;
-  // Bug-fix 2026-05 (upload mobile): seleciona preset de upload pelo perfil
-  // de conexão. Em `mobile_broadband` usa chunks menores (256 KB / 1 MB) e
-  // menos streams para evitar `upload_failed` quando o uplink celular é
-  // baixo demais para concluir os chunks padrão (5–10 MB) dentro da janela.
+  // Bug-fix 2026-05 (upload mobile <2 Mbps): seleciona estratégia de upload
+  // pelo perfil. Em `mobile_broadband` usa o motor adaptativo
+  // (`runAdaptiveUploadProbe`) que escala chunks/streams round-a-round —
+  // começa em 64 KB × 1 stream e cresce só quando o round anterior fechou em
+  // <2s. Garante medição real mesmo em uplink ~0,5 Mbps. Em `fixed_broadband`
+  // mantém os presets fixos clássicos. Os antigos `UPLOAD_CONFIG_MOBILE_*`
+  // ficaram obsoletos — exportados em `uploadProbe.ts` para compat de quem
+  // precise inspecioná-los, mas não são mais consumidos aqui.
   const profile = toConnectionProfile(connectionType);
   const isMobile = profile === 'mobile_broadband';
-  const ulConfig = isMobile
-    ? (mode === 'fast' ? UPLOAD_CONFIG_MOBILE_FAST : UPLOAD_CONFIG_MOBILE_COMPLETE)
-    : (mode === 'fast' ? UPLOAD_CONFIG_FAST        : UPLOAD_CONFIG_COMPLETE);
+  const ulConfigFixed = mode === 'fast' ? UPLOAD_CONFIG_FAST : UPLOAD_CONFIG_COMPLETE;
   const pingCount = mode === 'fast' ? 15 : 25;
 
   // ── Fase 1: Latência ────────────────────────────────────────────────────────
@@ -237,6 +239,14 @@ export async function runSpeedTestV2(
     () => ({ latencyMs: null, resolverIp: null, provider: null }),
   );
 
+  // Packet loss nativo (2026-05): roda em paralelo com upload no APK
+  // Android — 50 pacotes UDP DNS ao Cloudflare, contagem real de perda.
+  // No PWA web (sem plugin), resolve `{ available: false }` e o
+  // orchestrator preserva o `packetLoss` estimado. Não bloqueia o
+  // resultado: se demorar mais que o upload, a Promise é coletada após.
+  const packetLossNativePromise: Promise<PacketLossResult> = measurePacketLossNative()
+    .catch(() => ({ available: false } as PacketLossResult));
+
   // Bug-fix 2026-05 (upload mobile): se o upload falhar (ex.: chunk não
   // completa em tempo no uplink celular saturado), preserva DL+latência e
   // retorna resultado parcial (`ul=0`, `ulFailed=true`) em vez de invalidar
@@ -244,16 +254,31 @@ export async function runSpeedTestV2(
   let ulResult: UploadProbeResult | null = null;
   let ulFailed = false;
   const ulPhaseStart = performance.now();
+  // Orçamento usado só para mapear progresso visual — em mobile usamos o
+  // teto adaptativo (25s); em fixa, o `durationMs` do preset.
+  const ulProgressBudget = isMobile ? 25_000 : ulConfigFixed.durationMs;
   try {
-    ulResult = await runUploadProbe(ulConfig, signal, (instant) => {
-      const elapsed = performance.now() - ulPhaseStart;
-      const local = Math.max(0, Math.min(0.98, elapsed / ulConfig.durationMs));
-      onProgress({
-        phase: 'upload',
-        instantMbps: instant,
-        overallProgress: mapProgress(ranges.upload, local),
+    if (isMobile) {
+      ulResult = await runAdaptiveUploadProbe(signal, (instant) => {
+        const elapsed = performance.now() - ulPhaseStart;
+        const local = Math.max(0, Math.min(0.98, elapsed / ulProgressBudget));
+        onProgress({
+          phase: 'upload',
+          instantMbps: instant,
+          overallProgress: mapProgress(ranges.upload, local),
+        });
       });
-    });
+    } else {
+      ulResult = await runUploadProbe(ulConfigFixed, signal, (instant) => {
+        const elapsed = performance.now() - ulPhaseStart;
+        const local = Math.max(0, Math.min(0.98, elapsed / ulConfigFixed.durationMs));
+        onProgress({
+          phase: 'upload',
+          instantMbps: instant,
+          overallProgress: mapProgress(ranges.upload, local),
+        });
+      });
+    }
   } catch (err) {
     // Cleanup dos pings simultâneos antes de decidir o destino do erro.
     ulPingCtrl.abort();
@@ -293,12 +318,24 @@ export async function runSpeedTestV2(
   const dnsProbeResult = await dnsProbePromise;
   const dnsLatencyMs = dnsProbeResult.latencyMs ?? getDnsLatencyMs();
 
+  // Packet loss nativo (2026-05): se disponível, sobrescreve a estimativa
+  // heurística com o valor real medido via UDP. `packetLossSource` registra
+  // a origem para a UI poder mostrar "estimado" quando ≠ 'native'.
+  const packetLossNativeResult = await packetLossNativePromise;
+  const finalPacketLoss = packetLossNativeResult.available && packetLossNativeResult.lossPercent != null
+    ? packetLossNativeResult.lossPercent
+    : packetLoss;
+  const packetLossSource: 'native' | 'estimated' = packetLossNativeResult.available
+    ? 'native'
+    : 'estimated';
+
   const partial: SpeedTestResult = {
     dl,
     ul,
     latency: latencyUnloaded,
     jitter,
-    packetLoss,
+    packetLoss: finalPacketLoss,
+    packetLossSource,
     timestamp: Date.now(),
     mode,
     stabilityScore,

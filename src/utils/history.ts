@@ -76,6 +76,9 @@ export function appendRecord(
     dnsProvider:        result.dnsProvider,
     // Resultado parcial (Bug-fix 2026-05).
     ulFailed:           result.ulFailed,
+    // Origem do packet loss (2026-05) — propagado pra UI poder marcar
+    // "estimado" coerentemente em revisitas pelo histórico.
+    packetLossSource:   result.packetLossSource,
   };
   const items = [record, ...loadHistory()].slice(0, MAX);
   persist(items);
@@ -103,6 +106,7 @@ export function recordToResult(r: TestRecord): import('../types').SpeedTestResul
     dnsResolverIp: r.dnsResolverIp,
     dnsProvider:   r.dnsProvider,
     ulFailed:      r.ulFailed,
+    packetLossSource: r.packetLossSource,
   };
 }
 

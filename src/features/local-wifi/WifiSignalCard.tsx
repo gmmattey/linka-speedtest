@@ -5,6 +5,12 @@ import { WifiDetailsSheet } from './WifiDetailsSheet';
 import './WifiSignalCard.css';
 
 /**
+ * @deprecated Substituído na ResultScreen pelo `<WifiSignalSection>` +
+ * `<WifiSignalBar>` (refator 2026-05). Pendência: avaliar remoção em
+ * pass futuro caso nenhuma superfície adote este componente. Mantido
+ * temporariamente porque era o único renderer inline do card unificado;
+ * sem usuários atuais conhecidos no repositório.
+ *
  * Card embutido na ResultScreen que mostra a qualidade do sinal Wi-Fi
  * percebido pelo dispositivo. Renderizado pelo pai apenas quando
  * `connectionType === 'wifi'`. Quando o bridge nativo

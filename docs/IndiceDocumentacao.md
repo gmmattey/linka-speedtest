@@ -22,6 +22,7 @@
 | [`GuiaBranding.md`](GuiaBranding.md) | Identidade visual completa: cores, tipografia, espaçamento, componentes, copy, design direction iOS-Calma |
 | [`DocumentacaoFuncionalSistema.md`](DocumentacaoFuncionalSistema.md) | Descrição das telas, fluxos de navegação, estados, UX |
 | [`DocumentacaoTecnicaSistema.md`](DocumentacaoTecnicaSistema.md) | Arquitetura, tipos, hooks, utils, componentes (Chip, IOSList, Gauge), deploy |
+| [`CI-CD.md`](CI-CD.md) | Pipelines GitHub Actions (PWA + Capacitor APK) — setup de secrets, keystore Android, Cloudflare Pages, troca de target |
 | [`EvolucaoSpeedTest.md`](EvolucaoSpeedTest.md) | Roadmap e features futuras: diagnóstico avançado, comparativos, UX evolutiva |
 | [`EvolucaoTelaDesktop.md`](EvolucaoTelaDesktop.md) | Design de telas desktop — prototipagem aprovada (opção 3); layout para telas grandes |
 | [`PendenciasLayout.md`](PendenciasLayout.md) | Backlog de melhorias de layout, UX, fraseologia e consistência visual |

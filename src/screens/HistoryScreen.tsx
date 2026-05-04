@@ -1,17 +1,30 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Area, AreaChart, ResponsiveContainer, YAxis } from 'recharts';
 import { IOSList } from '../components/IOSList';
 import { Chip, type ChipVariant } from '../components/Chip';
 import { Icon, DeviceIcon, ConnectionIcon, IconPdf, IconShare } from '../components/icons';
 import { TopBar } from '../components/TopBar';
 import { PageHeader } from '../components/PageHeader';
+import { PullToRefreshIndicator } from '../components/PullToRefreshIndicator';
 import { useScrollHeader } from '../hooks/useScrollHeader';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { SpeedTestResult, TestRecord } from '../types';
 import { interpretSpeedTestResult, resolveCopy } from '../core';
 import { clearHistory, loadHistory } from '../utils/history';
 import { buildHistoryInsights } from '../utils/historyInsights';
 import { formatDate, formatMbps, formatMs } from '../utils/format';
 import { exportHistoryPdf } from '../utils/pdfExport';
+import {
+  computeWeeklyTrend,
+  computeMonthlyTrend,
+  describeTrend,
+  isTrendSignificant,
+} from '../utils/historyTrends';
+import {
+  isAnatelComplaintEligible,
+  generateAnatelReport,
+} from '../utils/anatelReport';
+import { useSettings } from '../hooks/useSettings';
 import type { ConnectionProfile } from '../types';
 import './HistoryScreen.css';
 
@@ -21,6 +34,12 @@ interface Props {
   unit?: 'mbps' | 'gbps';
   initialSelectedId?: string;
   onBack?: () => void;
+  /**
+   * Callback do pull-to-refresh. Recebe `performAppRefresh` já amarrado
+   * com `deviceInfo.reload` em App.tsx. Quando ausente, o gesto fica
+   * desabilitado.
+   */
+  onRefresh?: () => Promise<void>;
 }
 
 function qualityToChipVariant(quality: string): ChipVariant {
@@ -39,6 +58,7 @@ export function HistoryScreen({
   unit = 'mbps',
   initialSelectedId,
   onBack,
+  onRefresh,
 }: Props) {
   const dlColor = theme === 'dark' ? '#60A5FA' : '#2563EB';
   const ulColor = theme === 'dark' ? '#34D399' : '#16A34A';
@@ -47,6 +67,8 @@ export function HistoryScreen({
   const selected = items.find((r) => r.id === selectedId) ?? null;
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
   const mountTime = useState(Date.now)[0];
+  const { settings } = useSettings();
+  const [generatingAnatel, setGeneratingAnatel] = useState(false);
 
   const handleClear = () => {
     if (!confirm('Apagar todo o histórico de testes?')) return;
@@ -87,6 +109,50 @@ export function HistoryScreen({
 
   const insights = useMemo(() => buildHistoryInsights(items), [items]);
 
+  // Tendência (2026-05): card no topo do histórico quando há mudança >10%
+  // entre as últimas duas janelas (semana ou mês). Prioriza a janela menor
+  // — semana é mais "viva" para o usuário; só cai para mês se não houver
+  // amostras suficientes no recorte semanal.
+  const trendCard = useMemo(() => {
+    const weekly  = computeWeeklyTrend(items);
+    const monthly = computeMonthlyTrend(items);
+    const trend = (weekly && isTrendSignificant(weekly)) ? weekly
+                : (monthly && isTrendSignificant(monthly)) ? monthly
+                : null;
+    if (!trend) return null;
+    return { trend, description: describeTrend(trend) };
+  }, [items]);
+
+  // Anatel (2026-05): card de denúncia ao final da lista quando o plano
+  // contratado está cadastrado e a entrega média < 80% nos últimos 30
+  // dias com pelo menos 5 testes. Suprimido em planos móveis (a Resolução
+  // 717/2019 trata banda larga fixa de modo específico).
+  const anatelData = useMemo(() => {
+    if (!settings.contractedDown || settings.contractedDown <= 0) return null;
+    // Dominante mobile: não aplica regra Anatel fixa.
+    const dominant = dominantProfile(items);
+    if (dominant === 'mobile_broadband') return null;
+    return isAnatelComplaintEligible(
+      items,
+      settings.contractedDown,
+      settings.contractedUp ?? 0,
+    );
+  }, [items, settings.contractedDown, settings.contractedUp]);
+
+  const handleGenerateAnatel = useCallback(async () => {
+    if (!anatelData || generatingAnatel) return;
+    setGeneratingAnatel(true);
+    try {
+      // ISP dominante: o último teste registrado costuma ser o ISP atual.
+      const dominantIsp = items.find((r) => r.isp && r.isp !== '—')?.isp ?? null;
+      await generateAnatelReport(anatelData, dominantIsp);
+    } catch {
+      /* silencioso — usuário pode tentar de novo */
+    } finally {
+      setGeneratingAnatel(false);
+    }
+  }, [anatelData, generatingAnatel, items]);
+
   const diagnosis = useMemo(() => {
     if (items.length === 0) return null;
     const cutoff = mountTime - 24 * 3600 * 1000;
@@ -114,6 +180,21 @@ export function HistoryScreen({
   // glass effect / título pequeno do TopBar.
   const { scrolled, scrollContainerRef, sentinelRef } = useScrollHeader();
 
+  // Pull-to-refresh universal (2026-05). `useScrollHeader` expõe callback
+  // ref; `usePullToRefresh` consome RefObject. Mantemos RefObject local e
+  // um callback ref combinado que atualiza os dois.
+  const ptrContainerRef = useRef<HTMLElement | null>(null);
+  const setScrollContainer = useCallback((el: HTMLElement | null) => {
+    ptrContainerRef.current = el;
+    scrollContainerRef(el);
+  }, [scrollContainerRef]);
+  const noopRefresh = useCallback(() => Promise.resolve(), []);
+  const ptr = usePullToRefresh(
+    ptrContainerRef,
+    onRefresh ?? noopRefresh,
+    { enabled: !!onRefresh && !selected },
+  );
+
   if (selected) {
     return <HistoryDetail record={selected} onBack={() => setSelectedId(null)} unit={unit} />;
   }
@@ -132,7 +213,15 @@ export function HistoryScreen({
         rightActions={rightActions}
       />
 
-      <main className="lk-history__main" ref={scrollContainerRef}>
+      {/* Pull-to-refresh (2026-05): pill flutuante; só aparece quando
+          o usuário começa a puxar a partir do topo. */}
+      <PullToRefreshIndicator
+        pullDistance={ptr.pullDistance}
+        isRefreshing={ptr.isRefreshing}
+        isReady={ptr.isReady}
+      />
+
+      <main className="lk-history__main" ref={setScrollContainer}>
         <PageHeader ref={sentinelRef} title="Histórico" />
         {items.length === 0 ? (
           <div className="lk-history__empty">
@@ -140,6 +229,19 @@ export function HistoryScreen({
           </div>
         ) : (
           <>
+            {/* Trend card (2026-05) — comparação inteligente entre testes.
+                Aparece no topo (acima do diagnóstico de 24h) quando há
+                mudança >10% na última janela semanal/mensal. */}
+            {trendCard && (
+              <section
+                className={`lk-history__trend lk-history__trend--${trendCard.description.severity}`}
+                aria-label="Tendência da sua internet"
+              >
+                <p className="lk-history__trend-headline">{trendCard.description.headline}</p>
+                <p className="lk-history__trend-comparison">{trendCard.description.comparison}</p>
+              </section>
+            )}
+
             {diagnosis && diagnosis.lines.length > 0 && (
               <section className="lk-history__diagnosis">
                 <p className="lk-history__diagnosis-label">Como sua internet anda · {diagnosis.windowLabel}</p>
@@ -208,33 +310,70 @@ export function HistoryScreen({
 
             <ul className="lk-history__list">
               {items.map((r) => (
-                <li key={r.id} className="lk-history__item" onClick={() => setSelectedId(r.id)}>
-                  <div className="lk-history__row1">
-                    <span className="lk-history__date">{formatDate(r.timestamp)}</span>
-                    <Chip variant={qualityToChipVariant(r.quality)}>
-                      {resolveCopy(`quality.${r.quality}`)}
-                    </Chip>
-                  </div>
-                  <div className="lk-history__row2">
-                    <span className="lk-history__dl">↓ {formatMbps(r.dl, unit)}</span>
-                    <span className="lk-history__ul">↑ {formatMbps(r.ul, unit)} {unitLabel}</span>
-                    <span className="lk-history__lat">{formatMs(r.latency)} ms</span>
-                  </div>
-                  <div className="lk-history__row3">
-                    <span className="lk-history__icons">
-                      <DeviceIcon kind={r.deviceType} size={13} />
-                      <ConnectionIcon kind={r.connectionType} size={13} />
-                    </span>
-                    <span>{r.serverName}{r.isp && r.isp !== '—' ? ` · ${r.isp}` : ''}</span>
-                    {r.locationTag && (
-                      <span className="lk-history__location-tag">
-                        <Icon name="pin" size={10} color="var(--accent)" /> {r.locationTag}
+                /* A11y (2026-05): item virou <button> dentro de <li>. Antes
+                   o `<li onClick>` era inacessível por teclado. Agora o
+                   button real recebe foco/Enter/Space e screen reader o
+                   anuncia como botão "Ver detalhes do teste de DD/MM ...". */
+                <li key={r.id} className="lk-history__item-wrap">
+                  <button
+                    type="button"
+                    className="lk-history__item lk-history__item-btn"
+                    onClick={() => setSelectedId(r.id)}
+                    aria-label={`Ver detalhes do teste de ${formatDate(r.timestamp)} — download ${formatMbps(r.dl, unit)} ${unitLabel}, upload ${formatMbps(r.ul, unit)} ${unitLabel}`}
+                  >
+                    <div className="lk-history__row1">
+                      <span className="lk-history__date">{formatDate(r.timestamp)}</span>
+                      <Chip variant={qualityToChipVariant(r.quality)}>
+                        {resolveCopy(`quality.${r.quality}`)}
+                      </Chip>
+                    </div>
+                    <div className="lk-history__row2">
+                      <span className="lk-history__dl">↓ {formatMbps(r.dl, unit)}</span>
+                      <span className="lk-history__ul">↑ {formatMbps(r.ul, unit)} {unitLabel}</span>
+                      <span className="lk-history__lat">{formatMs(r.latency)} ms</span>
+                    </div>
+                    <div className="lk-history__row3">
+                      <span className="lk-history__icons" aria-hidden="true">
+                        <DeviceIcon kind={r.deviceType} size={13} />
+                        <ConnectionIcon kind={r.connectionType} size={13} />
                       </span>
-                    )}
-                  </div>
+                      <span>{r.serverName}{r.isp && r.isp !== '—' ? ` · ${r.isp}` : ''}</span>
+                      {r.locationTag && (
+                        <span className="lk-history__location-tag">
+                          <Icon name="pin" size={10} color="var(--accent)" /> {r.locationTag}
+                        </span>
+                      )}
+                    </div>
+                  </button>
                 </li>
               ))}
             </ul>
+
+            {/* Anatel (2026-05): card de denúncia quando a entrega média
+                fica abaixo de 80% do plano nos últimos 30 dias. */}
+            {anatelData && (
+              <section className="lk-history__anatel" role="region" aria-label="Reclamação Anatel">
+                <div className="lk-history__anatel-icon" aria-hidden="true">
+                  <Icon name="shield" size={20} color="var(--warn)" />
+                </div>
+                <div className="lk-history__anatel-body">
+                  <p className="lk-history__anatel-title">Anatel — entrega abaixo do contratado</p>
+                  <p className="lk-history__anatel-desc">
+                    Você recebeu {Math.round(anatelData.averageDeliveredPct)}% do plano em média
+                    nos últimos {anatelData.testRecords.length} testes
+                    ({anatelData.windowDays} dias).
+                  </p>
+                  <button
+                    type="button"
+                    className="btn-outline lk-history__anatel-cta"
+                    onClick={handleGenerateAnatel}
+                    disabled={generatingAnatel}
+                  >
+                    {generatingAnatel ? 'Gerando relatório…' : 'Gerar relatório'}
+                  </button>
+                </div>
+              </section>
+            )}
 
             <div className="lk-history__footer">
               <button className="btn-text lk-history__clear" onClick={handleClear}>
@@ -316,6 +455,26 @@ function HistoryDetail({ record, onBack, unit }: { record: TestRecord; onBack: (
           </div>
           <p className="lk-hist-detail__sub">
             {resolveCopy(interpreted.copyKeys.stabilityLabelKey)}
+          </p>
+          {/* Bug-fix 2026-05 (rede móvel): ícone do tipo de conexão visível
+              no hero do detalhe — clarifica de que rede o teste veio. */}
+          <p
+            className="lk-hist-detail__conn"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              color: 'var(--text-2)',
+              fontSize: 12,
+              marginTop: 4,
+            }}
+          >
+            <ConnectionIcon kind={record.connectionType} size={20} />
+            <span>
+              {record.connectionType === 'wifi'   ? 'Wi-Fi' :
+               record.connectionType === 'mobile' ? 'Rede móvel' :
+               record.connectionType === 'cable'  ? 'Cabo' : '—'}
+            </span>
           </p>
         </div>
 

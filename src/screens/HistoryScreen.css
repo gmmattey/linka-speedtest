@@ -34,6 +34,55 @@
   font-size: 14px;
 }
 
+/* Trend card (2026-05) — comparação inteligente entre janelas.
+   Border-left grossa colorida pelo severity comunica a direção da
+   mudança imediatamente; o restante mantém o look-and-feel de
+   `--surface-deep` dos demais cards do histórico. Sem box-shadow. */
+.lk-history__trend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-md) 14px;
+  background: var(--surface-deep);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--text-3);
+  border-radius: var(--radius);
+}
+
+.lk-history__trend--good {
+  border-left-color: var(--success);
+}
+
+.lk-history__trend--bad {
+  border-left-color: var(--error);
+}
+
+.lk-history__trend--neutral {
+  border-left-color: var(--text-3);
+}
+
+.lk-history__trend-headline {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.lk-history__trend-comparison {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.lk-history__trend--good .lk-history__trend-comparison {
+  color: var(--success);
+}
+
+.lk-history__trend--bad .lk-history__trend-comparison {
+  color: var(--error);
+}
+
 /* Diagnosis */
 
 .lk-history__diagnosis {
@@ -141,6 +190,13 @@
   border-radius: var(--radius);
 }
 
+/* A11y 2026-05: o item virou `<li><button>`. O <li> é só o slot de lista;
+   o `<button>` herda os estilos clicáveis. Reset de aparência pra evitar o
+   estilo nativo de button (background/border/font). */
+.lk-history__item-wrap {
+  list-style: none;
+}
+
 .lk-history__item {
   display: flex;
   flex-direction: column;
@@ -151,16 +207,28 @@
   transition: background var(--t-fast);
 }
 
-.lk-history__item:first-child {
+.lk-history__item-btn {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+}
+
+.lk-history__item-wrap:first-child .lk-history__item-btn {
   border-radius: var(--radius) var(--radius) 0 0;
 }
 
-.lk-history__item:last-child {
+.lk-history__item-wrap:last-child .lk-history__item-btn {
   border-bottom: none;
   border-radius: 0 0 var(--radius) var(--radius);
 }
 
-.lk-history__item:active {
+.lk-history__item:active,
+.lk-history__item-btn:active {
   background: var(--surface-2);
 }
 
@@ -215,6 +283,58 @@
   font-size: 11px;
   color: var(--accent);
   font-weight: 500;
+}
+
+/* Anatel (2026-05) — card "entrega abaixo do contratado" no fim da lista
+   quando elegível. Border-left warn, ícone à esquerda, descrição + CTA. */
+.lk-history__anatel {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface-deep);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warn);
+  border-radius: var(--radius);
+}
+
+.lk-history__anatel-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-warn-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lk-history__anatel-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lk-history__anatel-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.lk-history__anatel-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+
+.lk-history__anatel-cta {
+  align-self: flex-start;
+  margin-top: 4px;
+  height: 36px;
+  font-size: 13px;
 }
 
 /* Footer */

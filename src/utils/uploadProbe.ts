@@ -1,6 +1,20 @@
 import { cfUploadChunk, UL_SIZES } from './cloudflareSpeedTest';
 import type { SpeedTestSample } from '../types';
 
+// ── Constantes do modo adaptativo (mobile_broadband) ────────────────────────
+// Bug-fix 2026-05 (upload mobile <2 Mbps): chunks pequenos progressivos.
+// Em uplink celular catastrófico (~0,5 Mbps) os presets fixos de 256 KB / 1 MB
+// + 3-4 streams ainda podem não fechar dentro da janela. O modo adaptativo
+// começa minúsculo (64 KB × 1 stream) e só escala quando o round anterior
+// completou rápido — assim sempre retorna amostras reais, nunca `upload_failed`.
+const ADAPTIVE_MIN_CHUNK = 64 * 1024;        // 64 KB — piso para uplink ~0,3 Mbps
+const ADAPTIVE_MAX_CHUNK = 2 * 1024 * 1024;  // 2 MB — teto antes de virar preset fixo
+const ADAPTIVE_MAX_PARALLEL = 4;
+const ADAPTIVE_ROUND_TIMEOUT_MS = 6_000;
+const ADAPTIVE_FAST_ROUND_MS = 2_000; // round que fecha em <2s → escala
+const ADAPTIVE_TOTAL_BUDGET_MS = 25_000;
+const ADAPTIVE_MAX_ROUNDS = 4;
+
 export interface UploadProbeConfig {
   durationMs: number;
   initialStreams: number;
@@ -201,6 +215,128 @@ export async function runUploadProbe(
   const stabilityScore = Math.round(Math.max(0, Math.min(100, 100 - cv * 150)));
 
   if (throughputMbps === 0 && valid.length === 0) {
+    throw Object.assign(new Error('upload_failed'), { code: 'upload_failed' as const });
+  }
+
+  return { throughputMbps, peakMbps, stabilityScore, samples };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Upload adaptativo (mobile_broadband) — Bug-fix 2026-05
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Estratégia de upload em rodadas progressivas para uplink celular muito lento.
+ *
+ * **Por que existe:** os presets fixos de `mobile_broadband`
+ * (`UPLOAD_CONFIG_MOBILE_FAST` / `_COMPLETE`) usam 256 KB / 1 MB com 3-4
+ * streams. Em uplink ≤2 Mbps isso ainda dispara `upload_failed` quando o
+ * AbortController estoura antes do PRIMEIRO chunk fechar — `samples` fica
+ * vazio e o motor lança `upload_failed`. O modo adaptativo começa em 64 KB ×
+ * 1 stream (~0,5s mesmo em 1 Mbps) e só escala quando o round anterior
+ * fechou rápido.
+ *
+ * **Algoritmo:**
+ * 1. Round 1: 64 KB × 1 stream, timeout 6s. Mede.
+ * 2. Se round terminou em <2s e parallelism<4 → escala (chunk×4, +1 stream).
+ *    Senão registra "round lento". 2 rounds lentos consecutivos → para.
+ * 3. Para também ao atingir 4 rounds, 25s totais ou abort.
+ *
+ * **Garantia:** mesmo em uplink 0,3 Mbps, o round 1 (64 KB / 0,5s) completa,
+ * gera ao menos 1 amostra e retorna throughput real. Nunca lança
+ * `upload_failed` em rede simplesmente lenta — só em rede catastroficamente
+ * offline (toda rodada falha por erro de rede, não por timeout).
+ */
+export async function runAdaptiveUploadProbe(
+  signal: AbortSignal,
+  onInstant: (mbps: number) => void,
+): Promise<UploadProbeResult> {
+  const totalStart = performance.now();
+  const samples: SpeedTestSample[] = [];
+
+  let chunkBytes = ADAPTIVE_MIN_CHUNK;
+  let parallelism = 1;
+  let consecutiveSlowRounds = 0;
+  let roundIndex = 0;
+
+  const maxBuffer = makeRandomBuffer(ADAPTIVE_MAX_CHUNK);
+
+  while (
+    roundIndex < ADAPTIVE_MAX_ROUNDS &&
+    performance.now() - totalStart < ADAPTIVE_TOTAL_BUDGET_MS &&
+    !signal.aborted
+  ) {
+    const roundStart = performance.now();
+    const roundCtrl = new AbortController();
+    const onOuterAbort = () => roundCtrl.abort();
+    signal.addEventListener('abort', onOuterAbort, { once: true });
+    const timeoutTid = setTimeout(() => roundCtrl.abort(), ADAPTIVE_ROUND_TIMEOUT_MS);
+
+    const buffer = maxBuffer.subarray(0, chunkBytes);
+    let roundBytes = 0;
+    let roundFailed = false;
+
+    // Cada stream envia 1 chunk e retorna. Round = N streams paralelos.
+    const streamPromises: Promise<void>[] = [];
+    for (let i = 0; i < parallelism; i++) {
+      streamPromises.push(
+        cfUploadChunk(buffer, roundCtrl.signal)
+          .then((sent) => {
+            roundBytes += sent;
+          })
+          .catch(() => {
+            // Falha individual ignorada (timeout / abort do round). Se o
+            // round inteiro falhar (`roundBytes === 0`) o consecutiveSlow
+            // count resolve a saída.
+            roundFailed = true;
+          }),
+      );
+    }
+
+    await Promise.allSettled(streamPromises);
+    clearTimeout(timeoutTid);
+    signal.removeEventListener('abort', onOuterAbort);
+
+    if (signal.aborted) break;
+
+    const roundDuration = performance.now() - roundStart;
+    const tMs = performance.now() - totalStart;
+
+    if (roundBytes > 0 && roundDuration > 0) {
+      const mbps = (roundBytes * 8) / (roundDuration / 1000) / 1_000_000;
+      samples.push({ tMs, mbps, phase: 'upload' });
+      onInstant(mbps);
+    }
+
+    roundIndex++;
+
+    // Decisão de escalar: round rápido (<2s) e ainda há margem de paralelismo.
+    const shouldScale =
+      !roundFailed &&
+      roundBytes > 0 &&
+      roundDuration < ADAPTIVE_FAST_ROUND_MS &&
+      (chunkBytes < ADAPTIVE_MAX_CHUNK || parallelism < ADAPTIVE_MAX_PARALLEL);
+
+    if (shouldScale) {
+      chunkBytes = Math.min(chunkBytes * 4, ADAPTIVE_MAX_CHUNK);
+      parallelism = Math.min(parallelism + 1, ADAPTIVE_MAX_PARALLEL);
+      consecutiveSlowRounds = 0;
+    } else {
+      consecutiveSlowRounds++;
+      if (consecutiveSlowRounds >= 2) break;
+    }
+  }
+
+  // Agregação: throughput é a média das amostras válidas (>0). Modo adaptativo
+  // só tem 1-4 amostras (uma por round), então não dá para descartar 35%
+  // como faz `runUploadProbe`. Usa todas as amostras com mbps>0.
+  const valid = samples.filter((s) => s.mbps > 0);
+  const throughputMbps = valid.length > 0 ? mean(valid.map((s) => s.mbps)) : 0;
+  const peakMbps = valid.length > 0 ? Math.max(...valid.map((s) => s.mbps)) : 0;
+  const cv = throughputMbps > 0 ? stddev(valid.map((s) => s.mbps)) / throughputMbps : 1;
+  const stabilityScore = Math.round(Math.max(0, Math.min(100, 100 - cv * 150)));
+
+  // Catastrófico: nem o round mínimo (64 KB) completou. Aí sim falha real.
+  if (valid.length === 0) {
     throw Object.assign(new Error('upload_failed'), { code: 'upload_failed' as const });
   }
 

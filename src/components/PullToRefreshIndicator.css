@@ -1,0 +1,76 @@
+/* PullToRefreshIndicator — pill flutuante abaixo do TopBar com spinner.
+ *
+ * Posicionamento: fixed top, centralizado por `left: 50%` + transform
+ * translateX(-50%). A transform Y é controlada via inline style (pelo
+ * componente) para acompanhar o gesto.
+ *
+ * Sem box-shadow — regra do projeto. A separação do conteúdo vem de
+ * `var(--surface-deep)` (mesmo tom dos cards) + `border 1px var(--border)`.
+ */
+
+.lk-ptr {
+  position: fixed;
+  top: calc(var(--safe-top) + 56px);
+  left: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  z-index: 100;
+  /* `transform` é setada inline pelo componente com translate(-50%, …px).
+     `will-change` reduz jank durante o pull (rápido) — descansa quando o
+     pill volta ao estado inativo. */
+  will-change: transform, opacity;
+}
+
+.lk-ptr--ready {
+  border-color: var(--accent-border);
+}
+
+/* Spinner SVG — base. */
+
+.lk-ptr__spinner {
+  display: block;
+}
+
+/* Quando refreshing, anima rotação contínua do SVG inteiro. O arco em si
+   já tem `dasharray` fixo no JSX (75% do perímetro = visível ¾ do anel),
+   então a rotação dá o "running" clássico de spinner indeterminado. */
+
+.lk-ptr__spinner--refreshing {
+  animation: lk-ptr-spin 1s linear infinite;
+}
+
+@keyframes lk-ptr-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Sr-only — texto alternativo para screen readers. Visualmente oculto
+   sem `display: none` (mantém leitura assistiva). */
+
+.lk-ptr__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Reduced motion: para a rotação contínua. O arco do pre-refresh ainda
+   reage ao pull (cresce conforme o dedo) — isso não é "motion" no sentido
+   de animação automática, é resposta direta ao input do usuário. */
+
+@media (prefers-reduced-motion: reduce) {
+  .lk-ptr__spinner--refreshing {
+    animation: none;
+  }
+}

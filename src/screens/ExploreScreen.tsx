@@ -22,6 +22,8 @@ interface Props {
   onStartComparison?: () => void;
   onStartBeforeAfter?: () => void;
   onShowLocalWifiDiagnostics?: () => void;
+  /** Reseta a flag `linka.onboarding.done` e reabre o tutorial inicial. */
+  onResetOnboarding?: () => void;
 }
 
 /**
@@ -53,6 +55,7 @@ export function ExploreScreen({
   onStartComparison,
   onStartBeforeAfter,
   onShowLocalWifiDiagnostics,
+  onResetOnboarding,
 }: Props) {
   const showToolsSection = !!(
     onStartComparison || onStartRoomTest || onStartBeforeAfter || onShowLocalWifiDiagnostics
@@ -86,6 +89,7 @@ export function ExploreScreen({
         contractedUp={contractedUp}
         onUpdateContracted={onUpdateContracted}
         showContracted={false}
+        onResetOnboarding={onResetOnboarding}
       />
 
       <div className="lk-explore__scroll" ref={scrollContainerRef}>

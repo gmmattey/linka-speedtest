@@ -17,6 +17,7 @@ Linka SpeedTest/
 │   ├── GuiaSelecaoModeloIA.md
 │   ├── DocumentacaoFuncionalSistema.md
 │   ├── DocumentacaoTecnicaSistema.md
+│   ├── CI-CD.md                  ← CI/CD GitHub Actions (PWA + Capacitor APK) — setup secrets, keystore, Cloudflare Pages (2026-05)
 │   ├── EvolucaoSpeedTest.md      ← Roadmap e features futuras do produto
 │   ├── EvolucaoTelaDesktop.md    ← Design de telas desktop (prototipagem aprovada)
 │   ├── PendenciasLayout.md       ← Backlog de melhorias de layout e UX
@@ -24,6 +25,11 @@ Linka SpeedTest/
 │   ├── RecomendacaoEquipamentos.md ← Plano de monetização: recomendação de equipamentos
 │   └── mockups/                  ← Protótipos HTML estáticos aprovados (não versionados em prod)
 │       └── recomendacoes_empty_state.html  ← Empty-state positivo da RecommendScreen (aprovado 2026-05-02)
+│
+├── .github/                      ← Pipelines GitHub Actions (2026-05)
+│   └── workflows/
+│       ├── ci.yml                ← Lint + test + build em todo push/PR contra main
+│       └── release.yml           ← Tag v* dispara deploy Cloudflare Pages + build APK assinado
 │
 ├── public/                       ← Assets estáticos (copiados verbatim para dist/)
 │   ├── logo.png                  ← Logo oficial linka (fonte: D:\Projetos\LINKA\...)
@@ -36,8 +42,10 @@ Linka SpeedTest/
 │   ├── app/                      ← Módulo Android do APK
 │   │   └── src/main/java/br/com/linka/speedtest/
 │   │       ├── MainActivity.java                 ← BridgeActivity; registra plugins inline
-│   │       └── wifi/                              ← Plugins Capacitor internos do projeto
-│   │           └── LinkaWifiDiagnosticsPlugin.java ← Diagnóstico Wi-Fi nativo (2026-05)
+│   │       ├── wifi/                              ← Plugins Capacitor internos do projeto
+│   │       │   └── LinkaWifiDiagnosticsPlugin.java ← Diagnóstico Wi-Fi nativo (2026-05)
+│   │       └── packetloss/                        ← Plugin Capacitor packet loss (2026-05)
+│   │           └── PacketLossPlugin.java          ← Mede perda de pacotes via UDP (Android-only)
 │   ├── gradle/                   ← Gradle Wrapper versionado
 │   ├── build.gradle
 │   ├── settings.gradle
@@ -66,21 +74,25 @@ Linka SpeedTest/
 │   │   ├── BackButton.tsx / .css ← Botão voltar (chevron em pill 36×36) — Bloco 5 TopBar
 │   │   ├── BottomSheet.tsx / .css
 │   │   ├── Chip.tsx / .css       ← Badge/chip com variantes semânticas (good/maybe/bad/accent/neutral)
+│   │   ├── Skeleton.tsx / .css   ← Placeholder com shimmer para loading states (App fallback, WifiSignalSection, DNSGuideSheet) — 2026-05
 │   │   ├── DraggableSheet.tsx / .css ← Base universal de bottom sheet com drag-to-resize (snap 60vh/88vh) — refator 2026-05
 │   │   ├── Gauge.tsx / .css      ← Anel SVG com fase + número hero + unidade
 │   │   ├── HamburgerMenu.tsx / .css
 │   │   ├── IconButton.tsx / .css ← Ação circular do TopBar (mesmo padrão visual do BackButton)
-│   │   ├── IOSList.tsx / .css    ← Lista estilo iOS Settings (ícone + título + trailing)
+│   │   ├── InfoTooltip.tsx / .css ← Botão "?" inline com balão flutuante explicativo (a11y/educacional, 2026-05)
+│   │   ├── IOSList.tsx / .css    ← Lista estilo iOS Settings (ícone + título + trailing) — `titleAfter` aceita `<InfoTooltip>` (2026-05)
 │   │   ├── LiveChart.tsx / .css  ← Sparkline ao vivo (RunningScreen, Bloco Motion 2026-05)
 │   │   ├── PageHeader.tsx / .css ← Título grande no início do scroll — Bloco 5 TopBar
 │   │   ├── PathRow.tsx / .css
+│   │   ├── PullToRefreshIndicator.tsx / .css ← Pill flutuante do pull-to-refresh universal (2026-05)
 │   │   ├── PwaUpdatePrompt.tsx / .css ← Banner "Nova versão disponível" do Service Worker (atualização ágil, 2026-05)
 │   │   ├── TopBar.tsx / .css     ← Header glass-on-scroll universal — Bloco 5 TopBar (2026-05)
-│   │   └── icons.tsx             ← Biblioteca centralizada de SVGs inline
+│   │   └── icons.tsx             ← Biblioteca centralizada de SVGs inline (inclui `ConnectionIcon` consumido em PathRow, HistoryScreen lista/detalhe e ResultScreen banner — Bug-fix 2026-05 rede móvel)
 │   │
 │   ├── hooks/                    ← React hooks (estado derivado, efeitos externos)
 │   │   ├── useCountUp.ts         ← Animação count-up com easeOutCubic (Bloco Motion 2026-05)
-│   │   ├── useDeviceInfo.ts      ← Device UA + navigator.connection + ServerInfo
+│   │   ├── useDeviceInfo.ts      ← Device UA + cascata Capacitor APK → navigator.connection → fallback (Bug-fix 2026-05 — rede móvel/Wi-Fi) + ServerInfo
+│   │   ├── usePullToRefresh.ts   ← Gesto pull-to-refresh universal (touch + pointer) com threshold/resistência (2026-05)
 │   │   ├── useScrollHeader.ts    ← IntersectionObserver para glass effect + título do TopBar (Bloco 5)
 │   │   ├── useSettings.ts        ← Settings persistidas em localStorage
 │   │   └── useSpeedTest.ts       ← Orquestra runSpeedTest, expõe fase/progresso/resultado
@@ -90,10 +102,11 @@ Linka SpeedTest/
 │   │   ├── RunningScreen.tsx / .css
 │   │   ├── ResultScreen.tsx / .css       ← Inclui card unificado de Diagnóstico (2 estados) + section "Mais detalhes" com 3 rows clicáveis (Avançado / Modo Gamer / DNS) que abrem bottom sheets dedicados — refator drag-to-resize 2026-05
 │   │   ├── HistoryScreen.tsx / .css
-│   │   ├── ComparisonScreen.tsx / .css
-│   │   ├── BeforeAfterScreen.tsx / .css
-│   │   ├── RoomTestScreen.tsx / .css
-│   │   └── ExploreScreen.tsx / .css      ← Hub reduzido a 2 sections: Histórico + Ferramentas (refator 2026-05)
+│   │   ├── ComparisonScreen.tsx / .css   ← lazy chunk (code split 2026-05)
+│   │   ├── BeforeAfterScreen.tsx / .css  ← lazy chunk (code split 2026-05)
+│   │   ├── RoomTestScreen.tsx / .css     ← lazy chunk (code split 2026-05)
+│   │   ├── ExploreScreen.tsx / .css      ← Hub reduzido a 2 sections: Histórico + Ferramentas (refator 2026-05); lazy chunk (code split 2026-05)
+│   │   └── OnboardingScreen.tsx / .css   ← Carousel de 3 cards exibido na primeira execução (gate via `linka.onboarding.done` em localStorage); lazy chunk (code split 2026-05)
 │   │   # Telas removidas no refator de arquitetura 2026-05 (stubbed,
 │   │   # pendentes de `git rm`):
 │   │   # - DiagnosticScreen → card de Diagnóstico na ResultScreen
@@ -105,6 +118,9 @@ Linka SpeedTest/
 │   │
 │   ├── utils/                    ← Funções puras / lógica de domínio (sem React) — específicas do PWA
 │   │   ├── anatelColor.ts        ← anatelGrade() + anatelGradeColorVar/GlowVar; cores semânticas Anatel (Resolução 717/2019) p/ DL/UL na ResultScreen quando plano cadastrado (2026-05)
+│   │   ├── anatelReport.ts       ← isAnatelComplaintEligible() + generateAnatelReport() — detecção de elegibilidade + PDF formal de denúncia Anatel (2026-05)
+│   │   ├── historyTrends.ts      ← computeWeeklyTrend() / computeMonthlyTrend() / describeTrend() — comparação inteligente entre janelas do histórico (2026-05)
+│   │   ├── appRefresh.ts         ← performAppRefresh() — orquestra pull-to-refresh: SW update OU reloadDeviceInfo + min duration 600ms (2026-05)
 │   │   ├── classifier.ts         ← Classificação de qualidade + diagnóstico (legado, em coexistência com src/core)
 │   │   ├── cloudflareSpeedTest.ts ← Primitivas HTTP: cfDownloadStream, cfPing, cfUploadChunk (Motor v2)
 │   │   ├── connectionProfile.ts  ← Mapeamento ConnectionType → ConnectionProfile (Anatel)
@@ -124,7 +140,8 @@ Linka SpeedTest/
 │   │   ├── shareCard.ts          ← generateShareCard(); PNG 1080×1080 via Canvas API (Bloco 3 Polimento, 2026-05 — refatorado para quadrado com headline + ISP)
 │   │   ├── speedTestOrchestrator.ts ← runSpeedTestV2(); coordena latência+DL+UL com bufferbloat integrado
 │   │   ├── combinedDiagnosis.ts  ← combineDiagnostics(); cruza SpeedTestResult + dados opcionais Wi-Fi/móvel → diagnóstico unificado
-│   │   └── uploadProbe.ts        ← Motor de upload time-based com XHR onprogress (Motor v2)
+│   │   ├── uploadProbe.ts        ← Motor de upload time-based com XHR onprogress (Motor v2) + `runAdaptiveUploadProbe()` em rodadas progressivas para `mobile_broadband` (Bug-fix 2026-05 — uplink <2 Mbps)
+│   │   └── packetLoss.ts         ← Bridge web → plugin Capacitor PacketLoss (Android UDP) com fallback `{ available: false }` no PWA web — 2026-05
 │   │
 │   └── core/                     ← Motor de decisão único (puro, sem React/DOM/localStorage)
 │       ├── types.ts              ← Tipos do contrato do motor (UseCaseId, InterpretedResult, etc.)
@@ -144,6 +161,7 @@ Linka SpeedTest/
 │   ├── copyDictionary.test.ts
 │   ├── dnsProbe.test.ts          ← identifyDnsProvider (Fase B DNS, 2026-05)
 │   ├── dnsTiming.test.ts         ← classifyDnsLatency + dnsLatencyLabel (Fase A DNS, 2026-05)
+│   ├── historyTrends.test.ts     ← computeWeeklyTrend / computeMonthlyTrend / describeTrend (2026-05)
 │   ├── interpret.test.ts
 │   ├── LocalWifiService.test.ts
 │   ├── share.test.ts
@@ -289,8 +307,13 @@ src/
 │       ├── LocalWifiService.ts
 │       ├── useLocalWifi.ts            ← hook on-demand (LocalWifiScreen)
 │       ├── useWifiDiagnostics.ts      ← hook auto-fetch (card embutido) — 2026-05
-│       ├── WifiSignalCard.tsx         ← card embutido na ResultScreen — 2026-05
-│       ├── WifiSignalCard.css         ← estilo do card embutido — 2026-05
+│       ├── wifiSignal.ts              ← helpers rssiToPercent/signalQualityColor — 2026-05
+│       ├── WifiSignalCard.tsx         ← @deprecated 2026-05 — substituído por WifiSignalSection/Bar; mantido sem usuários
+│       ├── WifiSignalCard.css         ← estilo do card legado — 2026-05
+│       ├── WifiSignalBar.tsx          ← barra horizontal de qualidade (substituiu o card 4 cells) — 2026-05
+│       ├── WifiSignalBar.css          ← estilo da barra — 2026-05
+│       ├── WifiSignalSection.tsx      ← orquestrador na ResultScreen (loading/permission/unavailable/bar) — 2026-05
+│       ├── WifiSignalSection.css      ← estados não-disponíveis da seção — 2026-05
 │       ├── WifiDetailsSheet.tsx      ← bottom sheet "premium" — refator 2026-05
 │       ├── WifiDetailsSheet.css      ← estilo do sheet de detalhes — refator 2026-05
 │       ├── WifiOptimizeSheet.tsx     ← tutorial de otimização (3 categorias) — 2026-05
@@ -300,7 +323,8 @@ src/
 │       ├── LocalWifiScreen.tsx
 │       └── LocalWifiScreen.css
 └── __tests__/
-    └── LocalWifiService.test.ts
+    ├── LocalWifiService.test.ts
+    └── wifiSignal.test.ts             ← cobre rssiToPercent + signalQualityColor — 2026-05
 ```
 
 ### Estrutura adicionada — Feature DNS (refator arquitetura 2026-05)

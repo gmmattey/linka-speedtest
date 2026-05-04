@@ -1,12 +1,20 @@
-import { useState } from 'react';
-import type { CSSProperties } from 'react';
+import { lazy, Suspense, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Icon } from '../../components/icons';
 import { DraggableSheet } from '../../components/DraggableSheet';
+import { InfoTooltip } from '../../components/InfoTooltip';
 import type { WifiDiagnosticResult, WifiQuality } from './types';
 import { ChannelQualityChart } from './ChannelQualityChart';
 import { wifiQualityLabel } from './LocalWifiService';
-import { WifiOptimizeSheet } from './WifiOptimizeSheet';
 import './WifiDetailsSheet.css';
+
+// Code splitting (2026-05): WifiOptimizeSheet é um sub-sheet acionado
+// pelo CTA "Como otimizar Wi-Fi". Carrega o chunk apenas quando o usuário
+// pede o tutorial — o sheet pai não precisa do conteúdo da otimização
+// para abrir.
+const WifiOptimizeSheet = lazy(() =>
+  import('./WifiOptimizeSheet').then((m) => ({ default: m.WifiOptimizeSheet })),
+);
 
 interface WifiDetailsSheetProps {
   isOpen: boolean;
@@ -106,14 +114,36 @@ export function WifiDetailsSheet({
                 value={rssi != null ? `${rssi}` : '—'}
                 unit={rssi != null ? 'dBm' : ''}
                 accent={signalColor(rssi)}
+                tooltip={
+                  <InfoTooltip
+                    label="RSSI: força do sinal Wi-Fi recebido pelo aparelho. Mais próximo de 0 é melhor. Acima de −60 dBm é forte; abaixo de −75 dBm já compromete a velocidade."
+                    ariaLabel="O que é Sinal Wi-Fi (RSSI)"
+                  />
+                }
               />
               <Metric
                 label="Velocidade do link"
                 value={linkSpeed != null ? `${linkSpeed}` : '—'}
                 unit={linkSpeed != null ? 'Mbps' : ''}
                 accent={linkSpeedColor(linkSpeed)}
+                tooltip={
+                  <InfoTooltip
+                    label="Taxa PHY negociada entre seu aparelho e o roteador. É o teto teórico da conexão Wi-Fi local — não da internet contratada."
+                    ariaLabel="O que é Velocidade do link"
+                  />
+                }
               />
-              <Metric label="Banda" value={bandText} unit="" />
+              <Metric
+                label="Banda"
+                value={bandText}
+                unit=""
+                tooltip={
+                  <InfoTooltip
+                    label="Frequência da rede. 2.4 GHz alcança mais longe mas é congestionado; 5 GHz é mais rápido e limpo, porém atravessa menos paredes."
+                    ariaLabel="O que é Banda Wi-Fi"
+                  />
+                }
+              />
               <Metric label="Canal" value={channel} unit="" />
             </section>
 
@@ -184,10 +214,12 @@ export function WifiDetailsSheet({
       </DraggableSheet>
 
       {optimizeOpen && (
-        <WifiOptimizeSheet
-          isOpen={optimizeOpen}
-          onClose={() => setOptimizeOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <WifiOptimizeSheet
+            isOpen={optimizeOpen}
+            onClose={() => setOptimizeOpen(false)}
+          />
+        </Suspense>
       )}
     </>
   );
@@ -198,13 +230,18 @@ interface MetricProps {
   value: string;
   unit: string;
   accent?: 'good' | 'warn' | 'error' | undefined;
+  /** Tooltip educacional opcional renderizado ao lado do label. */
+  tooltip?: ReactNode;
 }
 
-function Metric({ label, value, unit, accent }: MetricProps) {
+function Metric({ label, value, unit, accent, tooltip }: MetricProps) {
   const accentClass = accent ? ` lk-wifi-sheet__metric--${accent}` : '';
   return (
     <div className={`lk-wifi-sheet__metric${accentClass}`}>
-      <span className="lk-wifi-sheet__metric-label">{label}</span>
+      <span className="lk-wifi-sheet__metric-label">
+        {label}
+        {tooltip}
+      </span>
       <span className="lk-wifi-sheet__metric-value">
         {value}
         {unit && <span className="lk-wifi-sheet__metric-unit">{unit}</span>}

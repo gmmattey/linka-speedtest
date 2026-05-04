@@ -128,6 +128,7 @@ async function probeDnsLatency(signal: AbortSignal): Promise<number | null> {
 export async function runDNSBenchmark(
   signal: AbortSignal,
   onProgress?: (done: number, total: number, current: string) => void,
+  onServerComplete?: (server: DnsServerResult) => void,
 ): Promise<DnsBenchmarkResult> {
   const nativeDnsMs = await probeDnsLatency(signal);
   const results: DnsServerResult[] = [];
@@ -140,6 +141,10 @@ export async function runDNSBenchmark(
     const serverStart = performance.now();
     const result = await benchmarkServer(server, signal);
     results.push(result);
+    // Skeleton fade-in (2026-05): callback por servidor concluído permite à UI
+    // remover o placeholder daquele server progressivamente, sem precisar
+    // esperar todos terminarem.
+    onServerComplete?.(result);
 
     // Pacing mínimo entre servidores para UX
     const elapsed = performance.now() - serverStart;

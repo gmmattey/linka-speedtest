@@ -1,14 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../../components/icons';
 import { DraggableSheet } from '../../components/DraggableSheet';
+import { Skeleton } from '../../components/Skeleton';
 import type { SpeedTestResult } from '../../types';
 import {
   chooseDnsRecommendation,
   loadLastDnsResult,
   runDNSBenchmark,
   type DnsBenchmarkResult,
+  type DnsServerResult,
 } from '../../utils/dnsBenchmark';
 import './DNSGuideSheet.css';
+
+// Lista canônica usada para skeletons de loading. Ordem propositalmente
+// igual à de `SERVERS` em utils/dnsBenchmark.ts — assim o usuário vê o
+// loading na mesma ordem em que cada server completa.
+const SKELETON_SERVER_ORDER: ReadonlyArray<{ id: string; name: string }> = [
+  { id: 'cloudflare', name: 'Cloudflare' },
+  { id: 'google',     name: 'Google' },
+  { id: 'adguard',    name: 'AdGuard' },
+  { id: 'quad9',      name: 'Quad9' },
+  { id: 'opendns',    name: 'OpenDNS' },
+];
 
 type Platform = 'ios' | 'android' | 'router';
 
@@ -113,6 +126,10 @@ export function DNSGuideSheet({ open, onClose, result, benchmark }: Props) {
     () => benchmark ?? null,
   );
   const [running, setRunning] = useState(false);
+  // Skeleton fade-in (2026-05): tracking de servers completos durante o
+  // benchmark. Cada `onServerComplete` adiciona ao map; a `loading list`
+  // mostra skeleton para os faltantes. Reset ao reabrir o sheet.
+  const [progress, setProgress] = useState<Record<string, DnsServerResult>>({});
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [selectedServerId, setSelectedServerId] = useState<string | null>(null);
   const startedRef = useRef(false);
@@ -139,9 +156,18 @@ export function DNSGuideSheet({ open, onClose, result, benchmark }: Props) {
     const seed = loadLastDnsResult();
     if (seed) setInternalBench(seed);
 
+    // Reset do tracking incremental ao começar.
+    setProgress({});
+
     const ctrl = new AbortController();
     setRunning(true);
-    runDNSBenchmark(ctrl.signal)
+    runDNSBenchmark(
+      ctrl.signal,
+      undefined,
+      // Skeleton fade-in (2026-05): cada server completo entra no map de
+      // progress; a `loading list` remove o skeleton daquela linha.
+      (server) => setProgress((prev) => ({ ...prev, [server.id]: server })),
+    )
       .then((r) => setInternalBench(r))
       .catch(() => { /* ignora — seed continua válido */ })
       .finally(() => setRunning(false));
@@ -319,6 +345,36 @@ export function DNSGuideSheet({ open, onClose, result, benchmark }: Props) {
                   </span>
                 )}
               </div>
+            </section>
+          )}
+
+          {/* 2a. Loading list — skeleton enquanto o benchmark roda sem seed.
+                  Cada row some quando aquele server completa (callback
+                  `onServerComplete` do runDNSBenchmark). Só aparece
+                  quando `running && !effectiveBench` — assim que houver
+                  qualquer dado (seed ou primeiro server completo) ela
+                  cede vez aos pills normais. */}
+          {running && !effectiveBench && (
+            <section
+              className="lk-dns-sheet__loading-list"
+              aria-label="Comparando provedores"
+              aria-busy="true"
+            >
+              {SKELETON_SERVER_ORDER.map((s) => {
+                const done = progress[s.id];
+                return (
+                  <div key={s.id} className="lk-dns-sheet__loading-row">
+                    <span className="lk-dns-sheet__loading-name">{s.name}</span>
+                    {done ? (
+                      <span className="lk-dns-sheet__loading-value">
+                        {done.samples > 0 ? `${Math.round(done.p50)} ms` : '—'}
+                      </span>
+                    ) : (
+                      <Skeleton width={32} height={16} variant="pill" />
+                    )}
+                  </div>
+                );
+              })}
             </section>
           )}
 

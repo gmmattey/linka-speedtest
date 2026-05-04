@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { IOSList } from '../components/IOSList';
-import { Icon } from '../components/icons';
+import { Icon, ConnectionIcon } from '../components/icons';
 import { HamburgerMenu, HamburgerMenuIcon } from '../components/HamburgerMenu';
 import { TopBar } from '../components/TopBar';
 import { PageHeader } from '../components/PageHeader';
@@ -23,10 +23,24 @@ import { toConnectionProfile } from '../utils/connectionProfile';
 import { anatelGrade, anatelGradeColorVar, anatelGradeGlowVar } from '../utils/anatelColor';
 import { classifyDnsLatency } from '../utils/dnsTiming';
 import { aggregateDiagnosisSeverity, buildDiagnosisItems, type DiagnosisAggregate, type DiagnosisItem } from '../utils/diagnosisItems';
-import { WifiSignalCard } from '../features/local-wifi/WifiSignalCard';
-import { DNSGuideSheet } from '../features/dns/DNSGuideSheet';
-import { AdvancedSheet } from '../features/result-detail/AdvancedSheet';
-import { GamerSheet } from '../features/result-detail/GamerSheet';
+import { WifiSignalSection } from '../features/local-wifi/WifiSignalSection';
+import { InfoTooltip } from '../components/InfoTooltip';
+
+// Code splitting (2026-05): as 3 sheets de "Mais detalhes" são pesadas e
+// só são vistas quando o usuário toca em uma das rows. Lazy + montagem
+// condicional faz cada chunk baixar apenas no primeiro acesso.
+// Importante: o mount agora é feito dentro do bloco `{activeSheet === 'x'
+// && (<Suspense><X .../></Suspense>)}` — caso contrário o React.lazy
+// dispararia o download no mount da ResultScreen, sem ganho real.
+const DNSGuideSheet = lazy(() =>
+  import('../features/dns/DNSGuideSheet').then((m) => ({ default: m.DNSGuideSheet })),
+);
+const AdvancedSheet = lazy(() =>
+  import('../features/result-detail/AdvancedSheet').then((m) => ({ default: m.AdvancedSheet })),
+);
+const GamerSheet = lazy(() =>
+  import('../features/result-detail/GamerSheet').then((m) => ({ default: m.GamerSheet })),
+);
 
 interface Props {
   theme: 'dark' | 'light';
@@ -462,7 +476,21 @@ export function ResultScreen({
           if (rel) parts.push(rel);
           // Sem peças, sem banner. Verdict não é mais chip aqui — é ribbon
           // do card abaixo, então não há motivo para manter linha vazia.
-          if (parts.length === 0) return null;
+          // Bug-fix 2026-05 (rede móvel): se não há peças textuais MAS temos
+          // connectionType conhecido, ainda renderizamos a barra apenas com
+          // o ícone — manter a referência visual da rede no card.
+          if (parts.length === 0 && !connectionType) return null;
+          // Ícone discreto Wi-Fi / Móvel / Cabo no canto direito (top do
+          // card unificado, abaixo do TopBar). Usa `connectionType` resolvido
+          // pelo `useDeviceInfo` (override manual aplicado em `App.tsx`).
+          // `unknown` não renderiza — preferível ausente que ícone errado.
+          const showConnIcon = connectionType === 'wifi'
+            || connectionType === 'mobile'
+            || connectionType === 'cable';
+          const connLabel =
+            connectionType === 'wifi'   ? 'Wi-Fi' :
+            connectionType === 'mobile' ? 'Rede móvel' :
+            connectionType === 'cable'  ? 'Cabo' : '';
           return (
             <div className="lk-result__context-bar" role="contentinfo">
               <span className="lk-result__context-bar-meta">
@@ -473,6 +501,16 @@ export function ResultScreen({
                   </span>
                 ))}
               </span>
+              {showConnIcon && (
+                <span
+                  className="lk-result__context-bar-conn"
+                  aria-label={`Conexão: ${connLabel}`}
+                  title={connLabel}
+                  style={{ color: 'var(--text-2)', display: 'inline-flex', marginLeft: 'auto' }}
+                >
+                  <ConnectionIcon kind={connectionType!} size={16} />
+                </span>
+              )}
             </div>
           );
         })()}
@@ -533,8 +571,17 @@ export function ResultScreen({
             número verde teria aura azul. O `· 97%` da linha plan ganha
             a mesma cor (sutilmente — só o número, nunca a fração). */}
         {(() => {
-          const dlAnatel = anatelGrade(result.dl, contractedDown, profile);
-          const ulAnatel = anatelGrade(result.ul, contractedUp,   profile);
+          // Bug-fix 2026-05 (mobile vs plano contratado): a Resolução Anatel
+          // 717/2019 trata banda larga fixa e móvel com regras distintas; em
+          // móvel a noção de "velocidade contratada" não se aplica do mesmo
+          // modo (planos celulares não vendem Mbps fixos contratados). Aqui,
+          // quando `profile === 'mobile_broadband'`, suprimimos a UI de
+          // plano (`/ X Mbps · Y%`) e revertemos as cores para `--dl`/`--ul`
+          // de marca. A função `anatelGrade()` continua funcional para móvel
+          // (60/20%) — esta é uma decisão de RENDERIZAÇÃO, não do modelo.
+          const isMobile = profile === 'mobile_broadband';
+          const dlAnatel = isMobile ? null : anatelGrade(result.dl, contractedDown, profile);
+          const ulAnatel = isMobile ? null : anatelGrade(result.ul, contractedUp,   profile);
 
           // Inline style respeita o `text-shadow !important` do CSS
           // setando `text-shadow` também com `!important` via property
@@ -563,6 +610,11 @@ export function ResultScreen({
             ? { color: anatelGradeColorVar(ulAnatel) }
             : undefined;
 
+          // Em móvel, ignora `contractedDown/Up` para fins de UI — mesmo
+          // que o usuário tenha cadastrado, a linha plan não aparece.
+          const showDlPlan = !isMobile && contractedDown != null && contractedDown > 0;
+          const showUlPlan = !isMobile && contractedUp   != null && contractedUp   > 0;
+
           return (
             <div className="lk-result__primary-block">
               <div className="lk-result__primary-cell">
@@ -570,11 +622,11 @@ export function ResultScreen({
                 <div className="lk-result__primary-cell-value" style={dlStyle}>
                   {formatMbps(animDl, unit)}
                 </div>
-                {contractedDown && contractedDown > 0 ? (
+                {showDlPlan ? (
                   <div className="lk-result__primary-cell-plan">
-                    <span className="lk-result__primary-cell-plan-frac">/ {formatMbps(contractedDown, unit)} {unitLabel}</span>
+                    <span className="lk-result__primary-cell-plan-frac">/ {formatMbps(contractedDown!, unit)} {unitLabel}</span>
                     <span className="lk-result__primary-cell-plan-sep" aria-hidden="true">·</span>
-                    <span className="lk-result__primary-cell-plan-pct" style={dlPctStyle}>{Math.round((result.dl / contractedDown) * 100)}%</span>
+                    <span className="lk-result__primary-cell-plan-pct" style={dlPctStyle}>{Math.round((result.dl / contractedDown!) * 100)}%</span>
                   </div>
                 ) : (
                   <div className="lk-result__primary-cell-unit">{unitLabel}</div>
@@ -601,11 +653,11 @@ export function ResultScreen({
                     <div className="lk-result__primary-cell-value" style={ulStyle}>
                       {formatMbps(animUl, unit)}
                     </div>
-                    {contractedUp && contractedUp > 0 ? (
+                    {showUlPlan ? (
                       <div className="lk-result__primary-cell-plan">
-                        <span className="lk-result__primary-cell-plan-frac">/ {formatMbps(contractedUp, unit)} {unitLabel}</span>
+                        <span className="lk-result__primary-cell-plan-frac">/ {formatMbps(contractedUp!, unit)} {unitLabel}</span>
                         <span className="lk-result__primary-cell-plan-sep" aria-hidden="true">·</span>
-                        <span className="lk-result__primary-cell-plan-pct" style={ulPctStyle}>{Math.round((result.ul / contractedUp) * 100)}%</span>
+                        <span className="lk-result__primary-cell-plan-pct" style={ulPctStyle}>{Math.round((result.ul / contractedUp!) * 100)}%</span>
                       </div>
                     ) : (
                       <div className="lk-result__primary-cell-unit">{unitLabel}</div>
@@ -632,44 +684,65 @@ export function ResultScreen({
           return (
             <div className="lk-result__secondary-block" style={gridStyle}>
               <div className="lk-result__secondary-cell">
-                <div className="lk-result__secondary-cell-label">Resposta</div>
+                <div className="lk-result__secondary-cell-label">
+                  Resposta
+                  <InfoTooltip
+                    label="Tempo até a primeira resposta do servidor. Quanto menor, melhor pra jogos e videochamadas."
+                    ariaLabel="O que é Resposta"
+                  />
+                </div>
                 <div className="lk-result__secondary-cell-value">
                   {formatMs(result.latency > 0 ? Math.max(0.1, animLat) : animLat)}
                   <span className="lk-result__secondary-cell-unit"> ms</span>
                 </div>
               </div>
               <div className="lk-result__secondary-cell">
-                <div className="lk-result__secondary-cell-label">Oscilação</div>
+                <div className="lk-result__secondary-cell-label">
+                  Oscilação
+                  <InfoTooltip
+                    label="Variação no tempo de resposta. Alta oscilação causa lag mesmo com latência baixa."
+                    ariaLabel="O que é Oscilação"
+                  />
+                </div>
                 <div className="lk-result__secondary-cell-value">
                   {formatMs(result.jitter > 0 ? Math.max(0.1, animJitter) : animJitter)}
                   <span className="lk-result__secondary-cell-unit"> ms</span>
                 </div>
               </div>
               <div className="lk-result__secondary-cell">
-                <div className="lk-result__secondary-cell-label">Falhas</div>
+                <div className="lk-result__secondary-cell-label">
+                  Falhas
+                  <InfoTooltip
+                    label="% de pacotes que não chegaram ao destino. Mais que 1% afeta jogos e chamadas."
+                    ariaLabel="O que é Falhas na conexão"
+                  />
+                  {result.packetLossSource !== 'native' && (
+                    /* Label "estimado" (2026-05) — transparência: o
+                       valor de packet loss no PWA web é heurístico
+                       (timeouts de ping HTTP). Plugin nativo Android
+                       sobrescreve com medição UDP real. */
+                    <span className="lk-result__secondary-cell-tag" aria-label="valor estimado">
+                      {' '}estimado
+                    </span>
+                  )}
+                </div>
                 <div className="lk-result__secondary-cell-value">
                   {Math.round(animLoss)}
                   <span className="lk-result__secondary-cell-unit"> %</span>
                 </div>
               </div>
               {showDnsCell && (
-                /* Atalho (2026-05, atualizado para drag-to-resize 2026-05):
-                   clique na cell DNS abre o DNSGuideSheet diretamente, sem
-                   precisar passar pela row "DNS" da section "Mais detalhes".
-                   Os dois caminhos continuam válidos. role/tabIndex/
-                   aria-label garantem acessibilidade. */
-                <div
-                  className="lk-result__secondary-cell lk-result__secondary-cell--clickable"
-                  role="button"
-                  tabIndex={0}
+                /* Atalho (2026-05): clique na cell DNS abre o DNSGuideSheet.
+                   A11y refator (2026-05): substituímos `<div role="button">`
+                   por `<button>` real — keyboard activation (Enter/Space) e
+                   focus ring vêm de graça do navegador, sem onKeyDown
+                   manual. `lk-result__secondary-cell--btn` reseta o estilo
+                   default de button para casar com as demais cells. */
+                <button
+                  type="button"
+                  className="lk-result__secondary-cell lk-result__secondary-cell--clickable lk-result__secondary-cell--btn"
                   aria-label="Abrir guia de Serviços de Internet (DNS)"
                   onClick={() => setActiveSheet('dns')}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setActiveSheet('dns');
-                    }
-                  }}
                 >
                   <div className="lk-result__secondary-cell-label">DNS</div>
                   <div className="lk-result__secondary-cell-value">
@@ -682,7 +755,7 @@ export function ResultScreen({
                       </>
                     )}
                   </div>
-                </div>
+                </button>
               )}
             </div>
           );
@@ -715,13 +788,19 @@ export function ResultScreen({
           </div>
         )}
 
-        {/* ── Wi-Fi signal card ─────────────────────────────────────────
-            Inserido entre a use-row e o "Diagnóstico da conexão" quando
+        {/* ── Wi-Fi signal section ──────────────────────────────────────
+            Inserida entre a use-row e o "Diagnóstico da conexão" quando
             a conexão atual é Wi-Fi. Lê dados nativos via bridge
             `LinkaWifiDiagnostics` (Capacitor); se o bridge não responde
-            (PWA puro ou APK sem o plugin), o card mostra a mensagem
-            "Wi-Fi: detalhes disponíveis somente no app instalado.". */}
-        {connectionType === 'wifi' && <WifiSignalCard />}
+            (PWA puro ou APK sem o plugin), mostra a mensagem
+            "Wi-Fi: detalhes disponíveis somente no app instalado.".
+
+            Refator 2026-05 (barra horizontal): a representação INLINE no
+            card unificado virou uma barra horizontal de qualidade do
+            sinal (`<WifiSignalBar>`) — header "WI-FI" + SSID/canal +
+            barra colorida (verde/amarelo/vermelho) + %. A `WifiDetailsSheet`
+            ao clicar continua mostrando os 4 dados completos. */}
+        {connectionType === 'wifi' && <WifiSignalSection connectionType={connectionType} />}
         </section>
 
         {/* ── Diagnóstico da conexão (refator 2026-05) ────────────────────
@@ -866,29 +945,35 @@ export function ResultScreen({
         </div>
       </div>
 
-      {/* Sheets de "Mais detalhes" (refator drag-to-resize 2026-05). As 3
-          são montadas fora do scroll-container porque são fixed/full-screen
-          e precisam cobrir o TopBar. Mount permanece — `open` controla a
-          visibilidade e o cleanup interno (DraggableSheet) cuida de body
-          scroll lock e Esc. */}
-      <AdvancedSheet
-        open={activeSheet === 'advanced'}
-        onClose={closeActiveSheet}
-        result={result}
-        server={server}
-        unit={unit}
-        history={history}
-      />
-      <GamerSheet
-        open={activeSheet === 'gamer'}
-        onClose={closeActiveSheet}
-        result={result}
-      />
-      <DNSGuideSheet
-        open={activeSheet === 'dns'}
-        onClose={closeActiveSheet}
-        result={result}
-      />
+      {/* Sheets de "Mais detalhes" (refator drag-to-resize 2026-05; lazy
+          2026-05). As 3 são montadas fora do scroll-container porque são
+          fixed/full-screen e precisam cobrir o TopBar. Cada uma é
+          envolvida em Suspense + render condicional pra que o chunk só
+          desça quando o usuário abrir a row correspondente. O cleanup
+          interno do DraggableSheet (body scroll lock, Esc) acontece
+          normalmente no unmount. */}
+      {activeSheet === 'advanced' && (
+        <Suspense fallback={null}>
+          <AdvancedSheet
+            open
+            onClose={closeActiveSheet}
+            result={result}
+            server={server}
+            unit={unit}
+            history={history}
+          />
+        </Suspense>
+      )}
+      {activeSheet === 'gamer' && (
+        <Suspense fallback={null}>
+          <GamerSheet open onClose={closeActiveSheet} result={result} />
+        </Suspense>
+      )}
+      {activeSheet === 'dns' && (
+        <Suspense fallback={null}>
+          <DNSGuideSheet open onClose={closeActiveSheet} result={result} />
+        </Suspense>
+      )}
     </div>
   );
 }

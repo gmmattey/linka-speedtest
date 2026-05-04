@@ -12,6 +12,11 @@ const SVG = (props: React.SVGProps<SVGSVGElement> & { size?: number }) => {
       strokeWidth="1.6"
       strokeLinecap="round"
       strokeLinejoin="round"
+      // A11y (2026-05): SVGs são decorativos; os labels textuais ao lado
+      // já comunicam significado. `aria-hidden` impede leitura duplicada
+      // pelo screen reader (label + ícone "imagem").
+      aria-hidden="true"
+      focusable="false"
       {...rest}
     />
   );

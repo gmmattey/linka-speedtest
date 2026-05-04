@@ -1,0 +1,106 @@
+/* InfoTooltip — botão "?" inline com balão flutuante.
+   Sem box-shadow (regra do projeto); contraste vem do `--surface-deep`. */
+
+.lk-info-tooltip {
+  display: inline-flex;
+  position: relative;
+  margin-left: 4px;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.lk-info-tooltip__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text-3);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    color var(--t-fast),
+    border-color var(--t-fast),
+    background var(--t-fast);
+}
+
+.lk-info-tooltip__trigger:hover,
+.lk-info-tooltip__trigger:focus-visible {
+  color: var(--text-2);
+  border-color: var(--text-2);
+  background: var(--surface-2);
+}
+
+.lk-info-tooltip__trigger[aria-expanded="true"] {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-tint);
+}
+
+/* Balão. 240px largura fixa, max-content para conteúdos curtos.
+   Mantém legibilidade com font-size 13px e line-height 1.4. */
+.lk-info-tooltip__bubble {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 240px;
+  max-width: min(240px, 80vw);
+  padding: 10px 14px;
+  background: var(--surface-deep);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 10px);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 400;
+  z-index: 1000;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: normal;
+  text-align: left;
+  /* `pointer-events: auto` redundante, mas explicita: o balão é interativo
+     pra permitir seleção de texto. */
+  pointer-events: auto;
+  /* Anima abertura, sem usar transform secondary p/ não confundir
+     posicionamento. */
+  animation: lk-info-tooltip-fade var(--transition-fast) ease-out;
+}
+
+.lk-info-tooltip__bubble--below {
+  top: calc(100% + 6px);
+}
+
+.lk-info-tooltip__bubble--above {
+  bottom: calc(100% + 6px);
+}
+
+@keyframes lk-info-tooltip-fade {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lk-info-tooltip__bubble {
+    animation: none;
+  }
+}
+
+/* Mobile narrow: o balão pode tocar a borda da tela. Limitamos via
+   `max-width: 80vw` acima; quando o `?` fica perto da borda, o
+   `transform: translateX(-50%)` continua centralizando — em telas muito
+   estreitas usuários veem o balão truncado. Aceitável tradeoff (sem
+   layout dinâmico complexo). */

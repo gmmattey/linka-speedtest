@@ -1,0 +1,50 @@
+/* ──────────────────────────────────────────────────────────────────────
+   Skeleton — placeholder com shimmer para estados de loading.
+
+   Regras do projeto:
+   - SEM box-shadow.
+   - Cores via CSS vars (--surface, --surface-2).
+   - prefers-reduced-motion → desliga animação, mantém cor estática.
+   ────────────────────────────────────────────────────────────────────── */
+
+.lk-skeleton {
+  display: inline-block;
+  vertical-align: middle;
+  background: linear-gradient(
+    90deg,
+    var(--surface) 25%,
+    var(--surface-2) 50%,
+    var(--surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: lk-skeleton-shimmer 1.5s linear infinite;
+  /* Garante que descendentes (raros) não vazem do raio. */
+  overflow: hidden;
+  /* Bloqueia seleção/cursor — é puramente visual. */
+  user-select: none;
+  pointer-events: none;
+}
+
+.lk-skeleton--rect {
+  border-radius: var(--radius-sm);
+}
+
+.lk-skeleton--pill {
+  border-radius: 999px;
+}
+
+.lk-skeleton--circle {
+  border-radius: 50%;
+}
+
+@keyframes lk-skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lk-skeleton {
+    background: var(--surface-2);
+    animation: none;
+  }
+}

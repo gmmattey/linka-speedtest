@@ -79,6 +79,13 @@ export interface SpeedTestResult {
   //   o teste todo. `undefined`/`false` em testes que mediram upload com
   //   sucesso ou em registros legados.
   ulFailed?: boolean;
+  // ── Origem do packet loss (2026-05) ────────────────────────────────
+  // packetLossSource indica como o `packetLoss` acima foi obtido.
+  //   - 'native':    plugin Capacitor PacketLoss (UDP real, Android APK).
+  //   - 'estimated': heurística do PWA web (timeouts de ping HTTP/CORS).
+  // `undefined` = não anotado (registros legados ou origem desconhecida).
+  // UI mostra label "estimado" quando ≠ 'native' para transparência.
+  packetLossSource?: 'native' | 'estimated';
 }
 
 export interface SpeedTestProgress {
@@ -135,6 +142,10 @@ export interface TestRecord {
   // Mantém o estado "upload não pôde ser medido" ao revisitar o teste pelo
   // histórico, evitando que `ul=0` seja exibido como "0,00 Mbps".
   ulFailed?: boolean;
+  // Origem do packet loss (2026-05) — propagado de SpeedTestResult.
+  // Permite que o histórico mostre o label "estimado" coerentemente ao
+  // revisitar testes anteriores.
+  packetLossSource?: 'native' | 'estimated';
 }
 
 export interface Classification {

@@ -33,7 +33,22 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: '/index.html',
       },
-      includeAssets: ['logo.png', 'icon-192.png', 'icon-512.png', 'icon-maskable-192.png', 'icon-maskable-512.png'],
+      // Audit 2026-05: includeAssets garante que todos os ícones cacheados
+      // pelo SW estejam disponíveis offline. Mantém favicon + svg + apple
+      // touch icons além dos PWA icons base.
+      includeAssets: [
+        'favicon.ico',
+        'icon.svg',
+        'logo.png',
+        'icon-192.png',
+        'icon-512.png',
+        'icon-maskable-192.png',
+        'icon-maskable-512.png',
+        'apple-touch-icon.png',
+        'touch-icon/ios/AppIcon@2x.png',
+        'touch-icon/ios/AppIcon@2x~ipad.png',
+        'touch-icon/ios/AppIcon-83.5@2x~ipad.png',
+      ],
       manifest: {
         name: 'linka SpeedTest',
         short_name: 'linka Speed',
@@ -50,11 +65,16 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         lang: 'pt-BR',
+        // Audit 2026-05: declara todos os tamanhos disponíveis em public/.
+        // SVG vetor adicional ajuda user agents modernos a zoom sem aliasing.
+        // 192/512 (any + maskable) são os tamanhos obrigatórios para
+        // install criteria do Chrome/Android.
         icons: [
           { src: '/icon-192.png',          sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: '/icon-512.png',          sizes: '512x512', type: 'image/png', purpose: 'any' },
           { src: '/icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
           { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/icon.svg',              sizes: 'any',     type: 'image/svg+xml', purpose: 'any' },
         ],
       },
     }),

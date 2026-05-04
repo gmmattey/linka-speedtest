@@ -250,6 +250,42 @@
   font-size: 12px;
 }
 
+/* ── Loading list — skeleton enquanto benchmark roda sem seed.
+   5 rows verticais com nome do server + skeleton pill ou valor real.
+   Cede vez aos pills assim que `effectiveBench` aparece. */
+
+.lk-dns-sheet__loading-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.lk-dns-sheet__loading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  min-height: 32px;
+}
+
+.lk-dns-sheet__loading-name {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.lk-dns-sheet__loading-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--text);
+}
+
 /* ── Pills outros servidores ───────────────────── */
 
 .lk-dns-sheet__pills {

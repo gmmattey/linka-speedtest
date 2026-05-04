@@ -1,21 +1,47 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StartScreen } from './screens/StartScreen';
 import { RunningScreen } from './screens/RunningScreen';
 import { ResultScreen } from './screens/ResultScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
-import { ComparisonScreen, type ComparisonStep } from './screens/ComparisonScreen';
-import { BeforeAfterScreen, type BeforeAfterStep } from './screens/BeforeAfterScreen';
-import { RoomTestScreen } from './screens/RoomTestScreen';
-import { ExploreScreen } from './screens/ExploreScreen';
-import { LocalWifiScreen } from './features/local-wifi/LocalWifiScreen';
+import type { ComparisonStep } from './screens/ComparisonScreen';
+import type { BeforeAfterStep } from './screens/BeforeAfterScreen';
 import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
+import { Skeleton } from './components/Skeleton';
 import { useDeviceInfo } from './hooks/useDeviceInfo';
 import { useSpeedTest } from './hooks/useSpeedTest';
 import { useSettings } from './hooks/useSettings';
 import { appendRecord, previousRecord, recordToResult } from './utils/history';
 import { averageSpeedResults } from './utils/provaReal';
+import { performAppRefresh } from './utils/appRefresh';
 import { getCapabilities } from './platform/capabilities';
 import type { SpeedTestResult, TestRecord } from './types';
+
+// Code splitting (2026-05): screens secundárias e o overlay de onboarding
+// vão para chunks separados via React.lazy. StartScreen/RunningScreen/
+// ResultScreen/HistoryScreen permanecem eager — são o caminho principal
+// do app e qualquer atraso seria perceptível na primeira interação.
+//
+// Cada componente lazy expõe um named export (`export function X`) — por
+// isso o wrapper `.then(m => ({ default: m.X }))` adapta para a forma que
+// React.lazy exige (módulo com `default`).
+const ComparisonScreen = lazy(() =>
+  import('./screens/ComparisonScreen').then((m) => ({ default: m.ComparisonScreen })),
+);
+const BeforeAfterScreen = lazy(() =>
+  import('./screens/BeforeAfterScreen').then((m) => ({ default: m.BeforeAfterScreen })),
+);
+const RoomTestScreen = lazy(() =>
+  import('./screens/RoomTestScreen').then((m) => ({ default: m.RoomTestScreen })),
+);
+const ExploreScreen = lazy(() =>
+  import('./screens/ExploreScreen').then((m) => ({ default: m.ExploreScreen })),
+);
+const LocalWifiScreen = lazy(() =>
+  import('./features/local-wifi/LocalWifiScreen').then((m) => ({ default: m.LocalWifiScreen })),
+);
+const OnboardingScreen = lazy(() =>
+  import('./screens/OnboardingScreen').then((m) => ({ default: m.OnboardingScreen })),
+);
 
 // Refator 2026-05: 6 telas consolidadas no ResultScreen / removidas:
 //   diagnostic / recommend / gamer / dnsbenchmark / dnsguide / details.
@@ -25,6 +51,7 @@ import type { SpeedTestResult, TestRecord } from './types';
 type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter' | 'roomtest' | 'explore' | 'localwifi';
 
 const THEME_KEY = 'linka.speedtest.theme';
+const ONBOARDING_KEY = 'linka.onboarding.done';
 const SWIPE_THRESHOLD_PX = 80;
 const SWIPE_AXIS_RATIO = 1.5;
 
@@ -36,8 +63,19 @@ function readInitialTheme(): 'dark' | 'light' {
   return 'dark';
 }
 
+function readOnboardingDone(): boolean {
+  try {
+    return localStorage.getItem(ONBOARDING_KEY) === '1';
+  } catch { /* ignore */ }
+  return false;
+}
+
 export default function App() {
   const [theme, setTheme] = useState<'dark' | 'light'>(readInitialTheme);
+  // Onboarding (primeira execução, 2026-05): true → não mostra. Flag em
+  // localStorage `linka.onboarding.done`. Reset disponível pelo
+  // HamburgerMenu da ExploreScreen ("Ver tutorial novamente").
+  const [onboardingDone, setOnboardingDone] = useState<boolean>(readOnboardingDone);
   const { settings, update: updateSettings } = useSettings();
   const [screen, setScreen] = useState<Screen>(() => previousRecord() ? 'result' : 'start');
   const [previous, setPrevious] = useState<TestRecord | null>(null);
@@ -392,6 +430,26 @@ export default function App() {
   const handleExplore = useCallback(() => goTo('explore'), [goTo]);
   const handleShowLocalWifiDiagnostics = useCallback(() => goTo('localwifi'), [goTo]);
 
+  // Onboarding (2026-05): completar marca a flag e nunca mais aparece;
+  // resetar (item "Ver tutorial novamente" no HamburgerMenu) limpa a flag
+  // e força o overlay a renderizar de novo.
+  const handleOnboardingComplete = useCallback(() => {
+    try { localStorage.setItem(ONBOARDING_KEY, '1'); } catch { /* ignore */ }
+    setOnboardingDone(true);
+  }, []);
+  const handleResetOnboarding = useCallback(() => {
+    try { localStorage.removeItem(ONBOARDING_KEY); } catch { /* ignore */ }
+    setOnboardingDone(false);
+  }, []);
+
+  // Pull-to-refresh universal (2026-05) — handler compartilhado entre
+  // StartScreen e HistoryScreen. Combina update do Service Worker (se
+  // houver versão pendente) com re-fetch de IP/ISP/connection type.
+  const handleAppRefresh = useCallback(
+    () => performAppRefresh({ reloadDeviceInfo: deviceInfo.reload }),
+    [deviceInfo.reload],
+  );
+
   const capabilities = useMemo(() => getCapabilities(), []);
 
   // ── Swipe lateral (back/forward) ─────────────────────────
@@ -522,6 +580,7 @@ export default function App() {
             onStartComparison={handleStartComparison}
             onStartBeforeAfter={handleStartBeforeAfter}
             onShowLocalWifiDiagnostics={capabilities.localWifiDiagnostics ? handleShowLocalWifiDiagnostics : undefined}
+            onResetOnboarding={handleResetOnboarding}
           />
         );
       case 'localwifi':
@@ -534,6 +593,7 @@ export default function App() {
             unit={settings.unit}
             initialSelectedId={historyInitialId}
             onBack={goToReturnTarget}
+            onRefresh={handleAppRefresh}
           />
         );
       case 'start':
@@ -555,6 +615,7 @@ export default function App() {
             onShowLastResult={handleShowLastResult}
             onShowHistory={handleShowHistory}
             onExplore={handleExplore}
+            onRefresh={handleAppRefresh}
           />
         );
     }
@@ -568,6 +629,7 @@ export default function App() {
     handleStartBeforeAfter, handleBAStartBefore, handleBAStartAfter, handleBARetry,
     handleStartProvaReal, handleOpenRoomTest, handleRoomStart,
     handleExplore, handleShowLocalWifiDiagnostics,
+    handleAppRefresh, handleResetOnboarding,
     goBack, goToReturnTarget, capabilities.localWifiDiagnostics,
     settings, updateSettings, testMode,
     comparisonStep, comparisonNear, comparisonFar,
@@ -577,10 +639,60 @@ export default function App() {
 
   return (
     <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-      <div key={screen} className="screen-enter">
-        {view}
+      {/* A11y (2026-05): skip-to-main-content link — invisível visualmente,
+          materializa no foco por teclado. Pula TopBar/back/menu e leva
+          direto pro container principal. */}
+      <a className="lk-skip-link" href="#main-content">
+        Pular para o conteúdo
+      </a>
+      <div key={screen} className="screen-enter" id="main-content">
+        <Suspense fallback={<ScreenLoadingFallback />}>{view}</Suspense>
       </div>
+      {!onboardingDone && (
+        <Suspense fallback={null}>
+          <OnboardingScreen onComplete={handleOnboardingComplete} />
+        </Suspense>
+      )}
       <PwaUpdatePrompt />
+    </div>
+  );
+}
+
+/**
+ * Fallback enquanto um chunk lazy de tela secundária carrega.
+ *
+ * Substitui o antigo "Carregando…" plano por um skeleton (TopBar pill +
+ * título + 2 cards) que aproxima o layout esperado da maioria das telas.
+ * Mantém a "respiração" do shimmer dentro de `prefers-reduced-motion`
+ * (cor estática). Não tenta replicar exatamente cada tela — só dá ao
+ * olho um esqueleto reconhecível em vez de texto.
+ */
+function ScreenLoadingFallback() {
+  return (
+    <div
+      style={{
+        height: '100dvh',
+        background: 'var(--bg)',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 'calc(var(--safe-top, 0px) + 12px) 16px 16px',
+        gap: 16,
+      }}
+      role="status"
+      aria-live="polite"
+      aria-label="Carregando tela"
+    >
+      {/* TopBar approx: pill 36×36 (back) + título central + ação direita */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <Skeleton width={36} height={36} variant="circle" />
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          <Skeleton width={140} height={16} variant="pill" />
+        </div>
+        <Skeleton width={36} height={36} variant="circle" />
+      </div>
+      <div style={{ height: 8 }} />
+      <Skeleton width="100%" height={80} />
+      <Skeleton width="100%" height={60} />
     </div>
   );
 }

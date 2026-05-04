@@ -265,12 +265,25 @@
 
 /* Variante clicável (cell DNS, atalho 2026-05): mantém o layout idêntico
    às outras cells — só sinaliza interatividade via cursor + leve
-   destaque do label no hover/focus. Sem box-shadow (regra do projeto). */
+   destaque do label no hover/focus. Sem box-shadow (regra do projeto).
+   A11y 2026-05: virou `<button>` real; reset de aparência default para
+   casar com as demais cells (`--btn`). */
 .lk-result__secondary-cell--clickable {
   cursor: pointer;
   border-radius: 6px;
   transition: background var(--t-fast);
-  outline: none;
+}
+
+.lk-result__secondary-cell--btn {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  width: 100%;
 }
 
 .lk-result__secondary-cell--clickable:hover .lk-result__secondary-cell-label,
@@ -308,6 +321,20 @@
   font-size: 10px;
   color: var(--text-3);
   margin-left: 2px;
+}
+
+/* Tag "estimado" (2026-05) — sub-label discreto na cell de Falhas
+   quando packet loss não foi medido nativamente. Cor `--text-3` para
+   ficar perceptível sem competir com o valor; tamanho 9px, sem
+   uppercase (a label-mãe já é uppercase). */
+.lk-result__secondary-cell-tag {
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: lowercase;
+  letter-spacing: 0;
+  color: var(--text-3);
+  font-style: italic;
 }
 
 @media (min-width: 600px) {
