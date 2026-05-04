@@ -73,17 +73,17 @@ export function identifyDnsProvider(ip: string): string {
  *
  * Fluxo:
  * 1. `t0 = performance.now()`
- * 2. fetch DoH JSON
+ * 2. fetch DoH JSON a https://cloudflare-dns.com/dns-query?name=whoami.cloudflare.com
  * 3. `latencyMs = round(now - t0)` — só atribuído se o fetch teve sucesso
- * 4. parsing do `Answer[0].data` → IP do resolver → provider via
- *    `identifyDnsProvider()`
+ * 4. parsing do `Answer[]` array → busca pelo campo "remote_ip:" → IP do resolver →
+ *    provider via `identifyDnsProvider()`
  *
  * Nunca lança. Em qualquer falha (CORS, offline, timeout, parse, !ok)
  * retorna `{ latencyMs: null, resolverIp: null, provider: null }` e
  * loga em `console.warn` com o motivo (ajuda debug em DevTools mobile).
  */
 export async function probeDnsResolver(signal?: AbortSignal): Promise<DnsProbeResult> {
-  const url = 'https://whoami.cloudflare-dns.com/dns-query?name=whoami.cloudflare&type=TXT';
+  const url = 'https://cloudflare-dns.com/dns-query?name=whoami.cloudflare.com&type=TXT';
   const start = performance.now();
   try {
     const response = await fetch(url, {
@@ -97,15 +97,27 @@ export async function probeDnsResolver(signal?: AbortSignal): Promise<DnsProbeRe
       return { latencyMs: null, resolverIp: null, provider: null };
     }
     const data = await response.json();
-    const raw = (data?.Answer?.[0]?.data ?? null) as string | null;
-    if (!raw) {
-      console.warn('[dnsProbe] resposta sem Answer[0].data:', data);
-      return { latencyMs, resolverIp: null, provider: null };
+
+    // Busca pelo campo "remote_ip" nas respostas TXT de whoami.cloudflare.com.
+    // Resposta típica tem vários TXT records: asn, country_code, remote_ip.
+    // Extrai o IP do campo remote_ip: <ipv4/ipv6>
+    const answers = (data?.Answer ?? []) as Array<{ data: string }>;
+    let resolverIp: string | null = null;
+
+    for (const answer of answers) {
+      const data_str = answer.data?.replace(/^"|"$/g, '') ?? '';
+      if (data_str.startsWith('remote_ip:')) {
+        // Formato: "remote_ip: xxx.xxx.xxx.xxx" ou "remote_ip: ipv6::addr"
+        resolverIp = data_str.replace(/^remote_ip:\s*/, '').trim();
+        break;
+      }
     }
-    const resolverIp = raw.replace(/^"|"$/g, '').trim();
+
     if (!resolverIp) {
+      console.warn('[dnsProbe] resposta sem remote_ip:', data);
       return { latencyMs, resolverIp: null, provider: null };
     }
+
     return { latencyMs, resolverIp, provider: identifyDnsProvider(resolverIp) };
   } catch (err) {
     // Aborto pelo orchestrator (cancelamento do teste) é cenário esperado:
