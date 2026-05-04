@@ -1,9 +1,12 @@
 import type { LocalWifiRawInfo, WifiDiagnosticResult } from './types';
 
-export function getUnavailableLocalWifiRawInfo(platform: LocalWifiRawInfo['platform'] = 'web'): LocalWifiRawInfo {
+export function getUnavailableLocalWifiRawInfo(
+  platform: LocalWifiRawInfo['platform'] = 'web',
+  overrides?: Partial<Pick<LocalWifiRawInfo, 'permissionStatus'>>,
+): LocalWifiRawInfo {
   return {
     available: false,
-    permissionStatus: 'unknown',
+    permissionStatus: overrides?.permissionStatus ?? 'unknown',
     platform,
   };
 }

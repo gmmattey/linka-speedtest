@@ -176,7 +176,9 @@ async function getLocalWifiRawInfo(): Promise<LocalWifiRawInfo> {
 
   const raw = await getLocalWifiRawInfoFromBridge();
   if (!raw.available) {
-    return getUnavailableLocalWifiRawInfo(raw.platform ?? 'unknown');
+    return getUnavailableLocalWifiRawInfo(raw.platform ?? 'unknown', {
+      permissionStatus: raw.permissionStatus,
+    });
   }
 
   return raw;
