@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { IOSList } from '../components/IOSList';
 import { Icon } from '../components/icons';
+import { TopBar } from '../components/TopBar';
+import { PageHeader } from '../components/PageHeader';
+import { useScrollHeader } from '../hooks/useScrollHeader';
 import './RoomTestScreen.css';
 
 const ROOM_PRESETS = ['Sala', 'Quarto', 'Escritório', 'Cozinha', 'Varanda', 'Garagem'];
@@ -20,18 +23,25 @@ export function RoomTestScreen({ onStart, onBack }: Props) {
     if (tag) onStart(tag);
   };
 
+  // Bloco 5 — TopBar System (2026-05).
+  const { scrolled, scrollContainerRef, sentinelRef } = useScrollHeader();
+
   return (
     <div className="lk-room">
-      <div className="lk-room__head">
-        <button className="lk-room__back" onClick={onBack}>‹ Voltar</button>
-        <span className="lk-room__head-label">Teste por local</span>
-      </div>
+      <TopBar
+        onBack={onBack}
+        scrolled={scrolled}
+        title="Teste por local"
+        showTitle={scrolled}
+      />
 
-      <div className="lk-room__scroll">
-        <div className="lk-room__hero">
-          <div className="lk-room__title">Selecione o cômodo</div>
-          <p className="lk-room__sub">O resultado ficará salvo com essa etiqueta no histórico.</p>
-        </div>
+      <div className="lk-room__scroll" ref={scrollContainerRef}>
+        <PageHeader
+          ref={sentinelRef}
+          size="md"
+          title="Teste por local"
+          subtitle="Selecione o cômodo. O resultado fica salvo com essa etiqueta no histórico."
+        />
 
         <IOSList
           items={ROOM_PRESETS.map((room) => ({

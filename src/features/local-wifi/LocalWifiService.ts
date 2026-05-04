@@ -31,6 +31,26 @@ export function channelFromFrequency(frequencyMhz?: number): number | undefined 
   return undefined;
 }
 
+/**
+ * Label em pt-BR para a qualidade do Wi-Fi. Função única usada por
+ * todas as telas que exibem qualidade ao usuário (LocalWifiScreen e
+ * WifiSignalCard) — proíbe strings em inglês na UI.
+ *
+ * Mantém a paridade com os labels usados nos chips de grade A-F dos
+ * use cases ("Excelente / Bom / Razoável / Fraco / Crítico").
+ */
+export function wifiQualityLabel(quality: WifiQuality): string {
+  switch (quality) {
+    case 'excellent': return 'Excelente';
+    case 'good':      return 'Bom';
+    case 'fair':      return 'Razoável';
+    case 'weak':      return 'Fraco';
+    case 'critical':  return 'Crítico';
+    case 'unknown':
+    default:          return 'Indisponível';
+  }
+}
+
 export function classifyWifiQuality(input: {
   rssiDbm?: number;
   linkSpeedMbps?: number;
@@ -166,7 +186,12 @@ export async function runLocalWifiDiagnostics(): Promise<WifiDiagnosticResult> {
   const raw = await getLocalWifiRawInfo();
 
   if (!raw.available) {
-    return getUnavailableWifiDiagnosticResult();
+    // Propaga permissionStatus/platform: a UI usa esses campos para
+    // distinguir "permissão negada" de "PWA sem plugin".
+    return getUnavailableWifiDiagnosticResult({
+      permissionStatus: raw.permissionStatus,
+      platform: raw.platform,
+    });
   }
 
   const band = bandFromFrequency(raw.frequencyMhz);

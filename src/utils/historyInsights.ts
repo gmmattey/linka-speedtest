@@ -69,8 +69,8 @@ export function buildHistoryInsights(records: TestRecord[]): HistoryInsight[] {
     insights.push({
       id: 'recurring_loss',
       type: 'recurring_issue',
-      title: 'Perda de dados repetida',
-      description: `Perda de dados foi detectada em ${highLossCount} dos últimos ${recent5.length} testes. Vale verificar o roteador ou cabo.`,
+      title: 'Falhas na conexão repetidas',
+      description: `Falhas na conexão foram detectadas em ${highLossCount} dos últimos ${recent5.length} testes. Vale verificar o roteador ou cabo.`,
       severity: 'critical',
     });
   }

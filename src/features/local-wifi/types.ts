@@ -10,6 +10,14 @@ export type WifiQuality =
 
 export type WifiChannelQuality = 'good' | 'medium' | 'bad';
 
+export interface LocalWifiNetworkInfo {
+  ssid: string;
+  bssid: string;
+  frequencyMhz: number;
+  rssiDbm: number;
+  capabilities: string;
+}
+
 export interface LocalWifiRawInfo {
   available: boolean;
   ssid?: string;
@@ -22,6 +30,8 @@ export interface LocalWifiRawInfo {
   ipAddress?: string;
   permissionStatus?: 'granted' | 'denied' | 'unknown';
   platform?: 'android' | 'ios' | 'web' | 'unknown';
+  wifiStandard?: string;
+  nearbyNetworks?: LocalWifiNetworkInfo[];
 }
 
 export interface WifiDiagnosticResult {
@@ -38,6 +48,23 @@ export interface WifiDiagnosticResult {
   gateway?: string;
   ipAddress?: string;
   quality?: WifiQuality;
+  /**
+   * Padrão WiFi (e.g., "802.11ac", "802.11ax"). Disponível em Android API 30+.
+   */
+  wifiStandard?: string;
+  /**
+   * Array de redes Wi-Fi próximas, resultado do scan assíncrono.
+   * Pode estar vazio na primeira chamada (scan em background).
+   */
+  nearbyNetworks?: LocalWifiNetworkInfo[];
+  /**
+   * Estado da permissão de localização propagado pelo plugin nativo
+   * (Android exige ACCESS_FINE_LOCATION). Permite a UI distinguir
+   * "indisponível porque o usuário negou" de "indisponível porque é PWA".
+   */
+  permissionStatus?: 'granted' | 'denied' | 'unknown';
+  /** Plataforma de origem do diagnóstico, propagado do raw bridge. */
+  platform?: 'android' | 'ios' | 'web' | 'unknown';
   title: string;
   explanation: string;
   primaryAction: string;

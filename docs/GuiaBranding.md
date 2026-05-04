@@ -42,7 +42,8 @@
 | `--text-2` | `rgba(242,242,247,0.55)` | `rgba(28,28,30,0.55)` | Texto secundário |
 | `--text-3` | `rgba(242,242,247,0.30)` | `rgba(28,28,30,0.30)` | Labels, metadados |
 | `--bg` | `#0D0D12` | `#F2F2F7` | Fundo principal |
-| `--surface` | `#16161E` | `#FFFFFF` | Cards, listas |
+| `--surface` | `#16161E` | `#FFFFFF` | Sheets sobrepostas (HamburgerMenu, BottomSheet) — superfícies que precisam contrastar com o body |
+| `--surface-deep` | `#11121A` | `#FBFBFD` | **Tom canônico de card** — todos os cards principais: Result, History, Comparison, Wifi, IOSList, Recommend, BeforeAfter, Diagnostic, etc. Replica visualmente o centro do `--bg-radial`, "vazando" no body |
 | `--surface-2` | `#1E1E28` | `#F2F2F7` | Estado hover/active, alternância |
 | `--surface-3` | `#25252F` | `#ECECF1` | Separadores visuais, track do gauge |
 | `--hairline` | `rgba(255,255,255,0.06)` | `rgba(0,0,0,0.06)` | Separadores de linha (hairline) |
@@ -50,10 +51,10 @@
 
 ### Regras de uso de cor
 
-- **Zero box-shadow e text-shadow.** Profundidade é indicada somente por cor de superfície e bordas.
+- **Zero box-shadow e text-shadow.** Profundidade é indicada somente por cor de superfície, bordas e por um único mecanismo global de "depth via tinta" definido exclusivamente em `tokens.css`: `--bg-radial` no `body` — centro um toque mais claro que as bordas (Bloco 3). Recalibrado em 2026-05 para edges quase coincidentes com `--surface-deep` dos cards, evitando step visível na transição body↔card. O `--bg-fade-bottom` aplicado via `#root::after` (Bloco 7) foi removido na mesma passada — ver `DocumentacaoTecnicaSistema.md` para histórico. O `--bg-radial` não deve ser duplicado em telas/componentes.
 - **Accent `#6C2BFF` apenas em elementos interativos** (botões primários, links, orb) ou como ênfase de label (badge, ícone pinned). Não usar como cor de fundo de tela inteira.
 - **DL (`--dl`) e UL (`--ul`)** são reservadas para métricas de velocidade. Não usar em contextos não relacionados a velocidade.
-- **Gradientes:** proibidos exceto na definição de `tokens.css`.
+- **Gradientes:** proibidos exceto na definição de `tokens.css` (atualmente: somente `--bg-radial` no body — o `linear-gradient` do depth fade em `#root::after` foi removido em 2026-05).
 
 ---
 
@@ -61,11 +62,35 @@
 
 ### Fontes
 
-| Família | Uso | Variantes carregadas |
-|---|---|---|
-| **Geist** (`var(--font-display)` e `var(--font-body)`) | Toda a interface — uma família única, como o iOS faz com SF Pro | 400, 500, 600, 700 |
+| Família | Token | Uso | Variantes carregadas |
+|---|---|---|---|
+| **Geist** | `var(--font-display)` e `var(--font-body)` | Toda a UI — uma família única, como o iOS faz com SF Pro | 300, 400, 500, 600, 700 |
+| **JetBrains Mono** | `var(--font-mono)` | **Somente** valores tabular-nums em listas/cells técnicas (ms, Mbps, %, IP, timestamps); não para labels nem para texto corrido | 400, 500, 600, 700 |
+| **Instrument Serif** | `var(--font-editorial)` | Reservada — exclusiva para mockups editoriais. Não usada em produção atualmente | 400, italic |
 
 Geist é a fonte open-source da Vercel, projetada como alternativa web mais próxima do SF Pro. Uma família só elimina a dissonância entre display e body, reforçando a direção iOS-Calma.
+
+#### Regra de auditoria (2026-05) — quando usar mono
+
+A confusão mais comum é mono virar fonte de "informação técnica" em geral. Não é. JetBrains Mono é **exclusiva para VALORES NUMÉRICOS com tabular-nums** — nunca para LABELS, mesmo em telas técnicas.
+
+| Caso | Família correta | Por quê |
+|---|---|---|
+| `87,3` Mbps na hero number | `--font-display` | Hero — peso visual máximo, Geist 700 |
+| ` ms` / `Mbps` (unidade ao lado do valor hero) | `--font-mono` | Letra inicial alinha com o tabular-num do valor |
+| Valores em IOSList trailing (`87 ms`, `1.1.1.1`) | `--font-mono` | Tabular alinhamento entre linhas |
+| Timestamps em listas (Histórico) | `--font-mono` | Cifras alinham coluna |
+| Label uppercase de seção ("Métricas avançadas") | `--font-display` 600 | Não é valor — é título de bloco |
+| Label de ícone ("Streaming 4K", "Trabalho") | `--font-body` 500 | Texto corrido curto |
+| Label de fase no Gauge ("DOWNLOAD") | `--font-display` 600 | Label uppercase, não valor |
+| Botão primário | `--font-display` 700 | CTA — display |
+| Botão texto / link | `--font-body` 500 | Texto |
+| Body de explicação (Diagnóstico, Guia DNS) | `--font-body` 400-500 | Texto corrido |
+
+#### Proibições
+
+- **Sem `'Inter'`, `'Space Grotesk'`, `'Roboto'`, `'system-ui'` ou outras famílias hardcoded em CSS/TSX.** Toda família vem dos 3 tokens (`--font-display`, `--font-body`, `--font-mono`).
+- **Exceção controlada:** geração de PDF (`pdfExport.ts`) e canvas (`shareCard.ts`) usam `'Geist'` literal porque os contextos vivem fora do DOM e não têm acesso a CSS vars. Nesses casos, a string DEVE ser exatamente `'Geist'` (com fallback `system-ui, sans-serif`) — qualquer outra fonte hardcoded é bug.
 
 ### Escala tipográfica de referência
 
@@ -118,11 +143,7 @@ Geist é a fonte open-source da Vercel, projetada como alternativa web mais pró
 
 ### Padding de cabeçalho de tela
 
-Todas as telas usam o mesmo padrão de topo:
-```css
-padding: 14px 16px 4px;
-```
-Estrutura: `‹ Início` (esquerda, `color: var(--accent)`, `font-size: 14px`, `font-weight: 500`) + label de tela (direita, `font-size: 13px`, `color: var(--text-3)`).
+**Bloco 5 — TopBar System (2026-05).** Todas as telas usam o componente `<TopBar>` em `position: absolute; top: 0; height: 56px + safe-top; z-index: 50`. Estado inicial transparente; quando o `<PageHeader>` sai da viewport (via `useScrollHeader`), o TopBar ganha `background: var(--surface-translucent)` + `backdrop-filter: blur(20px) saturate(160%)` + borda inferior `var(--border-subtle)`. Back button = chevron `‹` único em pill 36×36 (área tocável 44×44, sem texto, `aria-label="Voltar"`). Título da tela vive no `<PageHeader>` no topo do scroll content (Geist 700 32px lg / 24-28px md) e migra para o slot pequeno do TopBar (Geist 600 14px) com fade ao rolar. Detalhes técnicos em `DocumentacaoTecnicaSistema.md` §5.7. *(Padrão pré-Bloco 5 obsoleto: `‹ Início` accent 14px + label text-3 13px com `padding: 14px 16px 4px`.)*
 
 ### Scroll principal
 
@@ -260,7 +281,7 @@ O design system segue a direção **iOS-Calma**:
 - **Superfícies neutras** — sem fundo colorido de tela; toda cor está nos dados.
 - **Hierarquia pelo tamanho** — o número hero comunica a métrica; labels e contexto ficam secundários.
 - **Listas estilo iOS Settings** (`IOSList`) no lugar de cards aninhados com sombra.
-- **Zero sombras** — profundidade via cor de superfície (`--surface` / `--surface-2`) e `--hairline`.
+- **Zero sombras** — profundidade via cor de superfície (`--surface-deep` para todos os cards, `--surface` apenas para sheets sobrepostas, `--surface-2` para estados hover/active de pills e linhas), `--hairline` e o mecanismo global de tinta de fundo `--bg-radial` no body (edges calibradas para casar com `--surface-deep` e não criar step visível).
 - **Accent restrito** — `#6C2BFF` apenas em: botão primário, orb, anel do gauge (fase), ícone pinned, links.
 - **Dados com cor semântica** — DL é sempre azul, UL é sempre verde, latência é roxo/accent.
 - **Toque mínimo** — bordas sutis (`--border`), hairlines (`--hairline`), raios arredondados mas não exagerados.
@@ -278,6 +299,6 @@ Antes de entregar qualquer tela ou componente novo:
 - [ ] Números de métrica em Geist
 - [ ] Botão primário usa `btn-primary` com `--accent`
 - [ ] Labels uppercase de seção: 11px, 600, `letter-spacing: 0.06em`, `--text-3`
-- [ ] Cabeçalho de tela: padding `14px 16px 4px`, `‹ Início` (accent) + label (text-3)
+- [ ] Cabeçalho de tela: usar `<TopBar>` + `<PageHeader>` + `useScrollHeader` (Bloco 5 — TopBar System); back é chevron `‹` em pill 36×36, sem texto
 - [ ] Sem gradientes fora de `tokens.css`
 - [ ] Copy em pt-BR, tom objetivo

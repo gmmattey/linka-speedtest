@@ -1,0 +1,166 @@
+.lk-channel-chart {
+  margin-top: 16px;
+}
+
+.lk-channel-chart--loading,
+.lk-channel-chart--empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* Container das barras */
+.lk-channel-chart__bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  height: 120px;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Container de cada barra */
+.lk-channel-chart__bar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Barra vertical */
+.lk-channel-chart__bar {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  transition: opacity 150ms ease;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+}
+
+/* Qualidades de cor */
+.lk-channel-chart__bar--excellent {
+  background: var(--color-good, #2e7d32);
+}
+
+.lk-channel-chart__bar--good {
+  background: var(--color-good, #2e7d32);
+  opacity: 0.8;
+}
+
+.lk-channel-chart__bar--fair {
+  background: var(--color-warn, #f57c00);
+}
+
+.lk-channel-chart__bar--weak {
+  background: var(--color-bad, #c62828);
+  opacity: 0.8;
+}
+
+.lk-channel-chart__bar--critical {
+  background: var(--color-bad, #c62828);
+}
+
+/* Indicador de canal atual */
+.lk-channel-chart__bar--current {
+  border: 2px solid var(--text-primary);
+  box-shadow: 0 0 0 1px var(--bg-primary);
+}
+
+/* Indicador de canal recomendado */
+.lk-channel-chart__bar--suggested {
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.4);
+}
+
+/* Label dentro da barra */
+.lk-channel-chart__bar-label {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  line-height: 1;
+}
+
+/* Rótulo do canal (número) */
+.lk-channel-chart__channel-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+/* Badges (Atual, Recomendado) */
+.lk-badge {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 2px 6px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.lk-badge--suggested {
+  background: var(--color-warn-bg, #fff3e0);
+  color: var(--color-warn, #f57c00);
+}
+
+/* Legenda */
+.lk-channel-chart__legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.lk-channel-chart__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.lk-channel-chart__legend-color {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.lk-channel-chart__legend-color--excellent {
+  background: var(--color-good, #2e7d32);
+}
+
+.lk-channel-chart__legend-color--good {
+  background: var(--color-good, #2e7d32);
+  opacity: 0.8;
+}
+
+.lk-channel-chart__legend-color--fair {
+  background: var(--color-warn, #f57c00);
+}
+
+.lk-channel-chart__legend-color--weak {
+  background: var(--color-bad, #c62828);
+  opacity: 0.8;
+}
+
+/* Recomendação textual */
+.lk-channel-chart__recommendation {
+  padding: 12px;
+  background: var(--color-warn-bg, #fff3e0);
+  border-left: 3px solid var(--color-warn, #f57c00);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--color-warn, #f57c00);
+}

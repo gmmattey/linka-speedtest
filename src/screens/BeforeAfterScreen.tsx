@@ -1,4 +1,7 @@
 import { useMemo } from 'react';
+import { TopBar } from '../components/TopBar';
+import { PageHeader } from '../components/PageHeader';
+import { useScrollHeader } from '../hooks/useScrollHeader';
 import type { SpeedTestResult } from '../types';
 import { calculateBeforeAfter } from '../utils/beforeAfter';
 import { formatMbps, formatMs } from '../utils/format';
@@ -49,18 +52,25 @@ export function BeforeAfterScreen({
     [beforeResult, afterResult],
   );
 
+  // Bloco 5 — TopBar System (2026-05).
+  const { scrolled, scrollContainerRef, sentinelRef } = useScrollHeader();
+
   return (
     <div className="lk-ba">
-      <div className="lk-ba__head">
-        <button className="lk-ba__back" onClick={onBack}>‹ Voltar</button>
-        <span className="lk-ba__head-label">Antes e Depois</span>
-      </div>
+      <TopBar
+        onBack={onBack}
+        scrolled={scrolled}
+        title="Antes e Depois"
+        showTitle={scrolled}
+      />
 
-      <div className="lk-ba__scroll fade-in">
-        <div className="lk-ba__hero">
-          <div className="lk-ba__title">Meça o impacto de uma ação</div>
-          <p className="lk-ba__sub">Reinicie o roteador, troque o canal Wi‑Fi ou mude de lugar — e veja se melhorou.</p>
-        </div>
+      <div className="lk-ba__scroll fade-in" ref={scrollContainerRef}>
+        <PageHeader
+          ref={sentinelRef}
+          size="md"
+          title="Antes e Depois"
+          subtitle="Reinicie o roteador, troque o canal Wi‑Fi ou mude de lugar — e veja se melhorou."
+        />
 
         {step === 'before' && (
           <div className="lk-ba__step">

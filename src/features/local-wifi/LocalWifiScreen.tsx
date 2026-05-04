@@ -1,5 +1,9 @@
 import { getCapabilities } from '../../platform/capabilities';
+import { TopBar } from '../../components/TopBar';
+import { PageHeader } from '../../components/PageHeader';
+import { useScrollHeader } from '../../hooks/useScrollHeader';
 import { useLocalWifi } from './useLocalWifi';
+import { wifiQualityLabel } from './LocalWifiService';
 import './LocalWifiScreen.css';
 
 interface Props {
@@ -15,15 +19,20 @@ export function LocalWifiScreen({ onBack }: Props) {
     bad: 'ruim',
   };
 
+  // Bloco 5 — TopBar System (2026-05).
+  const { scrolled, scrollContainerRef, sentinelRef } = useScrollHeader();
+
   return (
     <div className="lk-local-wifi">
-      <div className="lk-local-wifi__head">
-        <button className="lk-local-wifi__back" onClick={onBack}>‹ Explorar</button>
-        <span className="lk-local-wifi__head-label">Diagnóstico Wi-Fi</span>
-        <span aria-hidden="true" />
-      </div>
+      <TopBar
+        onBack={onBack}
+        scrolled={scrolled}
+        title="Diagnóstico Wi-Fi"
+        showTitle={scrolled}
+      />
 
-      <div className="lk-local-wifi__scroll">
+      <div className="lk-local-wifi__scroll" ref={scrollContainerRef}>
+        <PageHeader ref={sentinelRef} size="md" title="Diagnóstico Wi-Fi" />
         <div className="lk-local-wifi__card">
           {!localWifiDiagnostics ? (
             <>
@@ -51,7 +60,7 @@ export function LocalWifiScreen({ onBack }: Props) {
                   <p className="lk-local-wifi__text">{result.explanation}</p>
 
                   <dl className="lk-local-wifi__list">
-                    <div><dt>Qualidade</dt><dd>{result.quality ?? 'unknown'}</dd></div>
+                    <div><dt>Qualidade</dt><dd>{wifiQualityLabel(result.quality ?? 'unknown')}</dd></div>
                     {result.ssid && <div><dt>SSID</dt><dd>{result.ssid}</dd></div>}
                     {result.rssiDbm != null && <div><dt>Sinal</dt><dd>{result.rssiDbm} dBm</dd></div>}
                     {result.linkSpeedMbps != null && <div><dt>Velocidade negociada</dt><dd>{result.linkSpeedMbps} Mbps</dd></div>}

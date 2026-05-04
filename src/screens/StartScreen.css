@@ -1,21 +1,31 @@
 .lk-start {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100dvh;
-  background: var(--bg);
-  padding: 0 16px 24px;
+  background: transparent;
+  padding: calc(var(--safe-top) + 56px) 16px 24px;
   overflow-y: auto;
 }
 
-/* ── Topbar ──────────────────────────────────────── */
+/* ── Sentinel sintético (Bloco 6 — UX uniforme, 2026-05) ──
+   Alvo do useScrollHeader. Posicionado logo abaixo da altura do
+   TopBar para que, em scrollTop=0, ainda esteja dentro do rect
+   efetivo do observer (rootMargin -56px) — comportamento idêntico
+   ao "hero como sentinel" das demais telas. */
 
-.lk-start__topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 2px 8px;
-  padding-top: max(12px, var(--safe-top));
+.lk-start__sentinel {
+  position: absolute;
+  top: calc(var(--safe-top) + 56px);
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
 }
+
+/* ── Logo do TopBar (Bloco 5 — TopBar System, 2026-05) ──
+   Conserva-se apenas o estilo do logotipo "linka" em si; a
+   barra superior agora é renderizada pelo componente <TopBar>. */
 
 .lk-start__logo {
   font-family: var(--font-display);
@@ -23,23 +33,6 @@
   font-size: 20px;
   letter-spacing: -0.03em;
   color: var(--accent);
-}
-
-.lk-start__topbar-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--text-2);
-  transition: background var(--t-fast);
-}
-
-.lk-start__topbar-btn:hover {
-  background: var(--surface-3);
 }
 
 /* ── Alert ───────────────────────────────────────── */
@@ -87,13 +80,17 @@
   justify-content: center;
   cursor: pointer;
   touch-action: manipulation;
-  transition: transform var(--t-fast), box-shadow var(--t-fast);
+  transition: transform var(--t-fast), filter var(--t-fast);
   font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 20px;
+  font-weight: 700;
+  font-size: 22px;
   color: var(--text-on-accent);
   letter-spacing: -0.01em;
-  box-shadow: 0 20px 40px -15px var(--accent-glow);
+  /* Bloco 6 — UX uniforme (2026-05): drop-shadow respeita a forma
+     circular e cumpre a regra "zero box-shadow" do Manifesto. Blur
+     ampliado para 14px para compensar a remoção do box-shadow profundo
+     que dava o glow vertical do orb. */
+  filter: drop-shadow(0 0 14px var(--accent-glow));
 }
 
 .lk-start__orb::before,
@@ -194,7 +191,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 11px 14px;
-  background: var(--surface);
+  background: var(--surface-deep);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   cursor: pointer;
@@ -211,8 +208,8 @@
 }
 
 .lk-start__last-values {
-  font-family: var(--font-mono);
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-weight: 700;
   font-size: 13px;
 }
 

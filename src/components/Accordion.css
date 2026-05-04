@@ -1,0 +1,90 @@
+/* Accordion — bloco expansível usado nas seções "Mais detalhes" da
+   ResultScreen (Avançado, Modo Gamer, DNS) — refator 2026-05.
+
+   Visual matching ResultScreen: surface-deep, border, radius-lg, hairline
+   entre header e conteúdo. Header pesa o suficiente pra ler como botão
+   sem virar CTA — Geist 500/14px. */
+
+.lk-accordion {
+  background: var(--surface-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.lk-accordion + .lk-accordion {
+  margin-top: 10px;
+}
+
+.lk-accordion__header {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.lk-accordion__header:hover {
+  background: var(--surface-2);
+}
+
+.lk-accordion__header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--surface-3);
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+
+.lk-accordion__header-title {
+  flex: 1 1 auto;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: -0.005em;
+  color: var(--text);
+  text-align: left;
+}
+
+.lk-accordion__header-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 240ms cubic-bezier(0.32, 0.72, 0, 1);
+  flex-shrink: 0;
+}
+
+.lk-accordion--open .lk-accordion__header-chevron {
+  transform: rotate(-180deg);
+}
+
+.lk-accordion__content-wrap {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.lk-accordion__content {
+  padding: 4px 16px 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Quando fechado, o `border-top` do conteúdo some pra evitar a "linha
+   solta" durante a animação de colapso. */
+.lk-accordion:not(.lk-accordion--open) .lk-accordion__content {
+  border-top-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lk-accordion__content-wrap,
+  .lk-accordion__header-chevron {
+    transition: none !important;
+  }
+}

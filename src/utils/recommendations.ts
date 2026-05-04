@@ -1,4 +1,5 @@
 import type { Classification, Recommendation, SpeedTestResult, TestRecord } from '../types';
+import { resolveCopy } from '../core';
 
 // ── Empty-state positivo ────────────────────────────────────────────────────
 
@@ -31,25 +32,26 @@ export const PREVENTIVE_TIPS = [
 export function derivePositiveUsecases(result: SpeedTestResult | null): PositiveUsecase[] {
   if (!result) return [];
   const { dl, ul, latency, jitter } = result;
+  // Labels longos (consistência com o motor `interpret.ts` / dictionary).
   return [
     {
       id: 'streaming',
-      label: 'Streaming 4K',
+      label: resolveCopy('useCase.streaming_4k.label'),
       status: dl >= 25 && latency <= 80 ? 'good' : 'limited',
     },
     {
       id: 'gaming',
-      label: 'Jogos online',
+      label: resolveCopy('useCase.gaming.label'),
       status: latency <= 50 && jitter <= 20 ? 'good' : 'limited',
     },
     {
       id: 'videocall',
-      label: 'Videochamada',
+      label: resolveCopy('useCase.video_call.label'),
       status: latency <= 100 && ul >= 2 ? 'good' : 'limited',
     },
     {
       id: 'remote',
-      label: 'Trabalho remoto',
+      label: resolveCopy('useCase.home_office.label'),
       status: ul >= 10 && dl >= 20 ? 'good' : 'limited',
     },
   ];
@@ -121,7 +123,7 @@ export function buildRecommendations(
     } else {
       recs.push(rec(
         'repeat_loss', 'Repita o teste',
-        'Perda de dados foi detectada. Pode ser momentânea — teste novamente para confirmar.',
+        'Falhas na conexão foram detectadas. Pode ser momentâneo — teste novamente para confirmar.',
         'high', 'repeat_test',
       ));
     }

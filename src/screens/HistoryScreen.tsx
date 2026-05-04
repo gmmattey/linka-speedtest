@@ -2,7 +2,10 @@ import { useMemo, useState } from 'react';
 import { Area, AreaChart, ResponsiveContainer, YAxis } from 'recharts';
 import { IOSList } from '../components/IOSList';
 import { Chip, type ChipVariant } from '../components/Chip';
-import { Icon, DeviceIcon, ConnectionIcon, IconPdf } from '../components/icons';
+import { Icon, DeviceIcon, ConnectionIcon, IconPdf, IconShare } from '../components/icons';
+import { TopBar } from '../components/TopBar';
+import { PageHeader } from '../components/PageHeader';
+import { useScrollHeader } from '../hooks/useScrollHeader';
 import type { SpeedTestResult, TestRecord } from '../types';
 import { interpretSpeedTestResult, resolveCopy } from '../core';
 import { clearHistory, loadHistory } from '../utils/history';
@@ -107,20 +110,30 @@ export function HistoryScreen({
     try { await exportHistoryPdf(items); } catch { /* silencioso */ }
   };
 
+  // Bloco 5 — TopBar System (2026-05): scroll listener para alternar
+  // glass effect / título pequeno do TopBar.
+  const { scrolled, scrollContainerRef, sentinelRef } = useScrollHeader();
+
   if (selected) {
     return <HistoryDetail record={selected} onBack={() => setSelectedId(null)} unit={unit} />;
   }
 
+  const rightActions = items.length > 0
+    ? [{ icon: <IconPdf size={18} />, onClick: handlePdf, ariaLabel: 'Exportar histórico em PDF' }]
+    : undefined;
+
   return (
     <div className="lk-history">
-      <div className="lk-history__head">
-        {onBack ? (
-          <button className="lk-history__back" onClick={onBack}>‹ Início</button>
-        ) : <span />}
-        <span className="lk-history__head-label">Histórico</span>
-      </div>
+      <TopBar
+        onBack={onBack}
+        scrolled={scrolled}
+        title="Histórico"
+        showTitle={scrolled}
+        rightActions={rightActions}
+      />
 
-      <main className="lk-history__main">
+      <main className="lk-history__main" ref={scrollContainerRef}>
+        <PageHeader ref={sentinelRef} title="Histórico" />
         {items.length === 0 ? (
           <div className="lk-history__empty">
             Nenhum teste registrado ainda. Volte e rode seu primeiro teste.
@@ -231,12 +244,6 @@ export function HistoryScreen({
           </>
         )}
       </main>
-
-      {items.length > 0 && (
-        <button className="lk-fab" onClick={handlePdf} aria-label="Exportar histórico em PDF">
-          <IconPdf size={22} />
-        </button>
-      )}
     </div>
   );
 }
@@ -258,14 +265,48 @@ function HistoryDetail({ record, onBack, unit }: { record: TestRecord; onBack: (
     record.connectionType === 'wifi' ? 'Wi-Fi' : record.connectionType === 'mobile' ? 'Celular' : 'Cabo'
   }`;
 
+  // Bloco 5 — TopBar System (2026-05): scroll listener próprio do detalhe.
+  const { scrolled, scrollContainerRef, sentinelRef } = useScrollHeader();
+
+  // Compartilhamento do detalhe — fallback simples para Web Share API
+  // ou cópia do texto. Quando indisponível, abre o PDF (mesmo comando do
+  // botão de PDF do histórico, mas filtrando para um único registro).
+  const handleShareDetail = async () => {
+    const text =
+      `${formatDate(record.timestamp)} — ↓ ${formatMbps(record.dl, unit)} / ↑ ${formatMbps(record.ul, unit)} ${unitLabel} · ${formatMs(record.latency)} ms`;
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        await navigator.share({ text, title: 'linka SpeedTest' });
+        return;
+      }
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+      }
+    } catch { /* cancelado */ }
+  };
+
   return (
     <div className="lk-history lk-history--detail fade-in">
-      <div className="lk-hist-detail__head">
-        <button className="lk-hist-detail__back" onClick={onBack}>‹ Voltar</button>
-        <span className="lk-hist-detail__date">{formatDate(record.timestamp)}</span>
-      </div>
+      <TopBar
+        onBack={onBack}
+        scrolled={scrolled}
+        title={formatDate(record.timestamp)}
+        showTitle={scrolled}
+        rightActions={[{
+          icon: <IconShare size={18} />,
+          onClick: handleShareDetail,
+          ariaLabel: 'Compartilhar resultado',
+        }]}
+      />
 
-      <div className="lk-hist-detail__scroll">
+      <div className="lk-hist-detail__scroll" ref={scrollContainerRef}>
+        <PageHeader
+          ref={sentinelRef}
+          size="md"
+          title={formatDate(record.timestamp)}
+          subtitle="Detalhes do teste"
+        />
+
         <div className="lk-hist-detail__hero">
           <Chip variant={qualityToChipVariant(interpreted.quality)}>
             {resolveCopy(`quality.${interpreted.quality}`)}
@@ -307,7 +348,7 @@ function HistoryDetail({ record, onBack, unit }: { record: TestRecord; onBack: (
             {
               icon: <Icon name="loss" size={14} color="var(--accent)" />,
               iconBg: 'var(--accent-tint)',
-              title: 'Perda',
+              title: resolveCopy('metric.packetLoss'),
               trailing: <span style={{ fontWeight: 600, fontSize: 14 }}>{record.packetLoss.toFixed(1)}%</span>,
             },
           ]}

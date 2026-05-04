@@ -6,25 +6,23 @@ import { HistoryScreen } from './screens/HistoryScreen';
 import { ComparisonScreen, type ComparisonStep } from './screens/ComparisonScreen';
 import { BeforeAfterScreen, type BeforeAfterStep } from './screens/BeforeAfterScreen';
 import { RoomTestScreen } from './screens/RoomTestScreen';
-import { DiagnosticScreen } from './screens/DiagnosticScreen';
-import { GamerScreen } from './screens/GamerScreen';
-import { RecommendScreen } from './screens/RecommendScreen';
-import { DNSGuideScreen } from './screens/DNSGuideScreen';
-import { DNSBenchmarkScreen } from './screens/DNSBenchmarkScreen';
 import { ExploreScreen } from './screens/ExploreScreen';
-import { DetailsScreen } from './screens/DetailsScreen';
 import { LocalWifiScreen } from './features/local-wifi/LocalWifiScreen';
+import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
 import { useDeviceInfo } from './hooks/useDeviceInfo';
 import { useSpeedTest } from './hooks/useSpeedTest';
 import { useSettings } from './hooks/useSettings';
 import { appendRecord, previousRecord, recordToResult } from './utils/history';
-import { exportResultPdf } from './utils/pdfExport';
 import { averageSpeedResults } from './utils/provaReal';
-import { classify } from './utils/classifier';
 import { getCapabilities } from './platform/capabilities';
 import type { SpeedTestResult, TestRecord } from './types';
 
-type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter' | 'roomtest' | 'diagnostic' | 'gamer' | 'recommend' | 'dnsguide' | 'dnsbenchmark' | 'explore' | 'details' | 'localwifi';
+// Refator 2026-05: 6 telas consolidadas no ResultScreen / removidas:
+//   diagnostic / recommend / gamer / dnsbenchmark / dnsguide / details.
+// Diagnóstico virou card no Result; gamer/details/dns viraram accordions
+// na section "Mais detalhes"; o guia de DNS virou bottom sheet. Os IDs
+// abaixo refletem apenas as rotas vivas.
+type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter' | 'roomtest' | 'explore' | 'localwifi';
 
 const THEME_KEY = 'linka.speedtest.theme';
 const SWIPE_THRESHOLD_PX = 80;
@@ -75,8 +73,6 @@ export default function App() {
   const forwardStackRef = useRef<Screen[]>([]);
   const returnToRef = useRef<Screen>('result');
   const screenRef = useRef<Screen>('start');
-
-  const [dnsGuideServerId, setDnsGuideServerId] = useState<string>('cloudflare');
 
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
 
@@ -278,6 +274,12 @@ export default function App() {
     test.start(effectiveConnection, testMode);
   }, [test, effectiveConnection, testMode, goTo]);
 
+  // handleStartProvaReal — refator 2026-05: a entrada "Prova Real" saiu da
+  // ExploreScreen junto com a section "Medir". O handler foi mantido (e o
+  // ciclo de vida de provaRealSession/Override/etc. abaixo no efeito de
+  // término de teste continua funcional) para o caso da feature ser
+  // ressurgida em outra superfície (ex.: StartScreen mode picker). Sem
+  // caller atual; remover quando confirmado que a feature foi sepultada.
   const handleStartProvaReal = useCallback(() => {
     provaRealResultsRef.current = [];
     provaRealPendingRef.current = false;
@@ -288,6 +290,9 @@ export default function App() {
     goTo('running');
     test.start(effectiveConnection, 'complete');
   }, [test, effectiveConnection, goTo]);
+  // Marca explicitamente que o handler é deliberadamente órfão hoje, para
+  // que o linter (`@typescript-eslint/no-unused-vars`) não reclame.
+  void handleStartProvaReal;
 
   const handleOpenRoomTest = useCallback(() => {
     returnToRef.current = screenRef.current;
@@ -363,17 +368,12 @@ export default function App() {
     goTo('history');
   }, [lastRecord, goTo]);
 
-  const handleDiagnostic = useCallback(() => goTo('diagnostic'), [goTo]);
-  const handleGamer = useCallback(() => goTo('gamer'), [goTo]);
-  const handleRecommend = useCallback(() => goTo('recommend'), [goTo]);
-  const handleShowDNSBenchmark = useCallback(() => goTo('dnsbenchmark'), [goTo]);
-  const handleShowDNSGuide = useCallback((serverId: string) => {
-    setDnsGuideServerId(serverId);
-    goTo('dnsguide');
-  }, [goTo]);
-
+  // Refator 2026-05: handlers de Diagnóstico/Recomendações/Modo Gamer/
+  // Detalhes/DNS Benchmark/DNS Guide foram removidos junto com suas telas.
+  // Diagnóstico virou card no Result; gamer/details/dns viraram accordions
+  // na section "Mais detalhes" do Result; o guia de DNS virou bottom sheet
+  // local da ResultScreen.
   const handleExplore = useCallback(() => goTo('explore'), [goTo]);
-  const handleShowDetails = useCallback(() => goTo('details'), [goTo]);
   const handleShowLocalWifiDiagnostics = useCallback(() => goTo('localwifi'), [goTo]);
 
   const capabilities = useMemo(() => getCapabilities(), []);
@@ -416,11 +416,15 @@ export default function App() {
             onToggleTheme={onToggleTheme}
             phase={test.phase}
             instantMbps={test.instantMbps}
+            overallProgress={test.overallProgress}
             onCancel={handleCancel}
             onRetry={handleRetry}
             unit={settings.unit}
             sessionLabel={sessionLabel}
             mode={testMode}
+            live={test.live}
+            server={deviceInfo.server}
+            useHaptics={settings.useHaptics}
           />
         );
       }
@@ -439,7 +443,7 @@ export default function App() {
             server={serverForResult}
             previous={previous}
             onRetry={handleRetry}
-            onShowHistory={handleShowHistory}
+            onBack={() => goTo('start')}
             unit={settings.unit}
             hideIpOnShare={settings.hideIpOnShare}
             gamingProfile={settings.gamingProfile}
@@ -447,64 +451,12 @@ export default function App() {
             contractedDown={settings.contractedDown}
             contractedUp={settings.contractedUp}
             onUpdateContracted={(down, up) => updateSettings({ contractedDown: down, contractedUp: up })}
-            onDiagnostic={handleDiagnostic}
-            onRecommend={handleRecommend}
-            onDetails={handleShowDetails}
+            useHaptics={settings.useHaptics}
+            onToggleHaptics={(next) => updateSettings({ useHaptics: next })}
             onStartRoomTest={handleOpenRoomTest}
             onExplore={handleExplore}
           />
         ) : null;
-      }
-      case 'dnsguide':
-        return (
-          <DNSGuideScreen
-            serverId={dnsGuideServerId}
-            onBack={goBack}
-          />
-        );
-      case 'dnsbenchmark':
-        return (
-          <DNSBenchmarkScreen
-            onBack={goBack}
-            onShowDNSGuide={handleShowDNSGuide}
-          />
-        );
-      case 'diagnostic': {
-        const resultForDiag = provaRealOverride ?? test.result ?? (lastRecord ? recordToResult(lastRecord) : null);
-        return resultForDiag ? (
-          <DiagnosticScreen
-            result={resultForDiag}
-            connectionType={deviceInfo.device?.connectionType ?? null}
-            onBack={goBack}
-            onRecommend={handleRecommend}
-          />
-        ) : null;
-      }
-      case 'gamer': {
-        const resultForGamer = provaRealOverride ?? test.result ?? (lastRecord ? recordToResult(lastRecord) : null);
-        return resultForGamer ? (
-          <GamerScreen
-            result={resultForGamer}
-            onBack={goBack}
-            onRetest={handleRetry}
-          />
-        ) : null;
-      }
-      case 'recommend': {
-        const resultForRec = provaRealOverride ?? test.result ?? (lastRecord ? recordToResult(lastRecord) : null);
-        const classification = resultForRec ? classify(resultForRec) : null;
-        const handleExportPdf = resultForRec && lastRecord
-          ? () => exportResultPdf(resultForRec, lastRecord.serverName, lastRecord.isp)
-          : undefined;
-        return (
-          <RecommendScreen
-            result={resultForRec}
-            quality={classification?.primary ?? ''}
-            tags={classification ? [...classification.tags] : []}
-            onBack={goBack}
-            onExportPdf={handleExportPdf}
-          />
-        );
       }
       case 'comparison':
         return (
@@ -540,8 +492,7 @@ export default function App() {
             onBack={goToReturnTarget}
           />
         );
-      case 'explore': {
-        const hasResult = !!(provaRealOverride ?? test.result ?? lastRecord);
+      case 'explore':
         return (
           <ExploreScreen
             theme={theme}
@@ -549,37 +500,14 @@ export default function App() {
             contractedDown={settings.contractedDown}
             contractedUp={settings.contractedUp}
             onUpdateContracted={(down, up) => updateSettings({ contractedDown: down, contractedUp: up })}
-            hasResult={hasResult}
             onBack={goBack}
-            onDiagnostic={hasResult ? handleDiagnostic : undefined}
-            onRecommend={hasResult ? handleRecommend : undefined}
-            onGamer={hasResult ? handleGamer : undefined}
-            onStartProvaReal={handleStartProvaReal}
+            onShowHistory={handleShowHistory}
             onStartRoomTest={handleOpenRoomTest}
             onStartComparison={handleStartComparison}
             onStartBeforeAfter={handleStartBeforeAfter}
-            onShowDNSBenchmark={handleShowDNSBenchmark}
-            onShowDNSGuide={() => handleShowDNSGuide('cloudflare')}
             onShowLocalWifiDiagnostics={capabilities.localWifiDiagnostics ? handleShowLocalWifiDiagnostics : undefined}
           />
         );
-      }
-      case 'details': {
-        const resultForDetails = provaRealOverride ?? test.result ?? (lastRecord ? recordToResult(lastRecord) : null);
-        const serverForDetails = (test.result || provaRealOverride)
-          ? deviceInfo.server
-          : lastRecord
-          ? { id: 'cloudflare', name: lastRecord.serverName, ip: '—', colo: '—', loc: '—', isp: lastRecord.isp ?? '—', available: true }
-          : deviceInfo.server;
-        return resultForDetails ? (
-          <DetailsScreen
-            result={resultForDetails}
-            server={serverForDetails}
-            unit={settings.unit}
-            onBack={goBack}
-          />
-        ) : null;
-      }
       case 'localwifi':
         return <LocalWifiScreen onBack={goBack} />;
       case 'history':
@@ -623,9 +551,8 @@ export default function App() {
     handleComparisonStartNear, handleComparisonStartFar, handleComparisonRetryNear,
     handleStartBeforeAfter, handleBAStartBefore, handleBAStartAfter, handleBARetry,
     handleStartProvaReal, handleOpenRoomTest, handleRoomStart,
-    handleDiagnostic, handleGamer, handleRecommend, handleShowDNSBenchmark, handleShowDNSGuide, handleExplore, handleShowLocalWifiDiagnostics,
+    handleExplore, handleShowLocalWifiDiagnostics,
     goBack, goToReturnTarget, capabilities.localWifiDiagnostics,
-    dnsGuideServerId,
     settings, updateSettings, testMode,
     comparisonStep, comparisonNear, comparisonFar,
     baStep, baBefore, baAfter,
@@ -637,6 +564,7 @@ export default function App() {
       <div key={screen} className="screen-enter">
         {view}
       </div>
+      <PwaUpdatePrompt />
     </div>
   );
 }

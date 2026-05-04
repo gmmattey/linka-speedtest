@@ -11,6 +11,8 @@ import {
   UPLOAD_CONFIG_FAST,
   UPLOAD_CONFIG_COMPLETE,
 } from './uploadProbe';
+import { getDnsLatencyMs } from './dnsTiming';
+import { probeDnsResolver, type DnsProbeResult } from './dnsProbe';
 
 // =============================================================================
 // Erro classificado
@@ -51,22 +53,47 @@ function rethrowClassified(err: unknown, fallbackCode: SpeedTestErrorCode): neve
 // Progresso
 // =============================================================================
 
-// fast:     latency 0–10% | download 10–55% | upload 55–100%
-// complete: latency 0–8%  | download 8–53%  | upload 53–100%
-const PROGRESS_RANGES = {
-  fast: {
-    latency:  [0.00, 0.10] as [number, number],
-    download: [0.10, 0.55] as [number, number],
-    upload:   [0.55, 1.00] as [number, number],
-  },
-  complete: {
-    latency:  [0.00, 0.08] as [number, number],
-    download: [0.08, 0.53] as [number, number],
-    upload:   [0.53, 1.00] as [number, number],
-  },
+/**
+ * Faixas (em [0,1]) de cada fase no progresso global, pesadas pelo número
+ * de amostras esperadas em cada uma:
+ *
+ *  - latência: `pingCount` amostras (~100ms cada)
+ *  - download: `durationMs / 300ms` amostras
+ *  - upload:   idem
+ *
+ * Para `fast`:     15 pings + 23 dl + 23 ul = 61 amostras → 24.6/37.7/37.7
+ * Para `complete`: 25 pings + 60 dl + 60 ul = 145         → 17.2/41.4/41.4
+ *
+ * Exportado para teste.
+ */
+export type ProgressRanges = {
+  latency:  [number, number];
+  download: [number, number];
+  upload:   [number, number];
 };
 
-function mapProgress(
+export function computeRanges(mode: 'fast' | 'complete'): ProgressRanges {
+  const pingCount = mode === 'fast' ? 15 : 25;
+  const dlDuration = mode === 'fast' ? DOWNLOAD_CONFIG_FAST.durationMs : DOWNLOAD_CONFIG_COMPLETE.durationMs;
+  const ulDuration = mode === 'fast' ? UPLOAD_CONFIG_FAST.durationMs   : UPLOAD_CONFIG_COMPLETE.durationMs;
+  const dlSamples = Math.round(dlDuration / 300);
+  const ulSamples = Math.round(ulDuration / 300);
+  const total = pingCount + dlSamples + ulSamples;
+
+  const latencyEnd  = pingCount / total;
+  const downloadEnd = (pingCount + dlSamples) / total;
+
+  return {
+    latency:  [0, latencyEnd],
+    download: [latencyEnd, downloadEnd],
+    upload:   [downloadEnd, 1],
+  };
+}
+
+/**
+ * Projeta `local` ∈ [0,1] dentro do intervalo `range`. Exportado para teste.
+ */
+export function mapProgress(
   range: [number, number],
   local: number,
 ): number {
@@ -96,7 +123,12 @@ export async function runSpeedTestV2(
   connectionType?: ConnectionType,
 ): Promise<SpeedTestResult> {
   void connectionType;
-  const ranges = PROGRESS_RANGES[mode];
+  // Tempo total do teste (2026-05): timestamp de início das 3 fases.
+  // Capturado em `elapsedMs` no resultado final para o accordion Avançado
+  // mostrar "Tempo total do teste" sem precisar carregar o cronômetro pela
+  // ResultScreen.
+  const testStartTime = Date.now();
+  const ranges = computeRanges(mode);
   const dlConfig = mode === 'fast' ? DOWNLOAD_CONFIG_FAST : DOWNLOAD_CONFIG_COMPLETE;
   const ulConfig = mode === 'fast' ? UPLOAD_CONFIG_FAST   : UPLOAD_CONFIG_COMPLETE;
   const pingCount = mode === 'fast' ? 15 : 25;
@@ -141,14 +173,15 @@ export async function runSpeedTestV2(
   });
 
   let dlResult;
+  const dlPhaseStart = performance.now();
   try {
     dlResult = await runDownloadProbe(dlConfig, signal, (instant) => {
-      const elapsed = performance.now();
-      const local = Math.min(0.98, (elapsed % dlConfig.durationMs) / dlConfig.durationMs);
+      const elapsed = performance.now() - dlPhaseStart;
+      const local = Math.max(0, Math.min(0.98, elapsed / dlConfig.durationMs));
       onProgress({
         phase: 'download',
         instantMbps: instant,
-        overallProgress: mapProgress(ranges.download, 0.05 + local * 0.9),
+        overallProgress: mapProgress(ranges.download, local),
       });
     });
   } catch (err) {
@@ -183,15 +216,26 @@ export async function runSpeedTestV2(
     if (rtt !== null) ulPings.push(rtt);
   });
 
+  // DNS probe (Fase B 2026-05; refatorado 2026-05 para Safari): roda em
+  // paralelo com o upload — uma única request DoH ao Cloudflare whoami,
+  // com latência medida via `performance.now()` em volta do fetch (não
+  // mais via Resource Timing, que Safari mobile zera por TAO/CORS).
+  // Não bloqueia, não pode falhar (retorna campos null em erro). Captura
+  // abaixo, junto da composição do resultado final.
+  const dnsProbePromise: Promise<DnsProbeResult> = probeDnsResolver(signal).catch(
+    () => ({ latencyMs: null, resolverIp: null, provider: null }),
+  );
+
   let ulResult;
+  const ulPhaseStart = performance.now();
   try {
     ulResult = await runUploadProbe(ulConfig, signal, (instant) => {
-      const elapsed = performance.now();
-      const local = Math.min(0.98, (elapsed % ulConfig.durationMs) / ulConfig.durationMs);
+      const elapsed = performance.now() - ulPhaseStart;
+      const local = Math.max(0, Math.min(0.98, elapsed / ulConfig.durationMs));
       onProgress({
         phase: 'upload',
         instantMbps: instant,
-        overallProgress: mapProgress(ranges.upload, 0.05 + local * 0.9),
+        overallProgress: mapProgress(ranges.upload, local),
       });
     });
   } catch (err) {
@@ -216,6 +260,15 @@ export async function runSpeedTestV2(
   const allSamples = [...(dlResult!.samples), ...(ulResult!.samples)];
   const stabilityScore = computeStabilityFromSamples(allSamples);
 
+  // DNS feature (2026-05): aguarda o probe DoH disparado no início do
+  // upload — fonte primária da latência DNS (medida diretamente via
+  // performance.now() em volta do fetch, funciona no Safari mobile).
+  // Se o probe falhou OU o navegador não expôs latência, tenta fallback
+  // pela Resource Timing API (`getDnsLatencyMs`). Ambos podem ser null
+  // sem afetar o restante do resultado.
+  const dnsProbeResult = await dnsProbePromise;
+  const dnsLatencyMs = dnsProbeResult.latencyMs ?? getDnsLatencyMs();
+
   const partial: SpeedTestResult = {
     dl,
     ul,
@@ -233,6 +286,10 @@ export async function runSpeedTestV2(
     latencyUpload,
     dlSamples: dlResult!.samples,
     ulSamples: ulResult!.samples,
+    dnsLatencyMs,
+    dnsResolverIp: dnsProbeResult.resolverIp,
+    dnsProvider:   dnsProbeResult.provider,
+    elapsedMs:     Date.now() - testStartTime,
   };
 
   const diagnostics = buildDiagnostics(partial);

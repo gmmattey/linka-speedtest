@@ -70,6 +70,10 @@ export function appendRecord(
     diagnosticSummary:  result.diagnostics?.summaryText,
     peakDlMbps:         result.peakDlMbps,
     peakUlMbps:         result.peakUlMbps,
+    // DNS feature (2026-05) — opcionais; null quando não medido.
+    dnsLatencyMs:       result.dnsLatencyMs,
+    dnsResolverIp:      result.dnsResolverIp,
+    dnsProvider:        result.dnsProvider,
   };
   const items = [record, ...loadHistory()].slice(0, MAX);
   persist(items);
@@ -93,6 +97,9 @@ export function recordToResult(r: TestRecord): import('../types').SpeedTestResul
     packetLoss: r.packetLoss,
     timestamp: r.timestamp,
     mode: r.testMode,
+    dnsLatencyMs:  r.dnsLatencyMs,
+    dnsResolverIp: r.dnsResolverIp,
+    dnsProvider:   r.dnsProvider,
   };
 }
 

@@ -1,5 +1,5 @@
 .lk-ios-list {
-  background: var(--surface);
+  background: var(--surface-deep);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;

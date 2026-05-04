@@ -1,0 +1,210 @@
+/* DNSGuideSheet — bottom sheet com guia de DNS por plataforma.
+   Substitui a antiga DNSGuideScreen (rota dedicada). Refator 2026-05. */
+
+.lk-dns-sheet__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 199;
+  animation: lk-dns-sheet-fade-in 220ms ease;
+}
+
+@keyframes lk-dns-sheet-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.lk-dns-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 20px 20px 0 0;
+  z-index: 200;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-50%) translateY(0);
+  animation: lk-dns-sheet-slide-up 280ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes lk-dns-sheet-slide-up {
+  from { transform: translateX(-50%) translateY(100%); }
+  to   { transform: translateX(-50%) translateY(0); }
+}
+
+.lk-dns-sheet__handle {
+  width: 40px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 10px auto 0;
+  flex-shrink: 0;
+}
+
+.lk-dns-sheet__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.lk-dns-sheet__scroll {
+  overflow-y: auto;
+  padding: 12px 20px 32px;
+  flex: 1;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lk-dns-sheet,
+  .lk-dns-sheet__backdrop {
+    animation: none !important;
+  }
+}
+
+/* ── Header ────────────────────────────────────────── */
+
+.lk-dns-sheet__header {
+  margin-bottom: 16px;
+}
+
+.lk-dns-sheet__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin: 0 0 2px;
+}
+
+.lk-dns-sheet__subtitle {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-3);
+  margin: 0;
+}
+
+/* ── Hero ────────────────────────────────────────── */
+
+.lk-dns-sheet__hero {
+  padding: 4px 0 16px;
+}
+
+.lk-dns-sheet__hero-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+
+.lk-dns-sheet__ips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lk-dns-sheet__ip-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
+/* ── Platform tabs ───────────────────────────────── */
+
+.lk-dns-sheet__tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.lk-dns-sheet__tab {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+}
+
+.lk-dns-sheet__tab--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-on-accent);
+}
+
+/* ── Steps ───────────────────────────────────────── */
+
+.lk-dns-sheet__steps {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lk-dns-sheet__step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.lk-dns-sheet__step-num {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-tint);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lk-dns-sheet__step-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  padding-top: 2px;
+}
+
+/* ── Note ────────────────────────────────────────── */
+
+.lk-dns-sheet__note {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-3);
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  margin: 0;
+}

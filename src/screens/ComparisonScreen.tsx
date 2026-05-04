@@ -1,4 +1,7 @@
 import { useMemo } from 'react';
+import { TopBar } from '../components/TopBar';
+import { PageHeader } from '../components/PageHeader';
+import { useScrollHeader } from '../hooks/useScrollHeader';
 import type { SpeedTestResult } from '../types';
 import { calculateComparison } from '../utils/comparison';
 import { formatMbps, formatMs } from '../utils/format';
@@ -35,18 +38,25 @@ export function ComparisonScreen({
     [nearResult, farResult],
   );
 
+  // Bloco 5 — TopBar System (2026-05).
+  const { scrolled, scrollContainerRef, sentinelRef } = useScrollHeader();
+
   return (
     <div className="lk-cmp">
-      <div className="lk-cmp__head">
-        <button className="lk-cmp__back" onClick={onBack}>‹ Voltar</button>
-        <span className="lk-cmp__head-label">Comparar locais</span>
-      </div>
+      <TopBar
+        onBack={onBack}
+        scrolled={scrolled}
+        title="Comparar locais"
+        showTitle={scrolled}
+      />
 
-      <div className="lk-cmp__scroll fade-in">
-        <div className="lk-cmp__hero">
-          <div className="lk-cmp__title">Compare sua cobertura</div>
-          <p className="lk-cmp__sub">Meça perto e longe do roteador para ver onde o sinal perde força.</p>
-        </div>
+      <div className="lk-cmp__scroll fade-in" ref={scrollContainerRef}>
+        <PageHeader
+          ref={sentinelRef}
+          size="md"
+          title="Comparar locais"
+          subtitle="Meça perto e longe do roteador para ver onde o sinal perde força."
+        />
 
         {step === 'near' && (
           <div className="lk-cmp__step">

@@ -52,6 +52,24 @@ export interface SpeedTestResult {
   diagnostics?: SpeedTestDiagnostics;
   dlSamples?: SpeedTestSample[];
   ulSamples?: SpeedTestSample[];
+  // ── DNS feature (2026-05) ───────────────────────────────────────────
+  // dnsLatencyMs: latência da primeira resolução DNS observada via
+  //   Resource Timing API. `null` = sem amostra válida (cache total ou
+  //   bloqueio CORS); `undefined` = não medido (registros legados).
+  // dnsResolverIp / dnsProvider: identificação do resolver via probe DoH
+  //   ao Cloudflare whoami (`whoami.cloudflare-dns.com`). Provider é
+  //   derivado do IP por `identifyDnsProvider`. Quando o probe falha
+  //   (offline, CORS, etc.), ambos ficam `null`.
+  dnsLatencyMs?: number | null;
+  dnsResolverIp?: string | null;
+  dnsProvider?: string | null;
+  // ── Tempo total do teste (2026-05) ──────────────────────────────────
+  // elapsedMs: duração total do teste do `runSpeedTestV2()`, capturada
+  //   pelo orchestrator (`Date.now() - testStartTime`). Inclui as três
+  //   fases (latência + download + upload + probe DNS). `undefined` em
+  //   registros legados ou quando o resultado vier de outra origem
+  //   (fixtures, recordToResult, etc.).
+  elapsedMs?: number;
 }
 
 export interface SpeedTestProgress {
@@ -100,6 +118,10 @@ export interface TestRecord {
   diagnosticSummary?: string;
   peakDlMbps?: number;
   peakUlMbps?: number;
+  // DNS feature (2026-05) — propagados de SpeedTestResult.
+  dnsLatencyMs?: number | null;
+  dnsResolverIp?: string | null;
+  dnsProvider?: string | null;
 }
 
 export interface Classification {

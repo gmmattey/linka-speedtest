@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">linka SpeedTest</string>
+    <string name="title_activity_main">linka SpeedTest</string>
+    <string name="package_name">br.com.linka.speedtest</string>
+    <string name="custom_url_scheme">br.com.linka.speedtest</string>
+</resources>

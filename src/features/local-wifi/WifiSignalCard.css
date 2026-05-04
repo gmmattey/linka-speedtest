@@ -1,0 +1,114 @@
+/* ──────────────────────────────────────────────────────────────────────
+   WifiSignalCard — Card compacto na ResultScreen mostrando SSID + Canal
+   (color-coded) + WiFi Standard. Clicável para abrir popup com detalhes.
+
+   Variantes:
+   - .lk-wifi-card--compact  → design novo (SSID + Canal + WiFi)
+   - .lk-wifi-card--placeholder/unavailable/permission-denied → fallbacks
+   ────────────────────────────────────────────────────────────────────── */
+
+.lk-wifi-card {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.lk-wifi-card--compact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  cursor: pointer;
+  padding: 14px 16px;
+  align-items: flex-start;
+  transition: opacity 150ms ease;
+}
+
+.lk-wifi-card--compact:hover,
+.lk-wifi-card--compact:focus {
+  opacity: 0.7;
+  outline: none;
+}
+
+.lk-wifi-card__kicker {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+}
+
+.lk-wifi-card__compact-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.lk-wifi-card__compact-ssid {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  word-break: break-word;
+}
+
+@media (min-width: 600px) {
+  .lk-wifi-card__compact-ssid {
+    font-size: 18px;
+  }
+}
+
+.lk-wifi-card__compact-meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.lk-wifi-card__channel {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 12px;
+  color: white;
+}
+
+.lk-wifi-card__channel--good {
+  background: var(--color-good);
+}
+
+.lk-wifi-card__channel--fair {
+  background: var(--color-warn);
+}
+
+.lk-wifi-card__channel--bad {
+  background: var(--color-bad);
+}
+
+.lk-wifi-card__standard {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+/* ── Estados especiais ────────────────────────────────────────────── */
+
+.lk-wifi-card--placeholder .lk-wifi-card__placeholder,
+.lk-wifi-card--unavailable .lk-wifi-card__unavailable,
+.lk-wifi-card--permission-denied .lk-wifi-card__unavailable {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-2);
+  padding: 4px 0 2px;
+}
+
+.lk-wifi-card--permission-denied .lk-wifi-card__unavailable {
+  color: var(--warn);
+}

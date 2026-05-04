@@ -28,3 +28,6 @@ dist-ssr
 
 # Capacitor / Android toolchain local (não versionado)
 _android-toolchain/
+
+# APKs gerados para entrega manual (não versionar binários)
+builds/apk/*.apk

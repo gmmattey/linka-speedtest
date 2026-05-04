@@ -34,6 +34,10 @@ Linka SpeedTest/
 │
 ├── android/                      ← Projeto Android nativo gerado pelo Capacitor
 │   ├── app/                      ← Módulo Android do APK
+│   │   └── src/main/java/br/com/linka/speedtest/
+│   │       ├── MainActivity.java                 ← BridgeActivity; registra plugins inline
+│   │       └── wifi/                              ← Plugins Capacitor internos do projeto
+│   │           └── LinkaWifiDiagnosticsPlugin.java ← Diagnóstico Wi-Fi nativo (2026-05)
 │   ├── gradle/                   ← Gradle Wrapper versionado
 │   ├── build.gradle
 │   ├── settings.gradle
@@ -54,49 +58,69 @@ Linka SpeedTest/
 │   ├── tokens.css                ← CSS Custom Properties: temas, espaçamento, tipografia
 │   │
 │   ├── types/
-│   │   └── index.ts              ← Todos os tipos TypeScript compartilhados
+│   │   ├── index.ts              ← Todos os tipos TypeScript compartilhados
+│   │   └── pwa.d.ts              ← Ambient module para `virtual:pwa-register/react` (vite-plugin-pwa)
 │   │
 │   ├── components/               ← Componentes reutilizáveis (sem estado de negócio)
+│   │   ├── Accordion.tsx / .css  ← Bloco expansível header+conteúdo (refator arquitetura 2026-05)
+│   │   ├── BackButton.tsx / .css ← Botão voltar (chevron em pill 36×36) — Bloco 5 TopBar
 │   │   ├── BottomSheet.tsx / .css
 │   │   ├── Chip.tsx / .css       ← Badge/chip com variantes semânticas (good/maybe/bad/accent/neutral)
 │   │   ├── Gauge.tsx / .css      ← Anel SVG com fase + número hero + unidade
+│   │   ├── HamburgerMenu.tsx / .css
+│   │   ├── IconButton.tsx / .css ← Ação circular do TopBar (mesmo padrão visual do BackButton)
 │   │   ├── IOSList.tsx / .css    ← Lista estilo iOS Settings (ícone + título + trailing)
+│   │   ├── LiveChart.tsx / .css  ← Sparkline ao vivo (RunningScreen, Bloco Motion 2026-05)
+│   │   ├── PageHeader.tsx / .css ← Título grande no início do scroll — Bloco 5 TopBar
 │   │   ├── PathRow.tsx / .css
+│   │   ├── PwaUpdatePrompt.tsx / .css ← Banner "Nova versão disponível" do Service Worker (atualização ágil, 2026-05)
+│   │   ├── TopBar.tsx / .css     ← Header glass-on-scroll universal — Bloco 5 TopBar (2026-05)
 │   │   └── icons.tsx             ← Biblioteca centralizada de SVGs inline
 │   │
 │   ├── hooks/                    ← React hooks (estado derivado, efeitos externos)
+│   │   ├── useCountUp.ts         ← Animação count-up com easeOutCubic (Bloco Motion 2026-05)
 │   │   ├── useDeviceInfo.ts      ← Device UA + navigator.connection + ServerInfo
+│   │   ├── useScrollHeader.ts    ← IntersectionObserver para glass effect + título do TopBar (Bloco 5)
 │   │   ├── useSettings.ts        ← Settings persistidas em localStorage
 │   │   └── useSpeedTest.ts       ← Orquestra runSpeedTest, expõe fase/progresso/resultado
 │   │
 │   ├── screens/                  ← Telas completas (1 arquivo .tsx + 1 .css por tela)
 │   │   ├── StartScreen.tsx / .css
 │   │   ├── RunningScreen.tsx / .css
-│   │   ├── ResultScreen.tsx / .css
+│   │   ├── ResultScreen.tsx / .css       ← Inclui card unificado de Diagnóstico (2 estados) + section "Mais detalhes" com 3 accordions (Avançado, Modo Gamer, DNS) — refator 2026-05
 │   │   ├── HistoryScreen.tsx / .css
 │   │   ├── ComparisonScreen.tsx / .css
 │   │   ├── BeforeAfterScreen.tsx / .css
 │   │   ├── RoomTestScreen.tsx / .css
-│   │   ├── DiagnosticScreen.tsx / .css  ← Diagnóstico de 6 áreas em grid 2-col
-│   │   ├── GamerScreen.tsx / .css       ← Avaliação de jogos: ping/jitter/loss + rows por game
-│   │   ├── DetailsScreen.tsx / .css     ← Métricas técnicas detalhadas: qualidade sob carga, provedor
-│   │   ├── RecommendScreen.tsx / .css   ← 4 ações para melhorar o Wi-Fi
-│   │   ├── DNSGuideScreen.tsx / .css    ← Guia de configuração de DNS no dispositivo
-│   │   ├── DNSBenchmarkScreen.tsx / .css ← Verificação on-demand de servidores DNS (feature Explorar)
-│   │   └── ExploreScreen.tsx / .css     ← Hub de ferramentas avançadas (acessado via Result e Start)
+│   │   └── ExploreScreen.tsx / .css      ← Hub reduzido a 2 sections: Histórico + Ferramentas (refator 2026-05)
+│   │   # Telas removidas no refator de arquitetura 2026-05 (stubbed,
+│   │   # pendentes de `git rm`):
+│   │   # - DiagnosticScreen → card de Diagnóstico na ResultScreen
+│   │   # - RecommendScreen  → fundido na lista [problema] → [ação]
+│   │   # - GamerScreen      → accordion "Modo Gamer" na ResultScreen
+│   │   # - DetailsScreen    → accordion "Avançado" na ResultScreen
+│   │   # - DNSGuideScreen   → DNSGuideSheet (overlay)
+│   │   # - DNSBenchmarkScreen → descontinuada
 │   │
 │   ├── utils/                    ← Funções puras / lógica de domínio (sem React) — específicas do PWA
+│   │   ├── anatelColor.ts        ← anatelGrade() + anatelGradeColorVar/GlowVar; cores semânticas Anatel (Resolução 717/2019) p/ DL/UL na ResultScreen quando plano cadastrado (2026-05)
 │   │   ├── classifier.ts         ← Classificação de qualidade + diagnóstico (legado, em coexistência com src/core)
 │   │   ├── cloudflareSpeedTest.ts ← Primitivas HTTP: cfDownloadStream, cfPing, cfUploadChunk (Motor v2)
 │   │   ├── connectionProfile.ts  ← Mapeamento ConnectionType → ConnectionProfile (Anatel)
-│   │   ├── dnsBenchmark.ts       ← runDNSBenchmark via DoH; loadLastDnsResult
+│   │   ├── diagnosisItems.ts     ← buildDiagnosisItems(); lista compacta [problema] → [ação] no card de Diagnóstico (refator arquitetura 2026-05)
+│   │   ├── dnsBenchmark.ts       ← runDNSBenchmark via DoH; loadLastDnsResult (sem caller após refator 2026-05; preservado para futuro reuso)
+│   │   ├── dnsTiming.ts          ← getDnsLatencyMs (Resource Timing API) + classifyDnsLatency (Fase A DNS, 2026-05)
+│   │   ├── dnsProbe.ts           ← probeDnsResolver via DoH whoami + identifyDnsProvider (Fase B DNS, 2026-05)
 │   │   ├── downloadProbe.ts      ← Motor de download time-based com paralelismo progressivo (Motor v2)
 │   │   ├── format.ts             ← formatMbps, formatMs, formatDate, formatDateIsoLike
+│   │   ├── haptics.ts            ← triggerHaptic(); wrap sobre navigator.vibrate (Bloco 3 Polimento, 2026-05)
 │   │   ├── history.ts            ← CRUD do histórico em localStorage
 │   │   ├── latencyProbe.ts       ← runLatencyPhase (pings com remoção de outliers) + runPingLoop (Motor v2)
 │   │   ├── pdfExport.ts          ← Geração de PDF (resultado + histórico)
+│   │   ├── relativeTime.ts       ← formatRelativeTime() — "agora"/"há N min/h/d/sem" pt-BR (banner de contexto da ResultScreen, pacote premium 2026-05)
 │   │   ├── serverRegistry.ts     ← ServerProvider interface + CloudflareProvider
 │   │   ├── share.ts              ← buildShareText + shareResultText (texto de compartilhamento)
+│   │   ├── shareCard.ts          ← generateShareCard(); PNG 1080×1080 via Canvas API (Bloco 3 Polimento, 2026-05 — refatorado para quadrado com headline + ISP)
 │   │   ├── speedTestOrchestrator.ts ← runSpeedTestV2(); coordena latência+DL+UL com bufferbloat integrado
 │   │   ├── combinedDiagnosis.ts  ← combineDiagnostics(); cruza SpeedTestResult + dados opcionais Wi-Fi/móvel → diagnóstico unificado
 │   │   └── uploadProbe.ts        ← Motor de upload time-based com XHR onprogress (Motor v2)
@@ -107,14 +131,25 @@ Linka SpeedTest/
 │       ├── copyDictionary.ts     ← Mapeamento copyKeys → string pt-BR + resolveCopy()
 │       ├── interpret.ts          ← interpretSpeedTestResult() — entrada única do motor
 │       ├── networkQualityClassifier.ts ← gradeFrom, classifyBufferbloatSeverity, buildDiagnostics (Motor v2)
+│       ├── useCaseGrade.ts         ← Deriva grade A-F por use case (refactor visual ResultScreen, 2026-05)
 │       └── index.ts              ← Reexporta o contrato público (usado pela Fase 7 / embed Flutter)
 │
 ├── __tests__/                    ← Testes Vitest (ficam dentro de src/)
+│   ├── anatelColor.test.ts       ← anatelGrade thresholds fixa/móvel + edge cases (2026-05)
 │   ├── classifier.test.ts
 │   ├── combinedDiagnosis.test.ts
+│   ├── compare.test.ts
 │   ├── connectionProfile.test.ts
+│   ├── copyDictionary.test.ts
+│   ├── dnsProbe.test.ts          ← identifyDnsProvider (Fase B DNS, 2026-05)
+│   ├── dnsTiming.test.ts         ← classifyDnsLatency + dnsLatencyLabel (Fase A DNS, 2026-05)
 │   ├── interpret.test.ts
-│   └── share.test.ts
+│   ├── LocalWifiService.test.ts
+│   ├── share.test.ts
+│   ├── speedtest.test.ts         ← Helpers do orchestrator: computeRanges + mapProgress (Bloco Motion 2026-05)
+│   ├── useCaseGrade.test.ts      ← gradeMetric + useCaseGrade por profile (refactor visual ResultScreen 2026-05)
+│   ├── useCountUp.test.ts        ← Helpers puros do useCountUp (Bloco Motion 2026-05)
+│   └── useScrollHeader.test.ts   ← Helpers puros do useScrollHeader (Bloco 5 TopBar 2026-05)
 │
 ├── CLAUDE.md                     ← Instruções para Claude Code
 ├── capacitor.config.ts           ← Configuração Capacitor (appId, appName, webDir)
@@ -139,6 +174,7 @@ Linka SpeedTest/
 | Tela completa | `src/screens/NomeTela.tsx` + `NomeTela.css` |
 | Função pura / lógica do PWA (consumo de hooks/screens, depende de DOM/localStorage) | `src/utils/nomeUtil.ts` |
 | Motor de decisão portável (sem React/DOM/localStorage, candidato a reuso no Flutter) | `src/core/nomeArquivo.ts` |
+| Plugin Capacitor interno (Java) | `android/app/src/main/java/br/com/linka/speedtest/<dominio>/<NomePlugin>.java` (registrar em `MainActivity.onCreate`) |
 | Asset público (imagens, ícones) | `public/` |
 | Documentação | `docs/NomeDocumento.md` |
 | Teste unitário | `src/__tests__/nomeUtil.test.ts` |
@@ -250,9 +286,24 @@ src/
 │       ├── LocalWifiBridge.ts
 │       ├── LocalWifiUnavailable.ts
 │       ├── LocalWifiService.ts
-│       ├── useLocalWifi.ts
+│       ├── useLocalWifi.ts            ← hook on-demand (LocalWifiScreen)
+│       ├── useWifiDiagnostics.ts      ← hook auto-fetch (card embutido) — 2026-05
+│       ├── WifiSignalCard.tsx         ← card embutido na ResultScreen — 2026-05
+│       ├── WifiSignalCard.css         ← estilo do card embutido — 2026-05
 │       ├── LocalWifiScreen.tsx
 │       └── LocalWifiScreen.css
 └── __tests__/
     └── LocalWifiService.test.ts
 ```
+
+### Estrutura adicionada — Feature DNS (refator arquitetura 2026-05)
+
+```txt
+src/
+└── features/
+    └── dns/
+        ├── DNSGuideSheet.tsx       ← Bottom sheet com guia DNS por plataforma
+        └── DNSGuideSheet.css       ← Estilo do sheet (substitui DNSGuideScreen.css)
+```
+
+A pasta nasceu para abrigar o `DNSGuideSheet`, criado quando a `DNSGuideScreen` (rota dedicada) foi descontinuada — agora o guia é overlay acionado pelo botão "Como alterar" do accordion DNS na ResultScreen.

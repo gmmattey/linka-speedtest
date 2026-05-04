@@ -1,0 +1,83 @@
+/* Bloco 5 — TopBar System (2026-05).
+   Header transparente que ganha glass effect ao rolar.
+   Posicionado em absolute no topo da tela; o scroll content passa
+   por baixo via padding-top do PageHeader. */
+
+.lk-topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  height: calc(56px + var(--safe-top));
+  padding: var(--safe-top) var(--space-md) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition:
+    background 200ms ease,
+    backdrop-filter 200ms ease,
+    -webkit-backdrop-filter 200ms ease,
+    border-color 200ms ease;
+  pointer-events: auto;
+}
+
+.lk-topbar--scrolled {
+  background: var(--surface-translucent);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-bottom-color: var(--border-subtle);
+}
+
+.lk-topbar__left,
+.lk-topbar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 0 0 auto;
+  min-width: 44px;
+  height: 56px;
+}
+
+.lk-topbar__right {
+  justify-content: flex-end;
+}
+
+.lk-topbar__title {
+  flex: 1 1 auto;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 180ms ease, transform 180ms ease;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 var(--space-sm);
+  min-width: 0;
+}
+
+.lk-topbar__title--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.lk-topbar__spacer {
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lk-topbar,
+  .lk-topbar__title {
+    transition: none;
+  }
+}

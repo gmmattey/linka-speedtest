@@ -8,10 +8,14 @@ export function getUnavailableLocalWifiRawInfo(platform: LocalWifiRawInfo['platf
   };
 }
 
-export function getUnavailableWifiDiagnosticResult(): WifiDiagnosticResult {
+export function getUnavailableWifiDiagnosticResult(
+  raw?: Partial<Pick<LocalWifiRawInfo, 'permissionStatus' | 'platform'>>,
+): WifiDiagnosticResult {
   return {
     available: false,
     quality: 'unknown',
+    permissionStatus: raw?.permissionStatus,
+    platform: raw?.platform,
     title: 'Diagnóstico Wi-Fi indisponível',
     explanation: 'Não foi possível obter dados do Wi-Fi neste aparelho.',
     primaryAction: 'Verifique permissões do app ou use o SpeedTest normalmente.',

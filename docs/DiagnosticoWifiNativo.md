@@ -61,10 +61,15 @@ Regras:
 
 ## Contrato do bridge nativo
 
-O app nativo deve prover:
+O lado JS resolve o plugin nesta ordem (ver `src/features/local-wifi/LocalWifiBridge.ts` `resolveBridge()`):
+
+1. `Capacitor.Plugins.LinkaWifiDiagnostics.getWifiInfo()` — padrão Capacitor 8 (registrado em `MainActivity.onCreate` via `registerPlugin`).
+2. `window.LinkaWifiDiagnostics.getWifiInfo()` — fallback de compatibilidade caso uma build antiga ainda injete a bridge via `addJavascriptInterface`.
+
+Shape do payload (idêntico nos dois caminhos):
 
 ```ts
-window.LinkaWifiDiagnostics.getWifiInfo(): Promise<{
+getWifiInfo(): Promise<{
   available: boolean;
   ssid?: string;
   bssid?: string;
@@ -80,6 +85,41 @@ window.LinkaWifiDiagnostics.getWifiInfo(): Promise<{
 ```
 
 Se o bridge não existir ou falhar, o módulo retorna indisponível com fallback seguro.
+
+## Implementação Android (Capacitor)
+
+Plugin Java vive em `android/app/src/main/java/br/com/linka/speedtest/wifi/LinkaWifiDiagnosticsPlugin.java`. Pontos principais:
+
+- `@CapacitorPlugin(name = "LinkaWifiDiagnostics", permissions = { ACCESS_FINE_LOCATION alias "location" })`.
+- Em `getWifiInfo`, valida a permissão de localização. Se ausente, dispara `requestPermissionForAlias("location", call, "permissionCallback")`. O callback termina o `PluginCall` com `{ available: false, permissionStatus: "denied" }` quando o usuário recusa.
+- Coleta `WifiInfo` preferindo `ConnectivityManager#getNetworkCapabilities().getTransportInfo()` em API 29+, com fallback para `WifiManager#getConnectionInfo()`.
+- Calcula o canal a partir de `frequencyMhz` (espelho do `channelFromFrequency` em TS).
+- Lê gateway IPv4 e IP local via `LinkProperties` da `Network` ativa.
+- Sanitiza SSID (remove aspas e descarta `<unknown ssid>`/BSSID padrão de "permissão negada").
+
+Registro: `MainActivity.onCreate` chama `registerPlugin(LinkaWifiDiagnosticsPlugin.class)` ANTES de `super.onCreate()`. Como o plugin é interno (não vem de pacote npm), `capacitor.plugins.json` permanece `[]` — esse arquivo é regenerado pelo `npx cap sync` e lista apenas plugins NPM. O `registerPlugin` programático cobre o nosso caso.
+
+Permissões em `AndroidManifest.xml`:
+
+```xml
+<uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+```
+
+## Estado `permission-denied` no WifiSignalCard
+
+`useWifiDiagnostics` distingue três modos de "sem dados":
+
+| Status              | Quando ocorre                                                                | UI                                                                                                                          |
+|---------------------|------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| `loading`           | Chamada ao bridge em andamento                                               | "Lendo informações do Wi-Fi…"                                                                                               |
+| `permission-denied` | Bridge respondeu mas `permissionStatus === 'denied'`                         | "Permissão de localização necessária para diagnóstico Wi-Fi. Habilite nas configurações do app." (cor `var(--warn)`)        |
+| `unavailable`       | Bridge ausente (PWA puro) ou erro genérico                                   | "Wi-Fi: detalhes disponíveis somente no app instalado."                                                                     |
+| `available`         | Plugin retornou `available: true`                                            | Renderiza grid 4 colunas (banda, canal, sinal, link).                                                                       |
+
+A propagação de `permissionStatus`/`platform` do raw para o `WifiDiagnosticResult` foi adicionada em `getUnavailableWifiDiagnosticResult(raw)` para que a UI possa decidir a copy correta.
 
 ## Conexão na navegação
 

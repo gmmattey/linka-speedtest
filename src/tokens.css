@@ -32,8 +32,25 @@
 
 [data-theme='dark'] {
   --bg:                   #0A0A0F;
+  /* Bloco 3 — Polimento (2026-05): radial sutil para dar profundidade sem
+     virar gradiente espalhafatoso. Centro mais claro que a borda; ~120vmax
+     de raio garante que mesmo telas grandes só vejam a cor da borda
+     (escolhida próxima a --bg para casar com áreas opacas).
+     Recalibração 2026-05 (terceira passada): edges achatadas para reduzir
+     contraste com o `--surface-deep` dos cards. Antes: edge `#06060A` (RGB
+     6,6,10) — ~10 pontos por canal abaixo do centro `#11121A` (17,18,26),
+     criando uma "barra" perceptível onde o card termina e o body fica
+     visível na zona escura do radial. Agora: edge `#0E0F18` (RGB 14,15,24)
+     — ~3 pontos abaixo do centro, mantém o efeito de profundidade mas
+     elimina o step visual contra os cards. */
+  --bg-radial:            radial-gradient(120vmax 120vmax at 50% 30%, #11121A 0%, #0E0F18 100%);
   --bg-elev:              #0F0F14;
   --surface:              #1A1A22;
+  /* Bloco visual (2026-05): --surface-deep replica visualmente o centro
+     do --bg-radial (#11121A). Usado em cards principais para que pareçam
+     "vazar" na cor do body, alinhando-se ao bloco Resposta/Oscilação/
+     Falhas (que é transparent e revela o radial). */
+  --surface-deep:         #11121A;
   --surface-2:            #22222B;
   --surface-3:            #2D2D38;
   --surface-translucent:  rgba(26, 26, 34, 0.72);
@@ -49,8 +66,16 @@
   --accent-glow:          rgba(124, 95, 255, 0.50);
   --dl:                   #60A5FA;
   --dl-tint:              rgba(96, 165, 250, 0.16);
+  /* Glow tokens (pacote premium 2026-05) — exclusivos do hero number da
+     ResultScreen (Download/Upload). Alpha baixo (~0.35-0.40) para dar
+     "respiração luminosa" sem virar sombra. Aplicados via text-shadow
+     blur 16px nos `.lk-result__primary-cell-value`. Override do
+     reset universal `text-shadow: none !important` é feito com
+     `!important` na própria regra do hero number. */
+  --dl-glow:              rgba(96, 165, 250, 0.40);
   --ul:                   #34D399;
   --ul-tint:              rgba(52, 211, 153, 0.16);
+  --ul-glow:              rgba(52, 211, 153, 0.40);
   --text:                 #FAFAF7;
   --text-2:               #9A9A9A;
   --text-3:               #6B6B6B;
@@ -58,6 +83,19 @@
   --error:                #F87171;
   --warn:                 #FBBF24;
   --success:              #34D399;
+  /* Glow tokens do card de Diagnóstico (refator 2026-05). Mesma família dos
+     `--dl-glow`/`--ul-glow` mas em torno dos tokens `--success`/`--warn`/
+     `--error`. Aplicados via `box-shadow` (não `text-shadow`) para criar
+     respiração luminosa em volta do contêiner. A severidade agregada do
+     diagnóstico (helper `aggregateDiagnosisSeverity`) decide qual token
+     vira `--diag-glow-color` na ResultScreen:
+       - healthy (sem itens) → --success-glow
+       - warn (algum item warn) → --warn-glow
+       - fail (algum item fail) → --error-glow
+     Alpha 0.30 em dark mantém paridade com a paleta dos hero numbers. */
+  --success-glow:         rgba(52, 211, 153, 0.30);
+  --warn-glow:            rgba(251, 191, 36, 0.30);
+  --error-glow:           rgba(248, 113, 113, 0.30);
   --info:                 #60A5FA;
   --grade-a:              #34D399;
   --grade-b:              #86EFAC;
@@ -75,8 +113,19 @@
 
 [data-theme='light'] {
   --bg:                   #FAFAF7;
+  /* Bloco 3 — Polimento (2026-05): mesma ideia em light: centro um toque
+     mais claro que as bordas para dar respiro sem afetar legibilidade.
+     Recalibração 2026-05 (terceira passada): mesmo motivo do dark — edge
+     antigo `#F2F1EC` (~11 pts por canal abaixo do centro `#FDFDFB`)
+     produzia step visual contra `--surface-deep` (`#FBFBFD`) dos cards.
+     Edge agora = `--bg` (`#FAFAF7`), ~3 pts por canal abaixo do centro. */
+  --bg-radial:            radial-gradient(120vmax 120vmax at 50% 30%, #FDFDFB 0%, #FAFAF7 100%);
   --bg-elev:              #FFFFFF;
   --surface:              #FFFFFF;
+  /* Bloco visual (2026-05): em light, --surface-deep é uma tonalidade
+     ligeiramente off-white, ainda lendo como "card" mas distinta do
+     --surface puro branco. Mantém paridade conceitual com o token dark. */
+  --surface-deep:         #FBFBFD;
   --surface-2:            #F3F2EE;
   --surface-3:            #ECEAE4;
   --surface-translucent:  rgba(255, 255, 255, 0.78);
@@ -92,8 +141,12 @@
   --accent-glow:          rgba(91, 63, 232, 0.50);
   --dl:                   #2563EB;
   --dl-tint:              rgba(37, 99, 235, 0.12);
+  /* Glow em light: alpha mais baixo (0.30) — fundo claro requer menos
+     intensidade pra mesma percepção de luminosidade. */
+  --dl-glow:              rgba(37, 99, 235, 0.30);
   --ul:                   #16A34A;
   --ul-tint:              rgba(22, 163, 74, 0.12);
+  --ul-glow:              rgba(22, 163, 74, 0.30);
   --text:                 #0F0F14;
   --text-2:               #3A3A3A;
   --text-3:               #6B6B6B;
@@ -101,6 +154,13 @@
   --error:                #DC2626;
   --warn:                 #D97706;
   --success:              #16A34A;
+  /* Glow tokens em light: alpha menor (0.22) seguindo a mesma proporção do
+     resto da paleta light vs dark. Cores derivam dos tokens base (success/
+     warn/error) — o card de Diagnóstico escolhe qual usar via
+     `--diag-glow-color` setado inline. */
+  --success-glow:         rgba(22, 163, 74, 0.22);
+  --warn-glow:            rgba(217, 119, 6, 0.22);
+  --error-glow:           rgba(220, 38, 38, 0.22);
   --info:                 #2563EB;
   --grade-a:              #16A34A;
   --grade-b:              #4ADE80;
@@ -127,13 +187,36 @@
   text-shadow: none !important;
 }
 
-html,
+/* PWA iOS standalone fix (2026-05): html recebe COR SÓLIDA (não gradiente).
+   Motivo: com `viewport-fit=cover`, o canvas da página se estende por
+   baixo da home indicator. Se o html ficar com `background-color: transparent`
+   (default — ou efeito colateral do `background:` shorthand sem cor),
+   a faixa do home indicator do iPhone aparece BRANCA em standalone.
+   Solução: html sempre com cor sólida do tema; o radial fica só no body. */
+html {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;       /* fallback */
+  min-height: 100dvh;      /* moderno */
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg);
+  color: var(--text);
+}
+
 body {
   margin: 0;
   padding: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
   height: 100%;
   overflow: hidden;
-  background: var(--bg);
+  /* Bloco 3 — Polimento (2026-05): aplica o radial gradient diretamente
+     no body. Telas internas continuam usando `var(--bg)` em superfícies
+     opacas, então o gradiente só aparece em "vazios" (entre cards). */
+  background-color: var(--bg);
+  background-image: var(--bg-radial);
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--font-body);
   font-size: 14px;
@@ -145,9 +228,14 @@ body {
 
 #root {
   height: 100dvh;
+  min-height: 100dvh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  /* Backstop: se o body não cobrir alguma região (rubber band, safe area
+     residual), o #root garante que o tema continue. Sem gradiente —
+     gradient já está no body e duplicar criaria banding. */
+  background-color: var(--bg);
 }
 
 button {
@@ -175,7 +263,7 @@ a {
 }
 
 .card {
-  background: var(--surface);
+  background: var(--surface-deep);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 18px;

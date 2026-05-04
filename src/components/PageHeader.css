@@ -1,0 +1,59 @@
+/* Bloco 5 — TopBar System (2026-05): título grande no início do scroll.
+   Padding-top compensa a altura do TopBar absolute. */
+
+.lk-page-header {
+  padding:
+    calc(var(--safe-top) + 56px + var(--space-md))
+    var(--space-md)
+    var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.lk-page-header__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.lk-page-header__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.lk-page-header--lg .lk-page-header__title {
+  font-size: 32px;
+}
+
+.lk-page-header--md .lk-page-header__title {
+  font-size: 24px;
+  letter-spacing: -0.015em;
+}
+
+.lk-page-header__trailing {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.lk-page-header__sub {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+
+@media (min-width: 480px) {
+  .lk-page-header--lg .lk-page-header__title {
+    font-size: 40px;
+  }
+  .lk-page-header--md .lk-page-header__title {
+    font-size: 28px;
+  }
+}

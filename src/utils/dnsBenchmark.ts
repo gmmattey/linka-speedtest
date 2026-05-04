@@ -1,3 +1,5 @@
+import { probeDnsResolver } from './dnsProbe';
+
 export type DnsGrade = 'A' | 'B' | 'C' | 'D';
 
 export interface DnsServerResult {
@@ -105,25 +107,29 @@ async function benchmarkServer(
   return { id: server.id, name: server.name, ip: server.ip, p50, p95, samples: latencies.length, grade: gradeFor(p50) };
 }
 
-async function probeDnsLatency(): Promise<number | null> {
-  const url = `https://cloudflare-dns.com/cdn-cgi/trace?_=${Date.now()}`;
-  try {
-    await fetch(url, { cache: 'no-store', mode: 'no-cors' });
-    const entries = performance.getEntriesByName(url) as PerformanceResourceTiming[];
-    if (!entries.length) return null;
-    const e = entries[0];
-    const dnsMs = e.domainLookupEnd - e.domainLookupStart;
-    return dnsMs > 0 ? Math.round(dnsMs) : null;
-  } catch {
-    return null;
-  }
+/**
+ * Mede a latência do "DNS atual" (o resolver-padrão do sistema/operadora,
+ * usado pelo navegador para resolver hostnames antes de qualquer
+ * benchmark DoH). Antes (até 2026-05) usava `cdn-cgi/trace` + Resource
+ * Timing API — Safari mobile zerava `domainLookupStart/End` por
+ * cross-origin sem `Timing-Allow-Origin: *`, devolvendo `null` quase
+ * sempre. Agora delega ao `probeDnsResolver` (também usado pelo
+ * orchestrator do speedtest), que mede via `performance.now()` em volta
+ * de uma request DoH JSON ao Cloudflare whoami — funciona no Safari.
+ *
+ * A medição inclui DNS-do-sistema + TLS + RTT HTTP, exatamente como os
+ * benchmarks DoH em `queryOnce()` — números comparáveis.
+ */
+async function probeDnsLatency(signal: AbortSignal): Promise<number | null> {
+  const { latencyMs } = await probeDnsResolver(signal);
+  return latencyMs;
 }
 
 export async function runDNSBenchmark(
   signal: AbortSignal,
   onProgress?: (done: number, total: number, current: string) => void,
 ): Promise<DnsBenchmarkResult> {
-  const nativeDnsMs = await probeDnsLatency();
+  const nativeDnsMs = await probeDnsLatency(signal);
   const results: DnsServerResult[] = [];
 
   for (let i = 0; i < SERVERS.length; i++) {

@@ -1,27 +1,11 @@
-.lk-ham {
-  position: relative;
-}
-
-.lk-ham__btn {
-  width: 44px;
-  height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-2);
-  border-radius: 8px;
-  transition: background var(--transition-fast), color var(--transition-fast);
-}
-
-.lk-ham__btn:hover {
-  background: var(--surface);
-  color: var(--text);
-}
+/* Bloco 6 — UX uniforme (2026-05): HamburgerMenu virou controlled.
+   O trigger foi externalizado para um <IconButton> no <TopBar>; aqui
+   só sobrou o painel, posicionado fixed para flutuar sob o ícone. */
 
 .lk-ham__panel {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
+  position: fixed;
+  top: calc(var(--safe-top) + 56px + 4px);
+  right: var(--space-md);
   width: 240px;
   background: var(--surface);
   border: 1px solid var(--border);

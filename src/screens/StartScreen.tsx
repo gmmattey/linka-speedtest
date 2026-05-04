@@ -3,6 +3,9 @@ import type { DeviceInfo, ServerInfo, TestRecord } from '../types';
 import type { Settings } from '../hooks/useSettings';
 import { IOSList } from '../components/IOSList';
 import { Icon } from '../components/icons';
+import { TopBar } from '../components/TopBar';
+import { useScrollHeader } from '../hooks/useScrollHeader';
+import { resolveCopy } from '../core';
 import { formatMbps } from '../utils/format';
 import './StartScreen.css';
 
@@ -43,6 +46,12 @@ export function StartScreen({
 }: Props) {
   const [selectedMode, setSelectedMode] = useState<'fast' | 'complete'>(settings.defaultMode ?? 'complete');
 
+  // Bloco 6 — UX uniforme (2026-05): sentinel sintético para o
+  // useScrollHeader. A StartScreen não tem `<PageHeader>`, então o
+  // hook não tinha alvo. Hoje fica idêntico (sem rolagem, sem glass);
+  // se a tela ganhar conteúdo no futuro, o glass passa a aparecer.
+  const { scrolled, scrollContainerRef, sentinelRef } = useScrollHeader();
+
   const handleModeChange = (mode: 'fast' | 'complete') => {
     setSelectedMode(mode);
     onUpdateSettings({ defaultMode: mode });
@@ -69,20 +78,32 @@ export function StartScreen({
   const serverSub = server?.loc ? server.loc : 'Servidor mais próximo';
 
   return (
-    <div className="lk-start" data-theme={theme}>
-      {/* Cabeçalho mínimo */}
-      <div className="lk-start__topbar">
-        <span className="lk-start__logo">
-          li<span style={{ color: 'var(--accent)' }}>n</span>ka
-        </span>
-        <button
-          className="lk-start__topbar-btn"
-          onClick={onShowHistory}
-          aria-label="Ver histórico"
-        >
-          <Icon name="history" size={20} color="var(--text-2)" />
-        </button>
-      </div>
+    <div className="lk-start" data-theme={theme} ref={scrollContainerRef}>
+      {/* Bloco 6 — UX uniforme (2026-05): sentinel sintético posicionado
+          logo abaixo da altura do TopBar. No-op visual hoje (a tela
+          não rola), mas mantém o useScrollHeader funcional caso a tela
+          ganhe conteúdo no futuro. */}
+      <div
+        ref={sentinelRef}
+        aria-hidden="true"
+        className="lk-start__sentinel"
+      />
+      {/* Bloco 5 — TopBar System (2026-05): logo à esquerda no leftSlot,
+          ícone histórico no rightActions. Sem PageHeader — o orb pulsante
+          central já é o hero da tela. */}
+      <TopBar
+        scrolled={scrolled}
+        leftSlot={
+          <span className="lk-start__logo">
+            li<span style={{ color: 'var(--accent)' }}>n</span>ka
+          </span>
+        }
+        rightActions={[{
+          icon: <Icon name="history" size={18} color="var(--text-2)" />,
+          onClick: onShowHistory,
+          ariaLabel: 'Ver histórico',
+        }]}
+      />
 
       {/* Alerta de erro */}
       {!isOnline && (
@@ -200,13 +221,13 @@ export function StartScreen({
             className={`lk-start__theme-btn${theme === 'light' ? ' lk-start__theme-btn--active' : ''}`}
             onClick={() => theme !== 'light' && onToggleTheme()}
           >
-            Light
+            {resolveCopy('theme.light')}
           </button>
           <button
             className={`lk-start__theme-btn${theme === 'dark' ? ' lk-start__theme-btn--active' : ''}`}
             onClick={() => theme !== 'dark' && onToggleTheme()}
           >
-            Dark
+            {resolveCopy('theme.dark')}
           </button>
         </div>
       </div>

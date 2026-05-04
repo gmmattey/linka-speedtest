@@ -3,31 +3,39 @@ import type { GamingProfile } from '../types';
 
 export interface Settings {
   unit: 'mbps' | 'gbps';
-  scale: 'linear' | 'log';
   connectionOverride: 'auto' | 'wifi' | 'cable' | 'mobile';
   hideIpOnShare: boolean;
   gamingProfile: GamingProfile;
   contractedDown: number | null;
   contractedUp: number | null;
   defaultMode: 'fast' | 'complete';
+  // Bloco 3 (Polimento, 2026-05): habilita vibração tátil em transições
+  // de fase, conclusão e erro do teste. Default `true` — usuário pode
+  // desativar pelo HamburgerMenu.
+  useHaptics: boolean;
 }
 
 const KEY = 'linka.speedtest.settings.v1';
 const DEFAULTS: Settings = {
   unit: 'mbps',
-  scale: 'linear',
   connectionOverride: 'auto',
   hideIpOnShare: true,
   gamingProfile: 'off',
   contractedDown: null,
   contractedUp: null,
   defaultMode: 'complete',
+  useHaptics: true,
 };
 
 function load(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Settings>) };
+    if (raw) {
+      // Spread tolera campos órfãos (ex.: `scale` removido em Bloco 6,
+      // 2026-05). Eles ficam no objeto até o próximo `update()` reescrever
+      // o storage somente com chaves de `Settings`.
+      return { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Settings>) };
+    }
   } catch { /* ignore */ }
   return DEFAULTS;
 }

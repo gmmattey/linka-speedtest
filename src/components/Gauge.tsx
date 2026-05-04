@@ -38,7 +38,16 @@ export function Gauge({ value, phase, num, unit, color, size = 220 }: Props) {
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={offset}
-          style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+          style={{
+            // Glow sutil no arco ativo (Bloco 3 — Polimento, 2026-05).
+            // O blur escala levemente com o progresso da fase (4-7px) para
+            // dar a sensação de "ganhar energia" enquanto a barra completa.
+            // Cor herda do `stroke`, então o glow muda com a fase (DL=azul,
+            // UL=verde, accent=lilás). `filter` é animado para acompanhar
+            // a transição do dashoffset.
+            transition: 'stroke-dashoffset 0.5s ease, filter 0.5s ease',
+            filter: `drop-shadow(0 0 ${4 + value * 3}px ${color})`,
+          }}
         />
       </svg>
       <div className="lk-gauge__center">

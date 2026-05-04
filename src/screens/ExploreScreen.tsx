@@ -1,6 +1,10 @@
+import { useState } from 'react';
 import { IOSList } from '../components/IOSList';
 import { Icon } from '../components/icons';
-import { HamburgerMenu } from '../components/HamburgerMenu';
+import { HamburgerMenu, HamburgerMenuIcon } from '../components/HamburgerMenu';
+import { TopBar } from '../components/TopBar';
+import { PageHeader } from '../components/PageHeader';
+import { useScrollHeader } from '../hooks/useScrollHeader';
 import './ExploreScreen.css';
 
 interface Props {
@@ -9,120 +13,107 @@ interface Props {
   contractedDown: number | null;
   contractedUp: number | null;
   onUpdateContracted: (down: number | null, up: number | null) => void;
-  hasResult: boolean;
   onBack: () => void;
-  onDiagnostic?: () => void;
-  onRecommend?: () => void;
-  onGamer?: () => void;
-  onStartProvaReal?: () => void;
+  /**
+   * Abre o Histórico. Item da seção "Histórico" no topo da lista.
+   */
+  onShowHistory?: () => void;
   onStartRoomTest?: () => void;
   onStartComparison?: () => void;
   onStartBeforeAfter?: () => void;
-  onShowDNSBenchmark?: () => void;
-  onShowDNSGuide?: () => void;
   onShowLocalWifiDiagnostics?: () => void;
 }
 
+/**
+ * ExploreScreen — refator 2026-05.
+ *
+ * A tela "Explorar" foi reduzida para 2 sections:
+ *   1. Histórico — entrada do Histórico de testes (mantida).
+ *   2. Ferramentas — Comparar locais, Teste por local, Antes e Depois,
+ *      e (quando a capability nativa existe) Diagnóstico Wi-Fi.
+ *
+ * O que saiu:
+ *   - "Resultado" (Diagnóstico / Recomendações / Modo Gamer) — virou
+ *     conteúdo da própria ResultScreen (card unificado + accordions).
+ *   - "Rede" (Verificar DNS / Guia DNS) — DNS virou accordion no Result;
+ *     guia virou bottom sheet.
+ *   - "Prova Real" — promovida para a ação de teste no StartScreen ou
+ *     reaproveitada quando o usuário pedir; deixou de ser entrada da
+ *     Explore para encurtar o menu.
+ */
 export function ExploreScreen({
   theme,
   onToggleTheme,
   contractedDown,
   contractedUp,
   onUpdateContracted,
-  hasResult,
   onBack,
-  onDiagnostic,
-  onRecommend,
-  onGamer,
-  onStartProvaReal,
+  onShowHistory,
   onStartRoomTest,
   onStartComparison,
   onStartBeforeAfter,
-  onShowDNSBenchmark,
-  onShowDNSGuide,
   onShowLocalWifiDiagnostics,
 }: Props) {
-  const showResultSection = hasResult && (onDiagnostic || onRecommend || onGamer);
-  const showAdvancedSection = onStartProvaReal || onStartRoomTest || onStartComparison || onStartBeforeAfter;
-  const dnsHandler = onShowDNSBenchmark ?? onShowDNSGuide;
-  const dnsLabel = onShowDNSBenchmark ? 'Verificar DNS' : 'Guia de DNS';
-  const dnsSubtitle = onShowDNSBenchmark
-    ? 'Compare servidores DNS da sua rede'
-    : 'Veja como trocar o DNS do dispositivo';
+  const showToolsSection = !!(
+    onStartComparison || onStartRoomTest || onStartBeforeAfter || onShowLocalWifiDiagnostics
+  );
+
+  // Bloco 5 — TopBar System (2026-05).
+  const { scrolled, scrollContainerRef, sentinelRef } = useScrollHeader();
+
+  // Bloco 6 — UX uniforme (2026-05): HamburgerMenu controlled via IconButton.
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <div className="lk-explore fade-in" data-theme={theme}>
-      <div className="lk-explore__head">
-        <button className="lk-explore__back" onClick={onBack}>
-          ‹ Voltar
-        </button>
-        <span className="lk-explore__title">Explorar</span>
-        <HamburgerMenu
-          theme={theme}
-          onToggleTheme={onToggleTheme}
-          contractedDown={contractedDown}
-          contractedUp={contractedUp}
-          onUpdateContracted={onUpdateContracted}
-          showContracted={false}
-        />
-      </div>
+      <TopBar
+        onBack={onBack}
+        scrolled={scrolled}
+        title="Explorar"
+        showTitle={scrolled}
+        rightActions={[{
+          icon: <HamburgerMenuIcon />,
+          onClick: () => setMenuOpen((o) => !o),
+          ariaLabel: 'Menu',
+        }]}
+      />
+      <HamburgerMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        theme={theme}
+        onToggleTheme={onToggleTheme}
+        contractedDown={contractedDown}
+        contractedUp={contractedUp}
+        onUpdateContracted={onUpdateContracted}
+        showContracted={false}
+      />
 
-      <div className="lk-explore__scroll">
-        {showResultSection && (
+      <div className="lk-explore__scroll" ref={scrollContainerRef}>
+        <PageHeader ref={sentinelRef} size="md" title="Explorar" />
+
+        {onShowHistory && (
           <div className="lk-explore__section">
-            <p className="lk-explore__section-label">Resultado</p>
+            <p className="lk-explore__section-label">Histórico</p>
             <IOSList
               items={[
-                ...(onDiagnostic ? [{
-                  icon: <Icon name="shield" size={14} color="#fff" />,
+                {
+                  icon: <Icon name="history" size={14} color="#fff" />,
                   iconBg: 'var(--accent)',
-                  title: 'Diagnóstico completo',
-                  subtitle: 'Análise de cada métrica da sua conexão',
+                  title: 'Histórico de testes',
+                  subtitle: 'Veja medições anteriores e tendências',
                   showChevron: true,
-                  onClick: onDiagnostic,
-                }] : []),
-                ...(onRecommend ? [{
-                  icon: <Icon name="bulb" size={14} color="#fff" />,
-                  iconBg: 'var(--accent)',
-                  title: 'Recomendações',
-                  subtitle: 'Como melhorar sua internet',
-                  showChevron: true,
-                  onClick: onRecommend,
-                }] : []),
-                ...(onGamer ? [{
-                  icon: <Icon name="game" size={14} color="#fff" />,
-                  iconBg: 'var(--accent)',
-                  title: 'Modo Gamer',
-                  subtitle: 'Avaliação para jogos online e cloud gaming',
-                  showChevron: true,
-                  onClick: onGamer,
-                }] : []),
+                  onClick: onShowHistory,
+                },
               ]}
             />
           </div>
         )}
 
-        {showAdvancedSection && (
+        {showToolsSection && (
           <div className="lk-explore__section">
-            <p className="lk-explore__section-label">Medir</p>
+            <p className="lk-explore__section-label">Ferramentas</p>
             <IOSList
               items={[
-                ...(onStartProvaReal ? [{
-                  icon: <Icon name="refresh" size={14} color="#fff" />,
-                  iconBg: 'var(--accent)',
-                  title: 'Prova Real',
-                  subtitle: 'Média de 3 testes consecutivos',
-                  showChevron: true,
-                  onClick: onStartProvaReal,
-                }] : []),
-                ...(onStartRoomTest ? [{
-                  icon: <Icon name="pin" size={14} color="#fff" />,
-                  iconBg: 'var(--surface-3)',
-                  title: 'Teste por local',
-                  subtitle: 'Meça o sinal em cada cômodo',
-                  showChevron: true,
-                  onClick: onStartRoomTest,
-                }] : []),
                 ...(onStartComparison ? [{
                   icon: <Icon name="cmp" size={14} color="#fff" />,
                   iconBg: 'var(--accent)',
@@ -131,24 +122,22 @@ export function ExploreScreen({
                   showChevron: true,
                   onClick: onStartComparison,
                 }] : []),
+                ...(onStartRoomTest ? [{
+                  icon: <Icon name="pin" size={14} color="#fff" />,
+                  iconBg: 'var(--accent)',
+                  title: 'Teste por local',
+                  subtitle: 'Meça o sinal em cada cômodo',
+                  showChevron: true,
+                  onClick: onStartRoomTest,
+                }] : []),
                 ...(onStartBeforeAfter ? [{
                   icon: <Icon name="swap" size={14} color="#fff" />,
-                  iconBg: 'var(--surface-3)',
+                  iconBg: 'var(--accent)',
                   title: 'Antes e Depois',
                   subtitle: 'Compare o impacto de uma mudança',
                   showChevron: true,
                   onClick: onStartBeforeAfter,
                 }] : []),
-              ]}
-            />
-          </div>
-        )}
-
-        {dnsHandler && (
-          <div className="lk-explore__section">
-            <p className="lk-explore__section-label">Rede</p>
-            <IOSList
-              items={[
                 ...(onShowLocalWifiDiagnostics ? [{
                   icon: <Icon name="wifi" size={14} color="#fff" />,
                   iconBg: 'var(--accent)',
@@ -157,14 +146,6 @@ export function ExploreScreen({
                   showChevron: true,
                   onClick: onShowLocalWifiDiagnostics,
                 }] : []),
-                {
-                  icon: <Icon name="ping" size={14} color="#fff" />,
-                  iconBg: 'var(--accent)',
-                  title: dnsLabel,
-                  subtitle: dnsSubtitle,
-                  showChevron: true,
-                  onClick: dnsHandler,
-                },
               ]}
             />
           </div>

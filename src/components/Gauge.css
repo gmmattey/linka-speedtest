@@ -16,7 +16,11 @@
 }
 
 .lk-gauge__phase {
-  font-family: var(--font-mono);
+  /* Auditoria 2026-05: era `var(--font-mono)`. "DOWNLOAD"/"UPLOAD" é
+     LABEL de seção, não valor tabular — mono ficava destoando do resto
+     do app (todos os labels uppercase do projeto usam display). Mantém
+     letter-spacing e weight para preservar a leitura "técnica". */
+  font-family: var(--font-display);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -25,9 +29,9 @@
 }
 
 .lk-gauge__num {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: 72px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 80px;
   letter-spacing: -0.02em;
   line-height: 1;
   font-variant-numeric: tabular-nums;

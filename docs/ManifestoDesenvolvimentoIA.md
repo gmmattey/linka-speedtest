@@ -175,7 +175,7 @@ Regras inegociáveis (resumo):
 - Números de métrica **sempre** em `var(--font-display)` (Geist).
 - Cores via tokens (`var(--*)`) — sem hex hardcoded em `.tsx` ou `.css`.
 - Design direction **iOS-Calma**: superfícies neutras, hierarquia pelo tamanho, dados com cor semântica (DL azul, UL verde, accent para latência/accent).
-- Cabeçalho de tela: `‹ Início` (accent, 14px, 500) à esquerda + label (text-3, 13px) à direita, `padding: 14px 16px 4px`.
+- Cabeçalho de tela: usar **Bloco 5 — TopBar System** (`<TopBar>` + `<PageHeader>` + `useScrollHeader`). Back é chevron `‹` em pill 36×36 (sem texto). Glass effect ativa quando o `<PageHeader>` sai da viewport. Detalhes em `DocumentacaoTecnicaSistema.md` §5.7. *(Pré-Bloco 5: `‹ Início` accent 14px à esquerda + label text-3 13px à direita — padrão obsoleto.)*
 - Copy em pt-BR, tom objetivo, sem jargão técnico ao usuário final.
 
 ---

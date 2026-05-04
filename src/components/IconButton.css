@@ -1,0 +1,38 @@
+/* Bloco 5 — TopBar System (2026-05): ícone-ação circular do header. */
+
+.lk-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+  flex: 0 0 auto;
+}
+
+.lk-icon-btn__pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-translucent);
+  border: 1px solid var(--border-subtle);
+  color: var(--text);
+  transition: transform 100ms ease, background var(--t-fast);
+}
+
+.lk-icon-btn:hover .lk-icon-btn__pill {
+  background: var(--surface-2);
+}
+
+.lk-icon-btn:active .lk-icon-btn__pill {
+  transform: scale(0.94);
+}

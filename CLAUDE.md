@@ -30,7 +30,7 @@ Você é um colaborador de engenharia trabalhando no PWA **linka SpeedTest** —
 - **Não crie arquivos fora de `GuiaOrganizacaoPastas.md`.** Se a pasta destino não está prevista, atualize o guia primeiro.
 - **Não invente.** Se não está no código nem na doc, é pendência — registre, não fabrique.
 - **Mudança mínima.** Nada além do escopo pedido.
-- **Branding:** "linka" sempre minúsculo. `var(--accent): #6C2BFF`. Sem box-shadow. Zero sombras. Fontes: Space Grotesk (display) + Inter (body).
+- **Branding:** "linka" sempre minúsculo. `var(--accent): #6C2BFF`. Sem box-shadow. Zero sombras. Fontes: **Geist** (display + body, uma família única) + **JetBrains Mono** (somente valores tabular-nums em listas técnicas). Não usar Inter, Space Grotesk ou system-ui hardcoded em CSS/TSX.
 - **Copy em pt-BR.** Tom objetivo, sem jargão técnico ao usuário final.
 
 ## 3.bis Disciplina antes de executar

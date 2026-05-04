@@ -14,7 +14,12 @@ const COLORS = {
   bg: '#F6F7F9',
 };
 
-const LOGO_HTML = `<span style="font-family:'Space Grotesk',system-ui,sans-serif;font-weight:700;font-size:20px;letter-spacing:-0.03em;color:${COLORS.accent};">linka</span>`;
+// Font-family alinhado com tokens.css — toda a UI usa Geist como display
+// e body. Antes (auditoria 2026-05) este logo herdava 'Space Grotesk' de
+// uma versão anterior do branding; a fonte não está carregada no projeto
+// e caía pro fallback `system-ui`, gerando inconsistência visual entre o
+// PDF exportado e a UI. Agora usa Geist como o resto do app.
+const LOGO_HTML = `<span style="font-family:'Geist',system-ui,sans-serif;font-weight:700;font-size:20px;letter-spacing:-0.03em;color:${COLORS.accent};">linka</span>`;
 
 export async function exportResultPdf(result: SpeedTestResult, serverName: string, isp?: string) {
   const interpreted = interpretSpeedTestResult({ metrics: result, profile: 'fixed_broadband' });

@@ -14,6 +14,7 @@
 export { interpretSpeedTestResult } from './interpret';
 export { resolveCopy } from './copyDictionary';
 export { runHeadlessTest } from './embed';
+export { useCaseGrade, gradeMetric, type UseCaseGrade } from './useCaseGrade';
 export type { HeadlessTestOptions, HeadlessTestResult } from './embed';
 export {
   PROFILES,
