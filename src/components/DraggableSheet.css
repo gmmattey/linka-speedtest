@@ -1,0 +1,129 @@
+/* ──────────────────────────────────────────────────────────────────────
+   DraggableSheet — base universal de bottom sheet (2026-05).
+
+   Substitui as animações próprias do DNSGuideSheet, WifiDetailsSheet e
+   WifiOptimizeSheet. Adiciona drag-to-resize com 2 snap points
+   (compact 60vh / expanded 88vh). Pointer events ficam SÓ na área do
+   handle — não no `__content` — pra não conflitar com scroll interno.
+
+   Tokens: --surface-deep, --border-subtle, --border-strong, --t-fast.
+   Sem box-shadow (regra de branding) — usa border-top + border-radius
+   pra delimitar o sheet.
+   ────────────────────────────────────────────────────────────────────── */
+
+.lk-dsheet__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 9998;
+  /* opacity é controlado inline pelo TSX (proporcional à altura do
+     sheet durante o drag), com transition gerenciado lá também. */
+  animation: lk-dsheet-fade-in 220ms ease backwards;
+}
+
+@keyframes lk-dsheet-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.lk-dsheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--surface-deep);
+  border-top: 1px solid var(--border-subtle);
+  border-radius: 20px 20px 0 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  /* `height` é controlado inline (snap + drag). transition idem. */
+  /* Animação de entrada: sobe de baixo. Não conflita com a transition
+     inline porque `transform` é propriedade independente. */
+  animation: lk-dsheet-slide-up 280ms cubic-bezier(0.32, 0.72, 0, 1) backwards;
+  padding-top: env(safe-area-inset-top, 0);
+  /* `touch-action: none` no handle area cuida do gesto vertical sem
+     o navegador tentar scroll do body. O `__content` mantém touch-action
+     padrão (auto) pra preservar scroll interno. */
+}
+
+@keyframes lk-dsheet-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* ── Handle area + barra ───────────────────────────────────────────────
+   O handle fica num bloco de 28px de altura (área de hit confortável),
+   com a barra de 40×4 centralizada. `touch-action: none` evita o browser
+   capturar o gesto pra scroll do body — pointer events ficam pra cá. */
+
+.lk-dsheet__handle-area {
+  flex-shrink: 0;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.lk-dsheet__handle-area:active {
+  cursor: grabbing;
+}
+
+.lk-dsheet__handle {
+  width: 40px;
+  height: 4px;
+  background: var(--border-strong);
+  border-radius: 2px;
+  transition: background var(--t-fast);
+}
+
+.lk-dsheet__handle-area:hover .lk-dsheet__handle,
+.lk-dsheet__handle-area:active .lk-dsheet__handle {
+  background: var(--text-3);
+}
+
+/* ── Content slot ──────────────────────────────────────────────────────
+   Os consumidores renderizam aqui dentro: header, body scrollável e
+   footer. Esta div só provê o flex container — todos os estilos do
+   conteúdo (cores, paddings das seções, etc.) ficam no consumer. */
+
+.lk-dsheet__content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Desktop / tablet: limita largura central (mesmo padrão dos sheets
+   antigos), mantendo bottom: 0 e centralizado. */
+@media (min-width: 600px) {
+  .lk-dsheet {
+    max-width: 520px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  }
+
+  @keyframes lk-dsheet-slide-up {
+    from { transform: translate(-50%, 100%); }
+    to   { transform: translate(-50%, 0); }
+  }
+}
+
+/* Sheets aninhados — sobem o z-index pra empilhar sobre o sheet base.
+   Usado pelo WifiOptimizeSheet (abre em cima do WifiDetailsSheet). */
+.lk-dsheet__backdrop--nested { z-index: 10000; }
+.lk-dsheet--nested            { z-index: 10001; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lk-dsheet,
+  .lk-dsheet__backdrop {
+    animation: none !important;
+  }
+}

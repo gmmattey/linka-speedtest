@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { IOSList, type IOSListItem } from '../components/IOSList';
+import { IOSList } from '../components/IOSList';
 import { Icon } from '../components/icons';
 import { HamburgerMenu, HamburgerMenuIcon } from '../components/HamburgerMenu';
 import { TopBar } from '../components/TopBar';
@@ -8,7 +8,7 @@ import { PageHeader } from '../components/PageHeader';
 import { useScrollHeader } from '../hooks/useScrollHeader';
 import { generateShareCard } from '../utils/shareCard';
 import { buildShareText, shareResultText } from '../utils/share';
-import type { Quality, ServerInfo, SpeedTestResult, SpeedTestSample, TestRecord } from '../types';
+import type { Quality, ServerInfo, SpeedTestResult, TestRecord } from '../types';
 import { interpretSpeedTestResult, resolveCopy, useCaseGrade, type UseCaseGrade } from '../core';
 
 import type { UseCaseId } from '../core';
@@ -21,12 +21,12 @@ import './ResultScreen.css';
 import { combineDiagnostics } from '../utils/combinedDiagnosis';
 import { toConnectionProfile } from '../utils/connectionProfile';
 import { anatelGrade, anatelGradeColorVar, anatelGradeGlowVar } from '../utils/anatelColor';
-import { classifyDnsLatency, dnsLatencyLabel } from '../utils/dnsTiming';
+import { classifyDnsLatency } from '../utils/dnsTiming';
 import { aggregateDiagnosisSeverity, buildDiagnosisItems, type DiagnosisAggregate, type DiagnosisItem } from '../utils/diagnosisItems';
 import { WifiSignalCard } from '../features/local-wifi/WifiSignalCard';
-import { Accordion } from '../components/Accordion';
 import { DNSGuideSheet } from '../features/dns/DNSGuideSheet';
-import { runDNSBenchmark, type DnsBenchmarkResult, type DnsServerResult } from '../utils/dnsBenchmark';
+import { AdvancedSheet } from '../features/result-detail/AdvancedSheet';
+import { GamerSheet } from '../features/result-detail/GamerSheet';
 
 interface Props {
   theme: 'dark' | 'light';
@@ -64,6 +64,9 @@ interface Props {
 }
 
 type ShareStatus = 'idle' | 'copied';
+
+/** Sheets de "Mais detalhes" — só uma aberta por vez (refator drag-to-resize 2026-05). */
+type ActiveSheet = 'advanced' | 'gamer' | 'dns' | null;
 
 function ucIcon(id: UseCaseId): string {
   if (id === 'gaming')       return 'game';
@@ -392,15 +395,12 @@ export function ResultScreen({
   // o trigger é um IconButton no rightActions do TopBar.
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Refator 2026-05: o DNSGuideScreen virou bottom sheet acionado pelo
-  // botão "Como alterar" do accordion DNS (seção Mais detalhes).
-  const [dnsSheetOpen, setDnsSheetOpen] = useState(false);
-
-  // Benchmark comparativo de DNS (2026-05): o accordion DNS dispara o
-  // benchmark dos 5 servidores DoH a partir do PRIMEIRO `open`. `started`
-  // só vai pra true uma vez e o `<DnsAccordionBody>` reaproveita o
-  // resultado nos opens subsequentes (sem refazer o teste).
-  const [dnsBenchStarted, setDnsBenchStarted] = useState(false);
+  // Refator 2026-05 (drag-to-resize): a seção "Mais detalhes" virou 3
+  // rows clicáveis (Avançado / Modo Gamer / DNS). Cada uma abre um
+  // bottom sheet dedicado (AdvancedSheet, GamerSheet, DNSGuideSheet).
+  // `activeSheet` unifica os 3 estados — só uma sheet aberta por vez.
+  const [activeSheet, setActiveSheet] = useState<ActiveSheet>(null);
+  const closeActiveSheet = useCallback(() => setActiveSheet(null), []);
 
   return (
     <div className="lk-result fade-in">
@@ -618,7 +618,24 @@ export function ResultScreen({
                 </div>
               </div>
               {showDnsCell && (
-                <div className="lk-result__secondary-cell">
+                /* Atalho (2026-05, atualizado para drag-to-resize 2026-05):
+                   clique na cell DNS abre o DNSGuideSheet diretamente, sem
+                   precisar passar pela row "DNS" da section "Mais detalhes".
+                   Os dois caminhos continuam válidos. role/tabIndex/
+                   aria-label garantem acessibilidade. */
+                <div
+                  className="lk-result__secondary-cell lk-result__secondary-cell--clickable"
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Abrir guia de DNS"
+                  onClick={() => setActiveSheet('dns')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setActiveSheet('dns');
+                    }
+                  }}
+                >
                   <div className="lk-result__secondary-cell-label">DNS</div>
                   <div className="lk-result__secondary-cell-value">
                     {result.dnsLatencyMs == null ? (
@@ -738,48 +755,42 @@ export function ResultScreen({
           );
         })()}
 
-        {/* ── Mais detalhes (refator 2026-05) ────────────────────────────
-            Section com 3 accordions consolidando 3 telas que morreram:
-              - Avançado (porto da DetailsScreen): qualidade sob carga,
-                bufferbloat, latência carregada, oscilação carregada,
-                estabilidade do download, IP, tempo do teste.
-              - Modo Gamer (porto da GamerScreen): stat cards de Resposta/
-                Oscilação/Falhas + lista de jogos por categoria.
-              - DNS: provider + latência + botão "Como alterar" que abre
-                o `DNSGuideSheet` (substituindo a antiga DNSGuideScreen). */}
+        {/* ── Mais detalhes (refator drag-to-resize 2026-05) ─────────────
+            Os 3 accordions inline (Avançado, Modo Gamer, DNS) viraram 3
+            rows clicáveis no estilo "Ferramentas". Cada click abre uma
+            bottom sheet dedicada (AdvancedSheet / GamerSheet /
+            DNSGuideSheet) montada sobre `DraggableSheet` — drag-to-resize
+            com snap entre 60vh e 88vh, pull-down threshold de 30% fecha. */}
         <section className="lk-result__more">
           <h2 className="lk-result__more-label">Mais detalhes</h2>
-
-          <Accordion
-            title="Avançado"
-            icon={<Icon name="cog" size={14} color="var(--text-2)" />}
-          >
-            <AdvancedAccordionBody
-              result={result}
-              server={server}
-              unit={unit}
-              history={history}
-            />
-          </Accordion>
-
-          <Accordion
-            title="Modo Gamer"
-            icon={<Icon name="game" size={14} color="var(--text-2)" />}
-          >
-            <GamerAccordionBody result={result} />
-          </Accordion>
-
-          <Accordion
-            title="DNS"
-            icon={<Icon name="ping" size={14} color="var(--text-2)" />}
-            onToggle={(open) => { if (open && !dnsBenchStarted) setDnsBenchStarted(true); }}
-          >
-            <DnsAccordionBody
-              result={result}
-              onOpenGuide={() => setDnsSheetOpen(true)}
-              benchmarkStarted={dnsBenchStarted}
-            />
-          </Accordion>
+          <IOSList
+            items={[
+              {
+                icon: <Icon name="cog" size={14} color="var(--text-2)" />,
+                iconBg: 'var(--surface-3)',
+                title: 'Avançado',
+                subtitle: 'Métricas detalhadas, telemetria e histórico',
+                showChevron: true,
+                onClick: () => setActiveSheet('advanced'),
+              },
+              {
+                icon: <Icon name="game" size={14} color="var(--text-2)" />,
+                iconBg: 'var(--surface-3)',
+                title: 'Modo Gamer',
+                subtitle: 'Avaliação para FPS, MOBA, MMO e cloud gaming',
+                showChevron: true,
+                onClick: () => setActiveSheet('gamer'),
+              },
+              {
+                icon: <Icon name="ping" size={14} color="var(--text-2)" />,
+                iconBg: 'var(--surface-3)',
+                title: 'DNS',
+                subtitle: 'Provedor, latência e como alterar',
+                showChevron: true,
+                onClick: () => setActiveSheet('dns'),
+              },
+            ]}
+          />
         </section>
 
         {/* Atalho residual para a tela "Explorar" (Histórico + Ferramentas).
@@ -820,727 +831,40 @@ export function ResultScreen({
         </div>
       </div>
 
-      {/* DNSGuideSheet — overlay acionado pelo botão "Como alterar" do
-          accordion DNS. Renderizado fora do scroll-container porque é
-          fixed/full-screen e precisa cobrir o TopBar também. */}
-      <DNSGuideSheet
-        open={dnsSheetOpen}
-        onClose={() => setDnsSheetOpen(false)}
-        serverId="cloudflare"
-      />
-    </div>
-  );
-}
-
-// =============================================================================
-// Bodies dos accordions (refator 2026-05) — funções privadas para manter o
-// JSX da ResultScreen legível. Cada body é um porto de uma das telas
-// consolidadas (DetailsScreen, GamerScreen, parcial DNSBenchmarkScreen).
-// =============================================================================
-
-// ── Avançado (porto de DetailsScreen) ─────────────────────────────────────
-
-function bufferbloatColor(grade: string): string {
-  if (grade === 'A' || grade === 'B') return 'var(--ul)';
-  if (grade === 'C') return 'var(--warn)';
-  return 'var(--error)';
-}
-
-function bufferbloatLabel(grade: string): string {
-  if (grade === 'A') return 'Excelente';
-  if (grade === 'B') return 'Bom';
-  if (grade === 'C') return 'Moderado';
-  if (grade === 'D') return 'Ruim';
-  return 'Crítico';
-}
-
-function packetLossColor(pct: number): string {
-  if (pct < 1) return 'var(--ul)';
-  if (pct < 2.5) return 'var(--warn)';
-  return 'var(--error)';
-}
-
-function packetLossLabel(pct: number): string {
-  if (pct < 1) return 'Baixo';
-  if (pct < 2.5) return 'Médio';
-  return 'Alto';
-}
-
-// =============================================================================
-// Helpers do Avançado (enriquecimento 2026-05)
-// =============================================================================
-
-/**
- * Formata data + hora completa para o item "Realizado em" do Avançado.
- * Exemplo: "03/05/2026 às 14:35:22". Não usa relativo — o banner de
- * contexto já mostra "há 2 min"; aqui é o timestamp absoluto.
- */
-function formatFullDateTime(ts: number): string {
-  const d = new Date(ts);
-  const dd = d.getDate().toString().padStart(2, '0');
-  const mm = (d.getMonth() + 1).toString().padStart(2, '0');
-  const yy = d.getFullYear();
-  const hh = d.getHours().toString().padStart(2, '0');
-  const mi = d.getMinutes().toString().padStart(2, '0');
-  const ss = d.getSeconds().toString().padStart(2, '0');
-  return `${dd}/${mm}/${yy} às ${hh}:${mi}:${ss}`;
-}
-
-/**
- * Formata duração em ms para "Xs" ou "Xm Ys". Granularidade de segundos —
- * abaixo de 1 s mostra "<1s" para evitar mostrar zero.
- */
-function formatElapsedMs(ms: number): string {
-  if (!isFinite(ms) || ms < 0) return '—';
-  if (ms < 1000) return '<1s';
-  const totalSec = Math.round(ms / 1000);
-  if (totalSec < 60) return `${totalSec}s`;
-  const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
-  return `${m}m ${s.toString().padStart(2, '0')}s`;
-}
-
-/**
- * Média aritmética dos samples filtrando os zeros das pontas (ramp-up e
- * ramp-down de cada fase). Implementação:
- *
- *  1. Encontra o primeiro índice com valor > 0 (start) e o último (end).
- *  2. Calcula média dos valores entre start..end (mantém zeros internos
- *     porque eles podem refletir stalls reais — não são ruído de borda).
- *
- * Quando nenhuma amostra > 0 existir, retorna 0.
- */
-function averageFromSamples(samples: SpeedTestSample[] | undefined): number {
-  if (!samples || samples.length === 0) return 0;
-  let start = -1;
-  let end = -1;
-  for (let i = 0; i < samples.length; i++) {
-    if (samples[i].mbps > 0) { start = i; break; }
-  }
-  for (let i = samples.length - 1; i >= 0; i--) {
-    if (samples[i].mbps > 0) { end = i; break; }
-  }
-  if (start === -1 || end === -1 || start > end) return 0;
-  let sum = 0;
-  let count = 0;
-  for (let i = start; i <= end; i++) {
-    sum += samples[i].mbps;
-    count++;
-  }
-  return count === 0 ? 0 : sum / count;
-}
-
-/**
- * Média de download dos últimos N registros. Pula o registro atual
- * (timestamp idêntico) para que a comparação compare contra o histórico
- * "anterior". Retorna `null` se o histórico não tem amostras suficientes
- * (mín 2 testes anteriores — média de 1 só não é representativa).
- */
-function historicalAverageDl(
-  history: TestRecord[],
-  currentTimestamp: number,
-  n = 10,
-): { avgDl: number; count: number } | null {
-  const previous = history.filter((r) => r.timestamp !== currentTimestamp).slice(0, n);
-  if (previous.length < 2) return null;
-  const sum = previous.reduce((acc, r) => acc + r.dl, 0);
-  return { avgDl: sum / previous.length, count: previous.length };
-}
-
-/**
- * Distância estimada ao servidor (km) a partir da latência baseline. A
- * heurística assume ~200 km/ms (luz no fio = ~2/3 c, somando RTT/2 e
- * processamento) — proxy bem aproximado, NÃO geográfico. O objetivo é
- * dar a ordem de grandeza ("perto / longe"), não medição física precisa.
- */
-function estimateDistanceKm(latencyMs: number): number {
-  return Math.round(latencyMs * 100);
-}
-
-function AdvancedAccordionBody({
-  result,
-  server,
-  unit,
-  history,
-}: {
-  result: SpeedTestResult;
-  server: ServerInfo | null;
-  unit: 'mbps' | 'gbps';
-  history: TestRecord[];
-}) {
-  const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
-
-  // ── Bloco "Métricas avançadas" ─────────────────────────────────────────
-  const metricItems: IOSListItem[] = [];
-
-  if (result.bufferbloatGrade) {
-    metricItems.push({
-      icon: <Icon name="bolt" size={14} color={bufferbloatColor(result.bufferbloatGrade)} />,
-      iconBg: 'var(--surface-3)',
-      title: resolveCopy('metric.latency.loaded'),
-      trailing: (
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ color: bufferbloatColor(result.bufferbloatGrade), fontWeight: 700, fontSize: 15 }}>
-            {result.bufferbloatGrade}
-          </div>
-          <div style={{ fontSize: 11, color: bufferbloatColor(result.bufferbloatGrade) }}>
-            {bufferbloatLabel(result.bufferbloatGrade)}
-          </div>
-        </div>
-      ),
-    });
-  }
-  if (result.latencyLoaded != null) {
-    metricItems.push({
-      icon: <Icon name="ping" size={14} color="var(--text-2)" />,
-      iconBg: 'var(--surface-3)',
-      title: resolveCopy('metric.latency.loadedValue'),
-      trailing: (
-        <span className="lk-result__metric-sub">
-          {formatMs(result.latencyLoaded)} ms
-          {result.bufferbloatDeltaMs != null && result.bufferbloatDeltaMs > 0 && (
-            <span style={{ color: 'var(--warn)', fontSize: 11, marginLeft: 4 }}>
-              +{formatMs(result.bufferbloatDeltaMs)} ms
-            </span>
-          )}
-        </span>
-      ),
-    });
-  }
-  if (result.jitterLoaded != null) {
-    metricItems.push({
-      icon: <Icon name="jitter" size={14} color="var(--text-2)" />,
-      iconBg: 'var(--surface-3)',
-      title: 'Oscilação carregada',
-      trailing: (
-        <span className="lk-result__metric-sub">{formatMs(result.jitterLoaded)} ms</span>
-      ),
-    });
-  }
-  if (result.dlP25 != null && result.dlP75 != null) {
-    metricItems.push({
-      icon: <Icon name="download" size={14} color="var(--dl)" />,
-      iconBg: 'var(--dl-tint, rgba(58,182,255,0.12))',
-      title: 'Estabilidade download',
-      trailing: (
-        <span className="lk-result__metric-sub">
-          {formatMbps(result.dlP25, unit)}–{formatMbps(result.dlP75, unit)} {unitLabel}
-        </span>
-      ),
-    });
-  }
-  metricItems.push({
-    icon: <Icon name="loss" size={14} color={result.packetLoss != null ? packetLossColor(result.packetLoss) : 'var(--text-2)'} />,
-    iconBg: 'var(--surface-3)',
-    title: 'Falhas na conexão',
-    trailing: (
-      <span className="lk-result__metric-sub" style={result.packetLoss != null ? { color: packetLossColor(result.packetLoss) } : undefined}>
-        {result.packetLoss != null ? `${result.packetLoss.toFixed(1)}%  ${packetLossLabel(result.packetLoss)}` : '—'}
-      </span>
-    ),
-  });
-
-  // Velocidade média (samples) — mostra apenas quando o teste tem séries
-  // temporais suficientes (Motor v2). Para registros legados sem
-  // `dlSamples`/`ulSamples`, pulamos o item — sem fallback ao peak.
-  const avgDl = averageFromSamples(result.dlSamples);
-  const avgUl = averageFromSamples(result.ulSamples);
-  if (avgDl > 0) {
-    metricItems.push({
-      icon: <Icon name="download" size={14} color="var(--dl)" />,
-      iconBg: 'var(--dl-tint, rgba(58,182,255,0.12))',
-      title: 'Velocidade média (DL)',
-      trailing: (
-        <span className="lk-result__metric-sub">
-          {formatMbps(avgDl, unit)} {unitLabel}
-        </span>
-      ),
-    });
-  }
-  if (avgUl > 0) {
-    metricItems.push({
-      icon: <Icon name="upload" size={14} color="var(--ul)" />,
-      iconBg: 'var(--ul-tint, rgba(34,197,94,0.12))',
-      title: 'Velocidade média (UL)',
-      trailing: (
-        <span className="lk-result__metric-sub">
-          {formatMbps(avgUl, unit)} {unitLabel}
-        </span>
-      ),
-    });
-  }
-
-  if (server?.ip && server.ip !== '—') {
-    metricItems.push({
-      icon: <Icon name="router" size={14} color="var(--text-2)" />,
-      iconBg: 'var(--surface-3)',
-      title: 'IP público',
-      trailing: (
-        <span className="lk-result__metric-sub lk-result__metric-sub--truncate">{server.ip}</span>
-      ),
-    });
-  }
-  if (server?.isp && server.isp !== '—') {
-    metricItems.push({
-      icon: <Icon name="router" size={14} color="var(--text-2)" />,
-      iconBg: 'var(--surface-3)',
-      title: 'Provedor',
-      trailing: (
-        <span className="lk-result__metric-sub lk-result__metric-sub--truncate">{server.isp}</span>
-      ),
-    });
-  }
-
-  // ── Bloco "Sobre o teste" ──────────────────────────────────────────────
-  const aboutItems: IOSListItem[] = [];
-
-  // Tempo total — usa elapsedMs do orchestrator. Pulamos se não houver
-  // (registros legados ou fixtures de teste).
-  if (result.elapsedMs != null && result.elapsedMs > 0) {
-    aboutItems.push({
-      icon: <Icon name="history" size={14} color="var(--text-2)" />,
-      iconBg: 'var(--surface-3)',
-      title: 'Tempo total do teste',
-      trailing: (
-        <span className="lk-result__metric-sub">{formatElapsedMs(result.elapsedMs)}</span>
-      ),
-    });
-  }
-
-  // Distância estimada ao servidor — só quando latência > 0.
-  if (result.latency > 0) {
-    aboutItems.push({
-      icon: <Icon name="pin" size={14} color="var(--text-2)" />,
-      iconBg: 'var(--surface-3)',
-      title: 'Distância estimada ao servidor',
-      subtitle: 'estimado pela latência',
-      trailing: (
-        <span className="lk-result__metric-sub">~{estimateDistanceKm(result.latency)} km</span>
-      ),
-    });
-  }
-
-  aboutItems.push({
-    icon: <Icon name="history" size={14} color="var(--text-2)" />,
-    iconBg: 'var(--surface-3)',
-    title: 'Realizado em',
-    trailing: (
-      <span className="lk-result__metric-sub">{formatFullDateTime(result.timestamp)}</span>
-    ),
-  });
-
-  // Versão do app — `__APP_VERSION__` é injetada via Vite `define`. Em
-  // ambientes onde a global não foi setada (ex.: alguns runners de teste
-  // que ignoram o `define`) caímos silenciosamente para "—".
-  const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : null;
-  if (appVersion) {
-    aboutItems.push({
-      icon: <Icon name="cog" size={14} color="var(--text-2)" />,
-      iconBg: 'var(--surface-3)',
-      title: 'Versão do app',
-      trailing: (
-        <span className="lk-result__metric-sub">v{appVersion}</span>
-      ),
-    });
-  }
-
-  // ── Bloco "Histórico" — comparação com média (últimos 10) ──────────────
-  const historyItems: IOSListItem[] = [];
-  const histAvg = historicalAverageDl(history, result.timestamp, 10);
-  if (histAvg) {
-    const delta = result.dl - histAvg.avgDl;
-    const deltaPct = histAvg.avgDl > 0 ? (delta / histAvg.avgDl) * 100 : 0;
-    const significant = Math.abs(deltaPct) > 5;
-    if (significant) {
-      const positive = delta > 0;
-      const sign = positive ? '+' : '−';
-      const color = positive ? 'var(--ul)' : 'var(--error)';
-      historyItems.push({
-        icon: <Icon name="trending-up" size={14} color={color} />,
-        iconBg: 'var(--surface-3)',
-        title: `Sua média (últimos ${histAvg.count})`,
-        subtitle: `este teste: ${formatMbps(result.dl, unit)} ${unitLabel}`,
-        trailing: (
-          <div style={{ textAlign: 'right' }}>
-            <div className="lk-result__metric-sub">
-              {formatMbps(histAvg.avgDl, unit)} {unitLabel}
-            </div>
-            <div style={{ color, fontSize: 11, fontWeight: 600 }}>
-              {sign}{Math.abs(Math.round(deltaPct))}%
-            </div>
-          </div>
-        ),
-      });
-    } else {
-      historyItems.push({
-        icon: <Icon name="trending-up" size={14} color="var(--text-2)" />,
-        iconBg: 'var(--surface-3)',
-        title: `Sua média (últimos ${histAvg.count})`,
-        subtitle: 'este teste está dentro da média (±5%)',
-        trailing: (
-          <span className="lk-result__metric-sub">
-            {formatMbps(histAvg.avgDl, unit)} {unitLabel}
-          </span>
-        ),
-      });
-    }
-  }
-
-  // Body com 3 sub-blocos hairlined. Quando todos os blocos estão vazios
-  // (extremamente raro — falhas na conexão sempre adiciona algo), volta
-  // ao empty-state legado.
-  if (metricItems.length === 0 && aboutItems.length === 0 && historyItems.length === 0) {
-    return (
-      <p className="lk-result__accordion-empty">
-        Sem dados avançados disponíveis para este teste.
-      </p>
-    );
-  }
-
-  return (
-    <div className="lk-result__advanced-body">
-      {metricItems.length > 0 && (
-        <div className="lk-result__advanced-group">
-          <h4 className="lk-result__advanced-group-label">Métricas avançadas</h4>
-          <IOSList items={metricItems} />
-        </div>
-      )}
-      {aboutItems.length > 0 && (
-        <div className="lk-result__advanced-group">
-          <h4 className="lk-result__advanced-group-label">Sobre o teste</h4>
-          <IOSList items={aboutItems} />
-        </div>
-      )}
-      {historyItems.length > 0 && (
-        <div className="lk-result__advanced-group">
-          <h4 className="lk-result__advanced-group-label">Histórico</h4>
-          <IOSList items={historyItems} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Modo Gamer (porto de GamerScreen) ─────────────────────────────────────
-
-type GamerTone = 'good' | 'maybe' | 'bad';
-
-const GAMER_TONE_COLOR: Record<GamerTone, string> = {
-  good: 'var(--success)',
-  maybe: 'var(--warn)',
-  bad: 'var(--error)',
-};
-
-interface GameRow { name: string; verdict: string; tone: GamerTone }
-
-function evaluateGames(result: SpeedTestResult): GameRow[] {
-  const { latency, jitter, packetLoss, dl } = result;
-
-  const fpsTone: GamerTone   = latency <= 20 && jitter <= 5 && packetLoss === 0 ? 'good' : latency <= 40 ? 'maybe' : 'bad';
-  const mobaTone: GamerTone  = latency <= 30 && jitter <= 5 ? 'good' : latency <= 60 ? 'maybe' : 'bad';
-  const mmoTone: GamerTone   = latency <= 60 ? 'good' : latency <= 120 ? 'maybe' : 'bad';
-  const cloudTone: GamerTone = dl >= 15 && latency <= 40 ? 'good' : dl >= 8 && latency <= 80 ? 'maybe' : 'bad';
-
-  const verdictLabel = (t: GamerTone) => t === 'good' ? 'Excelente' : t === 'maybe' ? 'Atenção' : 'Ruim';
-
-  return [
-    { name: 'FPS competitivo',     verdict: verdictLabel(fpsTone),   tone: fpsTone   },
-    { name: 'MOBA / Battle Royale', verdict: verdictLabel(mobaTone),  tone: mobaTone  },
-    { name: 'MMO / RPG Online',    verdict: verdictLabel(mmoTone),   tone: mmoTone   },
-    { name: 'Cloud Gaming',        verdict: verdictLabel(cloudTone), tone: cloudTone },
-  ];
-}
-
-function GamerAccordionBody({ result }: { result: SpeedTestResult }) {
-  const { latency, jitter, packetLoss } = result;
-  const games = evaluateGames(result);
-  const overallTone: GamerTone = latency <= 30 && jitter <= 5 && packetLoss === 0 ? 'good' : latency <= 60 ? 'maybe' : 'bad';
-  const overallLabel = overallTone === 'good'
-    ? 'Boa para jogos online.'
-    : overallTone === 'maybe'
-      ? 'Atenção para jogos competitivos.'
-      : 'Conexão fraca para jogar online.';
-
-  return (
-    <div className="lk-result__gamer">
-      <p className="lk-result__gamer-headline">{overallLabel}</p>
-
-      <div className="lk-result__gamer-stats">
-        <GamerStat label="Resposta"  value={formatMs(latency)}            unit="ms" tone={latency    <= 40 ? 'good' : latency    <= 80 ? 'maybe' : 'bad'} />
-        <GamerStat label="Oscilação" value={formatMs(jitter)}             unit="ms" tone={jitter     <= 5  ? 'good' : jitter     <= 20 ? 'maybe' : 'bad'} />
-        <GamerStat label="Falhas"    value={packetLoss.toFixed(1)}        unit="%"  tone={packetLoss === 0 ? 'good' : packetLoss <= 1  ? 'maybe' : 'bad'} />
-      </div>
-
-      <IOSList
-        items={games.map((g) => ({
-          icon: <Icon name="game" size={14} color="var(--text-2)" />,
-          iconBg: 'var(--surface-3)',
-          title: g.name,
-          trailing: (
-            <span style={{ color: GAMER_TONE_COLOR[g.tone], fontWeight: 600, fontSize: 12 }}>
-              {g.verdict}
-            </span>
-          ),
-        }))}
-      />
-    </div>
-  );
-}
-
-function GamerStat({ label, value, unit, tone }: { label: string; value: string; unit: string; tone: GamerTone }) {
-  return (
-    <div className="lk-result__gamer-stat">
-      <div className="lk-result__gamer-stat-label">{label}</div>
-      <div className="lk-result__gamer-stat-value" style={{ color: GAMER_TONE_COLOR[tone] }}>
-        {value}<span className="lk-result__gamer-stat-unit">{unit}</span>
-      </div>
-    </div>
-  );
-}
-
-// ── DNS (info atual + benchmark comparativo + atalho para guia) ─────────
-
-type DnsBenchState = 'idle' | 'running' | 'done' | 'error';
-
-/**
- * Tabela comparativa do benchmark DNS (refator 2026-05). Disparada na
- * primeira vez que o usuário abre o accordion DNS — `runDNSBenchmark()`
- * roda em background (5 servidores DoH, ~5-15s no total) e o componente
- * vai populando linhas conforme cada servidor termina. Servidor que
- * falha (CORS estrito no Safari, timeout, offline) vira "—" sem quebrar
- * o resto da tabela.
- *
- * Chips:
- * - "Em uso": linha cujo nome bate com `result.dnsProvider`.
- * - "Mais rápido": linha vencedora (menor `p50` com amostras válidas).
- * Linhas podem ter os DOIS chips simultaneamente.
- *
- * Delta: cada linha (exceto a "em uso") mostra `±X ms` vs a "em uso"
- * — positivo (vermelho) quando o servidor é mais lento; negativo (verde)
- * quando é mais rápido. Sem comparação se `dnsLatencyMs` do resultado
- * for null OU se nenhum dos 5 corresponde ao provider atual.
- */
-function DnsBenchmarkTable({
-  result,
-  benchmark,
-  state,
-  progress,
-}: {
-  result: SpeedTestResult;
-  benchmark: DnsBenchmarkResult | null;
-  state: DnsBenchState;
-  progress: { done: number; total: number; current: string };
-}) {
-  // Derivar a latência "atual" para deltas. Preferimos a linha do bench
-  // do mesmo provider (medida pela MESMA metodologia DoH); senão,
-  // fallback para o valor do speedtest principal (`result.dnsLatencyMs`,
-  // que pode misturar metodologias). Sem nada, deltas somem.
-  const currentName = (result.dnsProvider ?? '').toLowerCase();
-  const benchCurrentRow = benchmark?.servers.find(
-    (s) => s.name.toLowerCase() === currentName,
-  );
-  const currentLatency = benchCurrentRow?.samples
-    ? benchCurrentRow.p50
-    : (result.dnsLatencyMs ?? null);
-
-  if (state === 'idle' || state === 'running') {
-    return (
-      <div className="lk-result__dns-bench">
-        <div className="lk-result__dns-bench-header">
-          <span className="lk-result__dns-bench-label">Comparando 5 provedores</span>
-          {state === 'running' && (
-            <span className="lk-result__dns-bench-progress">
-              Testando {Math.min(progress.done + 1, progress.total)} de {progress.total}
-              {progress.current ? ` · ${progress.current}` : ''}
-            </span>
-          )}
-        </div>
-        <p className="lk-result__dns-bench-empty">
-          {state === 'idle' ? 'Iniciando…' : 'Pode levar alguns segundos.'}
-        </p>
-      </div>
-    );
-  }
-
-  if (state === 'error' || !benchmark) {
-    return (
-      <div className="lk-result__dns-bench">
-        <div className="lk-result__dns-bench-header">
-          <span className="lk-result__dns-bench-label">Benchmark DNS</span>
-        </div>
-        <p className="lk-result__dns-bench-empty">
-          Não foi possível comparar (rede offline ou bloqueio CORS).
-        </p>
-      </div>
-    );
-  }
-
-  // Ordenado: válidos por p50 ascendente; inválidos (samples=0) ao final.
-  const sorted = [...benchmark.servers].sort((a, b) => {
-    const va = a.samples > 0 ? 1 : 0;
-    const vb = b.samples > 0 ? 1 : 0;
-    if (va !== vb) return vb - va;
-    return a.p50 - b.p50;
-  });
-
-  return (
-    <div className="lk-result__dns-bench">
-      <div className="lk-result__dns-bench-header">
-        <span className="lk-result__dns-bench-label">Comparativo de servidores</span>
-        <span className="lk-result__dns-bench-progress">
-          Mais rápido vence
-        </span>
-      </div>
-      <ul className="lk-result__dns-bench-list">
-        {sorted.map((row) => (
-          <DnsBenchmarkRow
-            key={row.id}
-            row={row}
-            isCurrent={row.name.toLowerCase() === currentName}
-            isWinner={benchmark.winner.id === row.id && row.samples > 0}
-            currentLatency={currentLatency}
-          />
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function DnsBenchmarkRow({
-  row,
-  isCurrent,
-  isWinner,
-  currentLatency,
-}: {
-  row: DnsServerResult;
-  isCurrent: boolean;
-  isWinner: boolean;
-  currentLatency: number | null;
-}) {
-  const failed = row.samples === 0;
-  const hasCurrent = currentLatency != null && currentLatency > 0;
-  const showDelta = !failed && !isCurrent && hasCurrent;
-  // `currentLatency!` é seguro porque `showDelta` só é true após o guard
-  // `hasCurrent` acima (TS narrowing não atravessa a const boolean).
-  const delta = showDelta ? row.p50 - currentLatency! : 0;
-  const deltaSign = delta > 0 ? '+' : '−';
-  const deltaColor = delta > 0 ? 'var(--error)' : 'var(--ul)';
-
-  return (
-    <li className={`lk-result__dns-bench-row${failed ? ' lk-result__dns-bench-row--failed' : ''}`}>
-      <span className="lk-result__dns-bench-name">{row.name}</span>
-      <span className="lk-result__dns-bench-chips">
-        {isCurrent && (
-          <span className="lk-result__dns-bench-chip lk-result__dns-bench-chip--current">
-            Em uso
-          </span>
-        )}
-        {isWinner && (
-          <span className="lk-result__dns-bench-chip lk-result__dns-bench-chip--winner">
-            Mais rápido
-          </span>
-        )}
-      </span>
-      <span className="lk-result__dns-bench-latency">
-        {failed ? '—' : `${Math.round(row.p50)} ms`}
-        {showDelta && Math.abs(delta) >= 1 && (
-          <span style={{ color: deltaColor, fontSize: 11, marginLeft: 6, fontWeight: 600 }}>
-            {deltaSign}{Math.round(Math.abs(delta))} ms
-          </span>
-        )}
-      </span>
-    </li>
-  );
-}
-
-function DnsAccordionBody({
-  result,
-  onOpenGuide,
-  benchmarkStarted,
-}: {
-  result: SpeedTestResult;
-  onOpenGuide: () => void;
-  benchmarkStarted: boolean;
-}) {
-  const grade = classifyDnsLatency(result.dnsLatencyMs ?? null);
-
-  // Estado do benchmark — disparado na PRIMEIRA vez que o usuário abre
-  // o accordion (`benchmarkStarted` flipa pra true uma vez pelo pai).
-  // Nas vezes seguintes que o accordion abre, o resultado já está em
-  // memória — não refaz o teste.
-  const [state, setState] = useState<DnsBenchState>('idle');
-  const [benchmark, setBenchmark] = useState<DnsBenchmarkResult | null>(null);
-  const [progress, setProgress] = useState({ done: 0, total: 5, current: '' });
-  const startedRef = useRef(false);
-
-  useEffect(() => {
-    if (!benchmarkStarted || startedRef.current) return;
-    startedRef.current = true;
-    const ctrl = new AbortController();
-    setState('running');
-    runDNSBenchmark(ctrl.signal, (done, total, current) => {
-      setProgress({ done, total, current });
-    })
-      .then((r) => {
-        setBenchmark(r);
-        setState('done');
-      })
-      .catch(() => {
-        // Ignora aborts (cleanup ao desmontar). Para outras falhas, vai
-        // pra estado 'error' — UI mostra mensagem genérica.
-        if (ctrl.signal.aborted) return;
-        setState('error');
-      });
-
-    return () => {
-      ctrl.abort();
-    };
-  }, [benchmarkStarted]);
-
-  const items: IOSListItem[] = [];
-
-  items.push({
-    icon: <Icon name="router" size={14} color="var(--text-2)" />,
-    iconBg: 'var(--surface-3)',
-    title: 'Provedor DNS',
-    trailing: (
-      <span className="lk-result__metric-sub">
-        {result.dnsProvider ?? 'Não detectado'}
-      </span>
-    ),
-  });
-
-  if (result.dnsLatencyMs != null) {
-    items.push({
-      icon: <Icon name="ping" size={14} color="var(--text-2)" />,
-      iconBg: 'var(--surface-3)',
-      title: 'Latência DNS',
-      trailing: (
-        <span className="lk-result__metric-sub">
-          {Math.round(result.dnsLatencyMs)} ms{grade ? ` · ${dnsLatencyLabel(grade)}` : ''}
-        </span>
-      ),
-    });
-  }
-
-  items.push({
-    icon: <Icon name="cog" size={14} color="#fff" />,
-    iconBg: 'var(--accent)',
-    title: 'Como alterar',
-    subtitle: 'Guia passo a passo por plataforma',
-    showChevron: true,
-    onClick: onOpenGuide,
-  });
-
-  return (
-    <div className="lk-result__dns-body">
-      <IOSList items={items} />
-      <DnsBenchmarkTable
+      {/* Sheets de "Mais detalhes" (refator drag-to-resize 2026-05). As 3
+          são montadas fora do scroll-container porque são fixed/full-screen
+          e precisam cobrir o TopBar. Mount permanece — `open` controla a
+          visibilidade e o cleanup interno (DraggableSheet) cuida de body
+          scroll lock e Esc. */}
+      <AdvancedSheet
+        open={activeSheet === 'advanced'}
+        onClose={closeActiveSheet}
         result={result}
-        benchmark={benchmark}
-        state={state}
-        progress={progress}
+        server={server}
+        unit={unit}
+        history={history}
+      />
+      <GamerSheet
+        open={activeSheet === 'gamer'}
+        onClose={closeActiveSheet}
+        result={result}
+      />
+      <DNSGuideSheet
+        open={activeSheet === 'dns'}
+        onClose={closeActiveSheet}
+        result={result}
       />
     </div>
   );
 }
+
+// =============================================================================
+// As bodies dos antigos 3 accordions (Avançado, Modo Gamer, DNS) foram
+// migradas para sheets dedicadas (refator drag-to-resize 2026-05):
+//   - Avançado  → src/features/result-detail/AdvancedSheet.tsx
+//   - Modo Gamer → src/features/result-detail/GamerSheet.tsx
+//   - DNS        → src/features/dns/DNSGuideSheet.tsx (já existia)
+// =============================================================================
+
+
+

@@ -174,3 +174,51 @@ export function loadLastDnsResult(): DnsBenchmarkResult | null {
     return null;
   }
 }
+
+// ──────────────────────────────────────────────────────────────────────
+// Recomendação de troca de DNS (2026-05)
+//
+// Antes, o DNSGuideSheet tratava o servidor com menor p50 do benchmark
+// como "recomendado", independente da latência do DNS atual. Resultado:
+// usuário com DNS atual em 3ms via "Recomendado: Cloudflare 11ms" —
+// sugestão de TROCAR pra um DNS pior.
+//
+// `chooseDnsRecommendation` resolve isso devolvendo um discriminated
+// union com 3 estados:
+//   - 'switch'        → trocar é vantajoso (ganho real)
+//   - 'already_good'  → DNS atual já é tão bom quanto o melhor medido
+//   - 'no_data'       → faltam latência atual ou benchmark
+//
+// Thresholds (≥ 20ms E ≥ 30%): exigem ganho absoluto significativo
+// pro usuário sentir (20ms é o limite percentível em jitter de rede
+// móvel) E ganho relativo significativo (evita recomendar trocar de
+// 5ms para 3ms — irrelevante na prática mas seria 40%). A combinação
+// AND filtra ambos os falsos positivos: ganhos absolutos pequenos em
+// DNS já bons e ganhos percentuais grandes em valores ínfimos.
+// ──────────────────────────────────────────────────────────────────────
+
+export type DnsRecommendation =
+  | { type: 'switch'; target: DnsServerResult; deltaMs: number; deltaPct: number }
+  | { type: 'already_good'; fastest: DnsServerResult }
+  | { type: 'no_data' };
+
+const DNS_REC_MIN_DELTA_MS = 20;
+const DNS_REC_MIN_DELTA_PCT = 30;
+
+export function chooseDnsRecommendation(
+  currentLatencyMs: number | null | undefined,
+  benchmark: DnsServerResult[],
+): DnsRecommendation {
+  const valid = benchmark.filter((s) => s.samples > 0);
+  if (currentLatencyMs == null || valid.length === 0) return { type: 'no_data' };
+
+  const fastest = [...valid].sort((a, b) => a.p50 - b.p50)[0];
+  const deltaMs = currentLatencyMs - fastest.p50;
+  const deltaPct = (deltaMs / currentLatencyMs) * 100;
+
+  if (deltaMs >= DNS_REC_MIN_DELTA_MS && deltaPct >= DNS_REC_MIN_DELTA_PCT) {
+    return { type: 'switch', target: fastest, deltaMs, deltaPct };
+  }
+
+  return { type: 'already_good', fastest };
+}

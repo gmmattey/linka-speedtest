@@ -544,17 +544,30 @@ Mede a latência de 5 servidores DNS via DNS over HTTPS (DoH) e escolhe o mais r
 ```ts
 runDNSBenchmark(signal: AbortSignal, onProgress?): Promise<DnsBenchmarkResult>
 loadLastDnsResult(): DnsBenchmarkResult | null  // lê localStorage 'linka.dns.result.v1'
+chooseDnsRecommendation(currentLatencyMs, benchmark[]): DnsRecommendation
 ```
 
 **Tipos:**
 ```ts
 interface DnsServerResult { id, name, ip, p50, p95, samples, grade: 'A'|'B'|'C'|'D' }
-interface DnsBenchmarkResult { servers, winner, testedAt }
+interface DnsBenchmarkResult { servers, winner, testedAt, nativeDnsMs }
+
+type DnsRecommendation =
+  | { type: 'switch'; target: DnsServerResult; deltaMs: number; deltaPct: number }
+  | { type: 'already_good'; fastest: DnsServerResult }
+  | { type: 'no_data' }
 ```
 
 **Grades:** A (≤15 ms), B (≤30 ms), C (≤50 ms), D (>50 ms)
 
 **Vencedor:** servidor com menor p50 entre os que têm `samples > 0`. Resultado salvo em `localStorage` na chave `linka.dns.result.v1`.
+
+**`chooseDnsRecommendation` (Bug-1 fix 2026-05):** decide se vale trocar de DNS comparando `currentLatencyMs` (vem de `result.dnsLatencyMs`) com o servidor de menor p50 do benchmark. Sem latência atual ou sem amostras válidas → `no_data`. Caso contrário, recomenda `switch` **somente se** `deltaMs ≥ 20 ms` **E** `deltaPct ≥ 30 %` — ambos os cortes são necessários para evitar duas classes de falsos positivos:
+
+- **AND ≥ 20 ms:** corta ganhos absolutos imperceptíveis (ex.: trocar 5 ms por 3 ms = 40 % de ganho relativo, mas 2 ms é ruído de jitter móvel — usuário não sente).
+- **AND ≥ 30 %:** corta ganhos relativos pequenos (ex.: trocar 200 ms por 175 ms = 25 ms absolutos, mas só 12,5 % — não muda a percepção; provável outlier do benchmark).
+
+Falhando qualquer um, devolve `already_good` (mantém o `fastest` para a UI mostrar como referência opcional). A UI do `DNSGuideSheet` consome o discriminated union direto: `switch` → hero comparativo + chip `−Xms · −Y%` + "Copiar IPs"; `already_good` → card único centralizado + CTA só "Fechar"; `no_data` → hero com "—" + "Medindo…".
 
 **Integração:** DNS não faz parte do fluxo de speed test. É invocado on-demand pelo accordion "DNS" da `ResultScreen` (Mais detalhes) — disparado **uma única vez** na primeira `open` do accordion via prop `onToggle` do `<Accordion>`. Resultado fica em memória local do `<DnsAccordionBody>`; opens subsequentes reaproveitam sem refazer o teste. Timeout por servidor: 5 s; total ~5-15 s. Falha em um servidor (CORS estrito Safari, timeout, offline) renderiza `samples=0` e a tabela mostra "—" sem quebrar o resto. Status legado: a `DNSBenchmarkScreen` original foi removida no refator de arquitetura 2026-05; a função é o único caller atual.
 
@@ -1046,16 +1059,61 @@ interface AccordionProps {
   icon?: ReactNode;
   defaultOpen?: boolean;
   children: ReactNode;
+  onToggle?: (open: boolean) => void;
 }
 ```
 
-Componente novo (`src/components/Accordion.tsx` + `.css`) usado nos 3 expansives da section "Mais detalhes" da ResultScreen (Avançado / Modo Gamer / DNS).
+Componente em `src/components/Accordion.tsx` + `.css`. Foi criado no refator de arquitetura 2026-05 para os 3 expansives da section "Mais detalhes" da ResultScreen (Avançado / Modo Gamer / DNS). **No refator drag-to-resize 2026-05 perdeu seus callers** — a section "Mais detalhes" virou 3 rows clicáveis que abrem bottom sheets dedicados (`AdvancedSheet`, `GamerSheet`, `DNSGuideSheet`). O componente permanece disponível para uso futuro (não foi deletado).
 
 **Visual.** Container `var(--surface-deep)` + border + `border-radius: var(--radius-lg)`, `overflow: hidden`. Header é um `<button>` com `aria-expanded` (preferimos botão a `<details>/<summary>` para controle total do estilo do header sem polyfill de `::marker`). Layout do header: `[icon] title [chevron]`. Chevron rotaciona 180° quando aberto (`transform: rotate(-180deg)`, transição 240ms cubic-bezier).
 
 **Animação.** Conteúdo anima via `max-height` lendo `scrollHeight` do `contentRef` (sem `auto`, que não anima). Transição 320ms cubic-bezier. `prefers-reduced-motion: reduce` zera ambas as animações.
 
 **Acessibilidade.** Header é botão semântico com `aria-controls` apontando para o `id` gerado pelo `useId()`. Conteúdo carrega `role="region"` + `aria-hidden` espelhando o estado.
+
+### 5.3.3 `DraggableSheet` — base universal de bottom sheet (refator drag-to-resize 2026-05)
+
+Props:
+
+```ts
+type SnapPoint = 'compact' | 'expanded';
+
+interface DraggableSheetProps {
+  open: boolean;
+  onClose: () => void;
+  initialSnap?: SnapPoint;       // default 'compact'
+  children: ReactNode;
+  ariaLabel?: string;
+  ariaLabelledBy?: string;
+  nested?: boolean;              // eleva z-index para empilhar (default false)
+}
+```
+
+Componente em `src/components/DraggableSheet.tsx` + `.css`. **Base obrigatória de todo bottom sheet do app.** Substituiu as animações próprias do `DNSGuideSheet`, `WifiDetailsSheet` e `WifiOptimizeSheet`, e é a base dos novos `AdvancedSheet` e `GamerSheet`.
+
+**Snap points.** Dois pontos de parada definidos como % do viewport:
+
+- `compact` = 60vh (default ao abrir).
+- `expanded` = 88vh.
+
+**Drag math.** Pointer events ficam SÓ na `__handle-area` (28px de altura, full width, com a barra 40×4 centralizada). Não vão no `__content` para não conflitar com scroll interno. Convenção: `dy > 0` (pointer descendo) reduz a altura; `dy < 0` aumenta. A altura efetiva é convertida de pixels para vh dividindo por `window.innerHeight` e multiplicando por 100. Resistência (`OVERDRAG_RESISTANCE = 0.3`) é aplicada quando o usuário tenta exceder `expanded` — sem isso o sheet "estica" infinito.
+
+**Snap logic em `pointerup`.** Avaliada nesta ordem:
+
+1. Velocidade descendente > 0.8 px/ms (≈ 800 px/s) → fecha.
+2. Velocidade ascendente > 0.8 px/ms → snap para `expanded`.
+3. Distância: arrastou pra baixo > 30% da altura inicial → fecha.
+4. Senão, snap para o ponto mais próximo (compact ou expanded).
+
+A velocidade é medida entre o último e o penúltimo `pointermove` (janela curta = medida instantânea). Não usa rolling average — basta para fast-swipe-detection.
+
+**Animações.** Sem transition durante drag (responsivo); 300ms `cubic-bezier(0.32, 0.72, 0, 1)` ao soltar (snap). Animação de entrada: `lk-dsheet-slide-up` 280ms `transform: translateY(100%) → 0`. Backdrop fade 220ms. Backdrop opacity escala com a altura — quando o usuário puxa pra baixo, o backdrop começa a desaparecer junto, dando feedback visual de "está fechando".
+
+**Stacking (`nested`).** Ativa modifiers `--nested` que sobem o z-index pro stacking acima de outro sheet (backdrop 10000, sheet 10001). Usado pelo `WifiOptimizeSheet`, que abre por cima do `WifiDetailsSheet`. Sem `nested`, defaults são 9998/9999.
+
+**Body scroll lock + Esc.** Ambos são tratados aqui (centralizados) — os consumidores não duplicam a lógica.
+
+**Acessibilidade.** `role="dialog"` + `aria-modal="true"` no container; o consumidor passa `ariaLabel` ou `ariaLabelledBy` apontando para o título do header.
 
 ### 5.4 `IOSList`
 
@@ -1682,7 +1740,7 @@ Componente puro renderizado pela `ResultScreen` quando `connectionType === 'wifi
 - **Amarelo** (fair): `var(--color-warn)`
 - **Vermelho** (weak/critical): `var(--color-bad)`
 
-**Novo componente: `WifiDetailsSheet.tsx`**
+**Componente: `WifiDetailsSheet.tsx` (refator "premium" 2026-05)**
 
 Popup bottom-sheet que abre ao clicar no card compacto. Props:
 ```ts
@@ -1693,20 +1751,59 @@ interface WifiDetailsSheetProps {
 }
 ```
 
-Seções exibidas (em ordem):
-1. **Rede** — SSID, Frequência (banda derivada), Canal, Qualidade do canal
-2. **Desempenho** — Sinal (dBm), Velocidade do link (Mbps), Qualidade da conexão
-3. **Análise de Canais** — gráfico de barras via `<ChannelQualityChart>` mostrando:
-   - Ocupação/qualidade de cada canal da frequência atual (via `nearbyNetworks`)
-   - Altura da barra = contagem de APs detectados
-   - Cor da barra = qualidade média (RSSI) do canal
-   - Badges para canal atual ("Atual") e sugestão ("Recomendado")
-   - Legenda com escala RSSI (Excelente -50 a -60, Bom -60 a -70, etc.)
-   - Mensagem de recomendação se `suggestedChannel` diferir do `currentChannel`
-4. **Rede Local** — Gateway, IP local
-5. **Técnico** — WiFi Standard (ex., 802.11ax), Contagem de redes próximas
+**Estrutura visual (refator "premium" 2026-05):** o sheet saiu do dump de
+dados em listas `dl/dt` para uma hierarquia clara em 5 blocos:
 
-Animação: slide-up de baixo com backdrop fade (200-300ms via `cubic-bezier(0.34, 1.56, 0.64, 1)`). ESC key ou click no backdrop fecha. Body scroll locked enquanto aberto.
+1. **Hero verdict** — card com `border-top: 3px solid var(--ribbon-color)`,
+   ícone Wi-Fi 44×44 com tint matching a severidade, kicker "Estado do
+   Wi-Fi", título grande do verdict (`Excelente`/`Bom`/`Razoável`/`Fraco`/
+   `Crítico` via `wifiQualityLabel()`) e sub-frase contextual
+   ("Sinal forte, canal limpo" / "Sinal médio, canal congestionado").
+   Cor da ribbon = `var(--success)` para excellent/good, `var(--warn)`
+   para fair/weak, `var(--error)` para critical, `var(--text-3)` para
+   unknown.
+2. **Métricas 2x2** — cards compactos lado a lado: Sinal (cor por dBm:
+   ≥−60 verde, ≥−75 amarelo, <−75 vermelho), Velocidade do link (cor
+   apenas em casos ruins: <30 Mbps amarelo, <10 vermelho), Banda, Canal.
+   Valores em `var(--font-mono)` com `tabular-nums`.
+3. **Visualização de canais** — quando `nearbyNetworks.length > 0`,
+   header com "Canais &lt;banda&gt; na área" + count, seguido do
+   `<ChannelQualityChart>` (componente preservado). Quando o scan não
+   retornou nada (PWA puro ou Android <13 sem permissão), fallback
+   simples "Canal X (banda)" + hint "Lista de redes vizinhas
+   indisponível neste aparelho".
+4. **Recomendação inline** — `aside` com `var(--accent-tint)` + ícone
+   `bulb`. Aparece apenas quando há ação útil. Prioridade:
+   (a) `channelQuality === 'bad'` + `suggestedChannel != null` →
+   "Canal X está mais limpo · Pode reduzir interferência se trocar";
+   (b) `quality === 'weak' | 'critical'` → "Sinal fraco · aproxime-se
+   ou troque para 2.4 GHz" (texto adapta ao band atual);
+   (c) `linkSpeedMbps` muito abaixo da capacidade da banda →
+   "Velocidade abaixo do esperado · Verifique padrão Wi-Fi (ax/ac)".
+   Quando nenhuma condição bate, recomendação não aparece — Wi-Fi
+   saudável não merece UI extra.
+5. **Footer fixo (CTA pareado)** — botão primary `var(--accent)`
+   "Como otimizar Wi-Fi" abre `<WifiOptimizeSheet>` por cima; secondary
+   outline "Fechar".
+
+Animação: slide-up de baixo com backdrop fade (200-300ms via `cubic-bezier(0.34, 1.56, 0.64, 1)`). ESC key ou click no backdrop fecha. Body scroll locked enquanto aberto. Sem box-shadow (regra de branding).
+
+**Novo componente: `WifiOptimizeSheet.tsx`**
+
+Bottom-sheet montado por cima do `WifiDetailsSheet` (z-index 10000/10001).
+Tutorial em pt-BR com 3 categorias hardcoded:
+
+- **Trocar o canal Wi-Fi** — instruções para acessar painel do roteador
+  e escolher canais 1/6/11 (2.4 GHz) ou 36-48 (5 GHz).
+- **Escolher a banda certa** — quando 5 GHz vs 2.4 GHz; recomendação
+  para roteadores dual-band manterem ambas com nomes diferentes.
+- **Posicionar o roteador** — local central, em altura, longe de
+  microondas/bluetooth.
+
+Cada categoria tem 4 passos numerados em chip purple (`var(--accent-tint)`/
+`var(--accent)`). Ícone por categoria: `swap` (canal), `wifi` (banda),
+`router` (posição). CTA único "Fechar". O conteúdo é fixo (não depende
+do diagnóstico atual) — não passa por `copyDictionary`.
 
 **Novo componente: `ChannelQualityChart.tsx`**
 
@@ -1763,9 +1860,9 @@ Quando o diagnóstico retorna canal, a tela exibe:
 
 Pasta nova para abrigar o bottom sheet do guia de DNS, criado quando a `DNSGuideScreen` foi descontinuada.
 
-### `DNSGuideSheet.tsx` + `.css`
+### `DNSGuideSheet.tsx` + `.css` (refator "premium" 2026-05 → drag-to-resize 2026-05)
 
-Substitui a antiga `DNSGuideScreen` (rota dedicada). Acionado pelo botão "Como alterar" do accordion DNS na ResultScreen.
+Substitui a antiga `DNSGuideScreen` (rota dedicada). Acionado pela row "DNS" da section "Mais detalhes" da ResultScreen. **No refator drag-to-resize 2026-05, passou a usar o `DraggableSheet` como base** — backdrop, container fixed, slide-up animation e drag handle vivem agora no `DraggableSheet`; o `DNSGuideSheet` mantém só os estilos de conteúdo (header, hero, pills, tabs, steps, footer) sob a classe `.lk-dns-sheet__inner`.
 
 **Props:**
 
@@ -1773,16 +1870,154 @@ Substitui a antiga `DNSGuideScreen` (rota dedicada). Acionado pelo botão "Como 
 interface Props {
   open: boolean;
   onClose: () => void;
-  serverId?: string; // 'cloudflare' (default) | 'google' | 'adguard' | 'quad9' | 'opendns'
+  /** Resultado do speedtest atual — usado no hero "Recomendação". */
+  result?: SpeedTestResult;
+  /** Benchmark já executado pela ResultScreen (opcional — sheet roda o seu se ausente). */
+  benchmark?: DnsBenchmarkResult | null;
+  /** Compatibilidade com chamadas legadas; ignorado. */
+  serverId?: string;
 }
 ```
 
-**Comportamento:**
+**Estrutura visual (refator "premium" 2026-05):** sai do dump de passos
+por plataforma para uma hierarquia "recomendação-first":
 
-- Renderiza `null` quando `!open`. Quando aberto, monta backdrop translúcido (`z-index 199`) + container `fixed bottom: 0; max-width: 480px` (`z-index 200`).
-- Slide-up animation (cubic-bezier 0.32, 0.72, 0, 1, 280ms). Bloqueada por `prefers-reduced-motion: reduce`.
-- Tecla `Esc` fecha. `document.body.style.overflow` é setado para `hidden` enquanto aberto e restaurado no unmount.
-- Conteúdo idêntico ao da `DNSGuideScreen` antiga: hero (nome do servidor + IPs), tabs por plataforma (Android / iOS / Windows / Roteador), lista numerada de passos, nota de rodapé.
-- 5 servidores DNS preservados (Cloudflare, Google, AdGuard, Quad9, OpenDNS).
+1. **Hero "Recomendação" — 3 estados (Bug-1 fix 2026-05)** — o estado
+   é decidido por `chooseDnsRecommendation(currentLatencyMs, sortedServers)`
+   importada de `utils/dnsBenchmark.ts`:
+   - **`switch`** — grid 1fr · auto · 1fr. Lado esquerdo: kicker
+     "Seu DNS", nome (`currentDnsLabel`, ver Bug-2 abaixo), latência
+     atual em destaque (cor por threshold: ≥100ms vermelho, ≥50ms
+     amarelo, <50ms verde). Lado direito: kicker "Recomendado",
+     `recommendation.target.name`, latência verde + chip
+     `−X ms · −Y%` mostrando ganho. Setinha entre os lados.
+   - **`already_good`** — classe modificadora `--already-good`
+     desativa o grid 3-col e empilha verticalmente: ícone
+     `check-circle` verde + título "Seu DNS está excelente" + sub
+     `<provedor> · <X> ms — sem necessidade de trocar`.
+   - **`no_data`** — fallback do `switch` com `—` no lado direito e
+     "Medindo…" enquanto `running === true`.
+2. **Pills compactas** — em `switch`, exclui o `fastest`. Em
+   `already_good`, mostra os 3 mais rápidos. Pills `border-radius:
+   999px` com nome em `var(--font-display)` + latência em
+   `var(--font-mono)`.
+3. **Tabs por plataforma** — `ios | android | router`. Auto-detecção
+   inicial via `navigator.userAgent` (procura `iPhone|iPad|iPod` →
+   `ios`, `Android` → `android`, fallback `android`). Tabs em pill,
+   ativa em `var(--accent)`.
+4. **Steps** — 4 passos numerados por plataforma. Cada step em card
+   compacto com chip purple (`var(--accent-tint)`) à esquerda. Conteúdo
+   por plataforma:
+   - **iOS** (4): Ajustes → Wi-Fi → ⓘ → Configurar DNS → Manual → IPs.
+   - **Android** (4): Configurações → Rede e internet → DNS privado →
+     hostname DoT, com fallback de IP estático na rede Wi-Fi.
+   - **Roteador** (4): painel `192.168.0.1`, login admin/admin, seção
+     WAN/DNS, salvar.
+5. **Linha de IPs** — texto centralizado discreto mostrando os IPs do
+   servidor selecionado em `var(--font-mono)` para conferência rápida.
+6. **Footer fixo (CTA estado-dependente)** — em `switch`/`no_data`:
+   primary `var(--accent)` "Copiar IPs" →
+   `navigator.clipboard.writeText('1.1.1.1, 1.0.0.1')` (fallback
+   `document.execCommand` em iOS standalone antigo) + toast pill "IPs
+   copiados" + secondary outline "Fechar". Em `already_good`: apenas
+   primary "Fechar" (sem incentivar troca desnecessária).
 
-**Por que sheet em vez de rota.** Encurta o caminho de volta (sem `goBack`/`returnToRef`); o usuário já está olhando o accordion DNS, o sheet é um overlay leve. Também evita poluir o `screen` enum em `App.tsx`.
+**Bug-2 fix 2026-05 — fallback do nome do "Seu DNS":** o hero antes
+exibia `result?.dnsProvider ?? 'Detectando…'`, mostrando "Detectando…"
+mesmo após o speedtest ter terminado quando o probe falhou em mapear
+o IP do resolver. Agora há um fallback em cascata em `currentDnsLabel`:
+
+```ts
+const currentDnsLabel =
+  result?.dnsProvider          // nome conhecido (Cloudflare, Google, …)
+  ?? result?.dnsResolverIp     // IP cru detectado mas não mapeado
+  ?? 'Não identificado';       // probe DoH falhou completamente
+```
+
+Não há mais o estado "Detectando…" — o sheet só abre depois do teste
+terminar; o estado de detecção do **provider** (vem do `probeDnsResolver`
+do orchestrator) é independente do estado de **benchmark dos DoH
+alternativos** (`runDNSBenchmark` rodando dentro do sheet).
+
+**Comportamento dos dados:**
+
+- Quando o pai passa `benchmark`, o sheet usa direto. Quando ausente,
+  `useEffect` no abrir dispara `runDNSBenchmark()`. Para feedback
+  imediato, faz seed do `loadLastDnsResult()` antes do benchmark
+  terminar — UI já mostra o último resultado conhecido enquanto o
+  refresh roda em background.
+- Servidor selecionado para os steps = `fastest` do benchmark
+  (`sortedServers[0]`) **mesmo no estado `already_good`** — quem
+  decide trocar mesmo assim ainda precisa dos IPs. Sem benchmark
+  ainda, fallback Cloudflare.
+- Pills filtram para `samples > 0` (servidor que falhou no benchmark
+  some da lista — Safari iOS bloqueia DoH com CORS estrito em alguns
+  resolvers).
+
+**Atalho de abertura (refator drag-to-resize 2026-05).** O sheet abre
+pela row "DNS" da section "Mais detalhes" (`onClick={() => setActiveSheet('dns')}`)
+e pela 4ª cell do bloco `.lk-result__secondary-block` (cell "DNS"),
+que mantém `lk-result__secondary-cell--clickable` (cursor pointer +
+hover/focus realça `cell-label` em `var(--accent)`), `role="button"`,
+`tabIndex={0}` e handler de Enter/Espaço para acessibilidade. Os dois
+caminhos coexistem e disparam o mesmo `setActiveSheet('dns')`.
+
+**Comportamento do sheet:**
+
+- Renderiza `null` quando `!open` (delegado ao `DraggableSheet`).
+- Base visual e drag-to-resize fornecidos pelo `DraggableSheet` —
+  snap entre 60vh (compact) e 88vh (expanded), pull-down threshold de
+  30% fecha, fast-swipe-down (vel > 800 px/s) também fecha.
+- Tecla `Esc` fecha; body scroll lock — ambos centralizados no
+  `DraggableSheet`.
+- `prefers-reduced-motion: reduce` bloqueia animação de entrada/saída.
+
+**Por que sheet em vez de rota.** Encurta o caminho de volta; o usuário já está na ResultScreen, o sheet é um overlay leve. Também evita poluir o `screen` enum em `App.tsx`.
+
+---
+
+## 13. Feature Result Detail — `src/features/result-detail/` (refator drag-to-resize 2026-05)
+
+Pasta nova para abrigar as 2 sheets que substituíram os accordions inline "Avançado" e "Modo Gamer" da section "Mais detalhes" da ResultScreen. O DNS já vivia em `features/dns/DNSGuideSheet`; agora os 3 caminhos seguem o mesmo padrão (row clicável → bottom sheet montado sobre `DraggableSheet`).
+
+### Section "Mais detalhes" da ResultScreen (refator drag-to-resize 2026-05)
+
+```
+[ícone] Avançado            [chevron→]
+[ícone] Modo Gamer          [chevron→]
+[ícone] DNS                 [chevron→]
+```
+
+Renderizada como uma única `IOSList` com 3 items, cada um com `onClick: () => setActiveSheet(...)`. O estado `activeSheet: 'advanced' | 'gamer' | 'dns' | null` é mantido na ResultScreen e unifica a lógica de "qual sheet está aberta" (antes eram estados separados `dnsSheetOpen` e `dnsBenchStarted`). Os 3 sheets ficam sempre montados no DOM (`<AdvancedSheet open={activeSheet === 'advanced'} ... />` etc.) — o `open` controla a visibilidade.
+
+### `AdvancedSheet.tsx` + `.css`
+
+Porto do antigo `AdvancedAccordionBody`. Estrutura visual:
+
+1. **Header sticky** — title "Avançado" + close button (mesmo padrão das demais sheets).
+2. **Hero** — kicker "Detalhes técnicos" + título "Métricas, telemetria e histórico" + ícone settings 26px à esquerda, com border-top neutro.
+3. **3 grupos hairlined**, cada um com `<IOSList>`:
+   - Métricas avançadas: bufferbloat (latência sob carga), latência carregada, oscilação carregada, estabilidade DL (P25–P75), falhas, velocidade média (DL/UL via samples), IP público, provedor.
+   - Sobre o teste: tempo total, distância estimada, timestamp absoluto, versão do app.
+   - Histórico: comparação com média dos últimos 10 testes (delta % colorido por sinal).
+4. **Footer fixo** — CTA "Fechar".
+
+Todas as helpers (`bufferbloatColor`, `bufferbloatLabel`, `packetLossColor`, `packetLossLabel`, `formatFullDateTime`, `formatElapsedMs`, `averageFromSamples`, `historicalAverageDl`, `estimateDistanceKm`) foram migradas do `ResultScreen.tsx` para este arquivo — não há duplicação.
+
+Empty-state preserva o legado: quando `metricItems`, `aboutItems` e `historyItems` estão todos vazios (extremamente raro — falhas na conexão sempre adiciona algo), exibe `<p className="lk-adv-sheet__empty">Sem dados avançados disponíveis para este teste.</p>`.
+
+### `GamerSheet.tsx` + `.css`
+
+Porto do antigo `GamerAccordionBody`. Estrutura visual:
+
+1. **Header sticky** — title "Modo Gamer" + close.
+2. **Hero** — kicker "Avaliação" + título com `overallLabel` ("Boa para jogos online." / "Atenção…" / "Conexão fraca…") + ícone gamepad colorido pelo `overallTone`. Border-top do hero pega a mesma cor (`--ribbon-color` inline).
+3. **Stat cards 3 cols** — Resposta (latência), Oscilação (jitter), Falhas (perda) com cor por tone.
+4. **Lista de jogos** — `<IOSList>` com 4 categorias (FPS competitivo, MOBA/BR, MMO/RPG, Cloud Gaming), cada uma com verdict colorido por tone (`good` / `maybe` / `bad`).
+5. **Footer fixo** — CTA "Fechar".
+
+A lógica `evaluateGames(result)` foi migrada do `ResultScreen.tsx` integralmente — mesma classificação por jogo, mesmos thresholds.
+
+### Por que separar das tabs Wi-Fi (`features/local-wifi/`)
+
+A pasta `local-wifi` é específica do diagnóstico Wi-Fi nativo (com plugin Capacitor associado). As sheets `AdvancedSheet` e `GamerSheet` consomem só o `SpeedTestResult` puro (sem capabilities nativas) — separação por domínio justifica a pasta nova.

@@ -1,0 +1,186 @@
+/* ──────────────────────────────────────────────────────────────────────
+   WifiOptimizeSheet — Tutorial de otimização (refator 2026-05).
+
+   Bottom-sheet montado em cima do WifiDetailsSheet. Compartilha a mesma
+   família de tokens e o mesmo padrão visual (close + scroll + footer
+   fixo).
+
+   2026-05 (drag-to-resize): a base do sheet (backdrop, container fixed,
+   slide-up animation, handle) migrou pra `DraggableSheet`. Aqui ficam só
+   os estilos do CONTEÚDO (header, sections, steps, footer). O `__inner`
+   é o flex container que vive dentro do `.lk-dsheet__content`.
+   ────────────────────────────────────────────────────────────────────── */
+
+.lk-wifi-opt__inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ── Header ─────────────────────────────────────── */
+
+.lk-wifi-opt__header {
+  background: var(--surface-deep);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 4px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lk-wifi-opt__title-row {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+}
+
+.lk-wifi-opt__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.lk-wifi-opt__close {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 50%;
+  color: var(--text-2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+/* ── Content ─────────────────────────────────────── */
+
+.lk-wifi-opt__content {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.lk-wifi-opt__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+}
+
+.lk-wifi-opt__section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lk-wifi-opt__section-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--accent-tint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lk-wifi-opt__section-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.lk-wifi-opt__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lk-wifi-opt__step {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.lk-wifi-opt__step-num {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-tint);
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lk-wifi-opt__step-text {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+  padding-top: 1px;
+}
+
+/* ── Footer ─────────────────────────────────────── */
+
+.lk-wifi-opt__footer {
+  flex-shrink: 0;
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0));
+  background: var(--surface-deep);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.lk-wifi-opt__cta-secondary {
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+
+.lk-wifi-opt__cta-secondary:hover,
+.lk-wifi-opt__cta-secondary:focus-visible {
+  background: var(--surface-2);
+  color: var(--text);
+  outline: none;
+}
+
+/* Responsividade desktop e prefers-reduced-motion são gerenciados pelo
+   DraggableSheet — nada aqui. */

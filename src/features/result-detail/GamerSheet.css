@@ -1,0 +1,229 @@
+/* ──────────────────────────────────────────────────────────────────────
+   GamerSheet — Bottom sheet "Modo Gamer" (refator 2026-05).
+
+   Porto do antigo `GamerAccordionBody`. Estrutura visual: header com
+   title + close, hero (label + ícone gamepad colorido por tone), 3 stat
+   cards (Resposta/Oscilação/Falhas), lista de jogos por categoria,
+   footer com CTA "Fechar".
+
+   Usa o `DraggableSheet` como base (drag-to-resize). Aqui vivem só os
+   estilos de CONTEÚDO. O `__inner` é o flex container dentro do
+   `.lk-dsheet__content`.
+   ────────────────────────────────────────────────────────────────────── */
+
+.lk-gamer-sheet__inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────── */
+
+.lk-gamer-sheet__header {
+  background: var(--surface-deep);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 4px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lk-gamer-sheet__title-row {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+}
+
+.lk-gamer-sheet__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.lk-gamer-sheet__close {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 50%;
+  color: var(--text-2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+
+.lk-gamer-sheet__close:hover,
+.lk-gamer-sheet__close:focus-visible {
+  background: var(--surface-3);
+  color: var(--text);
+  outline: none;
+}
+
+/* ── Content scrollável ──────────────────────────────────────────────── */
+
+.lk-gamer-sheet__content {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  padding: 16px 16px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Hero ────────────────────────────────────────────────────────────── */
+
+.lk-gamer-sheet__hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-top: 3px solid var(--ribbon-color, var(--text-3));
+  border-radius: 14px;
+}
+
+.lk-gamer-sheet__hero-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lk-gamer-sheet__hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lk-gamer-sheet__hero-kicker {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+
+.lk-gamer-sheet__hero-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+/* ── Stat cards (Resposta / Oscilação / Falhas) ──────────────────────── */
+
+.lk-gamer-sheet__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.lk-gamer-sheet__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.lk-gamer-sheet__stat-label {
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.lk-gamer-sheet__stat-value {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.lk-gamer-sheet__stat-unit {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  margin-left: 2px;
+  opacity: 0.7;
+}
+
+/* ── Group (lista de jogos) ─────────────────────────────────────────── */
+
+.lk-gamer-sheet__group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lk-gamer-sheet__group-label {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* ── Footer fixo ─────────────────────────────────────────────────────── */
+
+.lk-gamer-sheet__footer {
+  flex-shrink: 0;
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0));
+  background: var(--surface-deep);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.lk-gamer-sheet__cta-secondary {
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+
+.lk-gamer-sheet__cta-secondary:hover,
+.lk-gamer-sheet__cta-secondary:focus-visible {
+  background: var(--surface-2);
+  color: var(--text);
+  outline: none;
+}

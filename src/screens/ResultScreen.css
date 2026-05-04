@@ -263,6 +263,25 @@
   min-width: 0;
 }
 
+/* Variante clicável (cell DNS, atalho 2026-05): mantém o layout idêntico
+   às outras cells — só sinaliza interatividade via cursor + leve
+   destaque do label no hover/focus. Sem box-shadow (regra do projeto). */
+.lk-result__secondary-cell--clickable {
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background var(--t-fast);
+  outline: none;
+}
+
+.lk-result__secondary-cell--clickable:hover .lk-result__secondary-cell-label,
+.lk-result__secondary-cell--clickable:focus-visible .lk-result__secondary-cell-label {
+  color: var(--accent);
+}
+
+.lk-result__secondary-cell--clickable:focus-visible {
+  background: var(--accent-tint);
+}
+
 .lk-result__secondary-cell-label {
   font-family: var(--font-display);
   font-weight: 600;
@@ -384,11 +403,16 @@
   line-height: 1.4;
 }
 
-/* ── Mais detalhes (refator 2026-05) ─────────────────────────────────────
-   Section que agrupa os 3 accordions Avançado / Modo Gamer / DNS. Kicker
-   no topo no mesmo padrão das outras labels (.lk-result__tools-label, etc.).
-   Os accordions internos cuidam do próprio espaçamento via `.lk-accordion +
-   .lk-accordion`. */
+/* ── Mais detalhes (refator drag-to-resize 2026-05) ──────────────────────
+   Section que agrupa as 3 rows clicáveis (Avançado / Modo Gamer / DNS).
+   Cada row abre um bottom sheet dedicado (AdvancedSheet, GamerSheet,
+   DNSGuideSheet). O conteúdo (que antes era inline em accordions) vive
+   nas sheets — aqui ficam só o kicker da section e a margem.
+
+   Os estilos antigos dos accordion bodies (.lk-result__advanced-*,
+   .lk-result__gamer-*, .lk-result__dns-bench-*, .lk-result__accordion-empty)
+   foram removidos junto com os componentes correspondentes — o conteúdo
+   migrou pra `features/result-detail/` e `features/dns/`. */
 
 .lk-result__more {
   margin-bottom: 20px;
@@ -402,223 +426,6 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 600;
-}
-
-/* Empty-state quando o accordion "Avançado" não tem nenhum dado para
-   exibir (teste rápido sem qualidade sob carga, sem IP, etc.). */
-.lk-result__accordion-empty {
-  margin: 0;
-  font-family: var(--font-body);
-  font-size: 12px;
-  color: var(--text-3);
-  line-height: 1.5;
-}
-
-/* ── Body do accordion "Avançado" enriquecido (2026-05) ──────────────────
-   Antes era uma única IOSList. Agora é dividido em 3 sub-blocos: Métricas
-   avançadas, Sobre o teste, Histórico. Cada sub-bloco tem um label
-   uppercase pequeno e a IOSList nativa. Hairline entre os sub-blocos vem
-   por margem (separação visual sem desenhar linha — as listas já têm
-   borda própria). */
-.lk-result__advanced-body {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.lk-result__advanced-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.lk-result__advanced-group-label {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-3);
-}
-
-/* ── Body do accordion "DNS" com benchmark comparativo (2026-05) ────────
-   IOSList do provedor atual + tabela do benchmark logo abaixo. */
-.lk-result__dns-body {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.lk-result__dns-bench {
-  background: var(--surface-deep);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.lk-result__dns-bench-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.lk-result__dns-bench-label {
-  font-family: var(--font-display);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-3);
-}
-
-.lk-result__dns-bench-progress {
-  font-family: var(--font-display);
-  font-size: 11px;
-  color: var(--text-3);
-}
-
-.lk-result__dns-bench-empty {
-  margin: 0;
-  font-family: var(--font-body);
-  font-size: 12px;
-  color: var(--text-3);
-  line-height: 1.5;
-}
-
-.lk-result__dns-bench-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.lk-result__dns-bench-row {
-  display: grid;
-  grid-template-columns: minmax(80px, 1fr) auto auto;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 0;
-  border-top: 1px solid var(--hairline);
-  font-family: var(--font-body);
-  font-size: 13px;
-}
-
-.lk-result__dns-bench-row:first-child {
-  border-top: none;
-  padding-top: 4px;
-}
-
-.lk-result__dns-bench-row--failed {
-  opacity: 0.55;
-}
-
-.lk-result__dns-bench-name {
-  font-weight: 600;
-  color: var(--text);
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.lk-result__dns-bench-chips {
-  display: inline-flex;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.lk-result__dns-bench-chip {
-  font-family: var(--font-display);
-  font-size: 9.5px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  padding: 2px 6px;
-  border-radius: var(--radius-pill);
-  white-space: nowrap;
-}
-
-.lk-result__dns-bench-chip--current {
-  background: var(--accent-tint);
-  color: var(--accent);
-}
-
-.lk-result__dns-bench-chip--winner {
-  background: var(--ul-tint);
-  color: var(--ul);
-}
-
-.lk-result__dns-bench-latency {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--text);
-  text-align: right;
-  white-space: nowrap;
-}
-
-/* ── Modo Gamer (porto compacto da GamerScreen morta) ──────────────────── */
-
-.lk-result__gamer {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.lk-result__gamer-headline {
-  margin: 0;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--text);
-  line-height: 1.35;
-}
-
-.lk-result__gamer-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.lk-result__gamer-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-}
-
-.lk-result__gamer-stat-label {
-  font-family: var(--font-display);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-3);
-}
-
-.lk-result__gamer-stat-value {
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-}
-
-.lk-result__gamer-stat-unit {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 500;
-  margin-left: 2px;
-  opacity: 0.7;
 }
 
 /* ── Tools list (atalho residual para Explorar) ───────────────────────── */

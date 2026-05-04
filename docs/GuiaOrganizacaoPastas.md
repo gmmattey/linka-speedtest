@@ -62,10 +62,11 @@ Linka SpeedTest/
 │   │   └── pwa.d.ts              ← Ambient module para `virtual:pwa-register/react` (vite-plugin-pwa)
 │   │
 │   ├── components/               ← Componentes reutilizáveis (sem estado de negócio)
-│   │   ├── Accordion.tsx / .css  ← Bloco expansível header+conteúdo (refator arquitetura 2026-05)
+│   │   ├── Accordion.tsx / .css  ← Bloco expansível header+conteúdo (criado no refator arquitetura 2026-05; sem caller após o refator drag-to-resize 2026-05, preservado para uso futuro)
 │   │   ├── BackButton.tsx / .css ← Botão voltar (chevron em pill 36×36) — Bloco 5 TopBar
 │   │   ├── BottomSheet.tsx / .css
 │   │   ├── Chip.tsx / .css       ← Badge/chip com variantes semânticas (good/maybe/bad/accent/neutral)
+│   │   ├── DraggableSheet.tsx / .css ← Base universal de bottom sheet com drag-to-resize (snap 60vh/88vh) — refator 2026-05
 │   │   ├── Gauge.tsx / .css      ← Anel SVG com fase + número hero + unidade
 │   │   ├── HamburgerMenu.tsx / .css
 │   │   ├── IconButton.tsx / .css ← Ação circular do TopBar (mesmo padrão visual do BackButton)
@@ -87,7 +88,7 @@ Linka SpeedTest/
 │   ├── screens/                  ← Telas completas (1 arquivo .tsx + 1 .css por tela)
 │   │   ├── StartScreen.tsx / .css
 │   │   ├── RunningScreen.tsx / .css
-│   │   ├── ResultScreen.tsx / .css       ← Inclui card unificado de Diagnóstico (2 estados) + section "Mais detalhes" com 3 accordions (Avançado, Modo Gamer, DNS) — refator 2026-05
+│   │   ├── ResultScreen.tsx / .css       ← Inclui card unificado de Diagnóstico (2 estados) + section "Mais detalhes" com 3 rows clicáveis (Avançado / Modo Gamer / DNS) que abrem bottom sheets dedicados — refator drag-to-resize 2026-05
 │   │   ├── HistoryScreen.tsx / .css
 │   │   ├── ComparisonScreen.tsx / .css
 │   │   ├── BeforeAfterScreen.tsx / .css
@@ -290,6 +291,12 @@ src/
 │       ├── useWifiDiagnostics.ts      ← hook auto-fetch (card embutido) — 2026-05
 │       ├── WifiSignalCard.tsx         ← card embutido na ResultScreen — 2026-05
 │       ├── WifiSignalCard.css         ← estilo do card embutido — 2026-05
+│       ├── WifiDetailsSheet.tsx      ← bottom sheet "premium" — refator 2026-05
+│       ├── WifiDetailsSheet.css      ← estilo do sheet de detalhes — refator 2026-05
+│       ├── WifiOptimizeSheet.tsx     ← tutorial de otimização (3 categorias) — 2026-05
+│       ├── WifiOptimizeSheet.css     ← estilo do tutorial — 2026-05
+│       ├── ChannelQualityChart.tsx   ← chart de canais reaproveitado pelo sheet — 2026-05
+│       ├── ChannelQualityChart.css   ← estilo do chart de canais — 2026-05
 │       ├── LocalWifiScreen.tsx
 │       └── LocalWifiScreen.css
 └── __tests__/
@@ -306,4 +313,20 @@ src/
         └── DNSGuideSheet.css       ← Estilo do sheet (substitui DNSGuideScreen.css)
 ```
 
-A pasta nasceu para abrigar o `DNSGuideSheet`, criado quando a `DNSGuideScreen` (rota dedicada) foi descontinuada — agora o guia é overlay acionado pelo botão "Como alterar" do accordion DNS na ResultScreen.
+A pasta nasceu para abrigar o `DNSGuideSheet`, criado quando a `DNSGuideScreen` (rota dedicada) foi descontinuada — agora o guia é overlay acionado pela row "DNS" da section "Mais detalhes" da ResultScreen.
+
+No refator drag-to-resize 2026-05, o `DNSGuideSheet` passou a usar o `DraggableSheet` como base (mesmo padrão do `WifiDetailsSheet` e `WifiOptimizeSheet`).
+
+### Estrutura adicionada — Feature Result Detail (refator drag-to-resize 2026-05)
+
+```txt
+src/
+└── features/
+    └── result-detail/
+        ├── AdvancedSheet.tsx       ← Bottom sheet "Avançado" — métricas + sobre o teste + histórico
+        ├── AdvancedSheet.css       ← Estilo do sheet
+        ├── GamerSheet.tsx          ← Bottom sheet "Modo Gamer" — stats + lista de jogos por categoria
+        └── GamerSheet.css          ← Estilo do sheet
+```
+
+A pasta nasceu para abrigar as sheets que substituíram os 3 accordions inline da section "Mais detalhes" da ResultScreen. Cada row da section abre uma sheet dedicada montada sobre `DraggableSheet`. O `DNSGuideSheet` permanece em `features/dns/` (já existia).

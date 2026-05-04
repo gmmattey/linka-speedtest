@@ -1,0 +1,204 @@
+/* ──────────────────────────────────────────────────────────────────────
+   AdvancedSheet — Bottom sheet "Avançado" (refator 2026-05).
+
+   Porto do antigo `AdvancedAccordionBody`. Estrutura visual: header com
+   title + close, hero (label + ícone settings), 3 sub-blocos hairlined
+   (Métricas avançadas / Sobre o teste / Histórico), footer com CTA
+   secundária "Fechar".
+
+   Usa o `DraggableSheet` como base (drag-to-resize). Aqui vivem só os
+   estilos de CONTEÚDO. O `__inner` é o flex container dentro do
+   `.lk-dsheet__content`.
+   ────────────────────────────────────────────────────────────────────── */
+
+.lk-adv-sheet__inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────── */
+
+.lk-adv-sheet__header {
+  background: var(--surface-deep);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 4px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lk-adv-sheet__title-row {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+}
+
+.lk-adv-sheet__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.lk-adv-sheet__close {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 50%;
+  color: var(--text-2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+
+.lk-adv-sheet__close:hover,
+.lk-adv-sheet__close:focus-visible {
+  background: var(--surface-3);
+  color: var(--text);
+  outline: none;
+}
+
+/* ── Content scrollável ──────────────────────────────────────────────── */
+
+.lk-adv-sheet__content {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  padding: 16px 16px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Hero ────────────────────────────────────────────────────────────── */
+
+.lk-adv-sheet__hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-top: 3px solid var(--text-3);
+  border-radius: 14px;
+}
+
+.lk-adv-sheet__hero-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lk-adv-sheet__hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lk-adv-sheet__hero-kicker {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+
+.lk-adv-sheet__hero-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+/* ── Groups (sub-blocos hairlined) ──────────────────────────────────── */
+
+.lk-adv-sheet__group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lk-adv-sheet__group-label {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* ── Empty state (raríssimo — só dispara se metric/about/history vazios) */
+
+.lk-adv-sheet__empty {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.5;
+}
+
+/* ── Trailing values ─────────────────────────────────────────────────────
+   Reaproveitamos `.lk-result__metric-sub` (definida em ResultScreen.css)
+   para os trailing values dos IOSList. Como o CSS do projeto é global
+   (Vite injeta todos os arquivos .css importados), a regra está
+   disponível assim que o ResultScreen é montado — e este sheet só abre
+   a partir do ResultScreen. */
+
+/* ── Footer fixo ─────────────────────────────────────────────────────── */
+
+.lk-adv-sheet__footer {
+  flex-shrink: 0;
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0));
+  background: var(--surface-deep);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.lk-adv-sheet__cta-secondary {
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+
+.lk-adv-sheet__cta-secondary:hover,
+.lk-adv-sheet__cta-secondary:focus-visible {
+  background: var(--surface-2);
+  color: var(--text);
+  outline: none;
+}

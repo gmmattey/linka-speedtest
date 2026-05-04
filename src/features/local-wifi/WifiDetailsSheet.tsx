@@ -1,7 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
-import type { WifiDiagnosticResult } from './types';
+import { useState } from 'react';
+import type { CSSProperties } from 'react';
+import { Icon } from '../../components/icons';
+import { DraggableSheet } from '../../components/DraggableSheet';
+import type { WifiDiagnosticResult, WifiQuality } from './types';
 import { ChannelQualityChart } from './ChannelQualityChart';
 import { wifiQualityLabel } from './LocalWifiService';
+import { WifiOptimizeSheet } from './WifiOptimizeSheet';
 import './WifiDetailsSheet.css';
 
 interface WifiDetailsSheetProps {
@@ -11,165 +15,319 @@ interface WifiDetailsSheetProps {
 }
 
 /**
- * Bottom-sheet com detalhes Wi-Fi. 4 cards principais (Rede, Desempenho,
- * Análise de Canais, Rede Local) + um toggle "Mais técnico" que expande
- * dados secundários (padrão WiFi, número de redes próximas).
+ * Bottom-sheet de detalhes Wi-Fi (refator "premium" 2026-05). Sai do dump
+ * de dados em 4 dl/dt para uma estrutura hierárquica:
  *
- * O backdrop usa `backdrop-filter: blur` + opacidade 0.6 para garantir que
- * o conteúdo da ResultScreen fique invisível (regressão fixada após
- * primeiro APK ter mostrado popup transparente).
+ *   1. Hero verdict — ribbon colorido por severidade + ícone + verdict +
+ *      sub-frase contextual.
+ *   2. Métricas 2x2 — Sinal (cor por dBm), Velocidade do link (cor por
+ *      Mbps), Banda, Canal.
+ *   3. Visualização de canais — `ChannelQualityChart` quando há vizinhos;
+ *      fallback "Canal X em <banda>" quando o scan não retornou nada.
+ *   4. Recomendação inline — opcional. Aparece só quando há ação útil
+ *      (canal alternativo mais limpo, sinal fraco, link speed abaixo do
+ *      esperado).
+ *   5. CTA pareado — "Como otimizar Wi-Fi" abre o `WifiOptimizeSheet`;
+ *      "Fechar" dispensa o sheet.
+ *
+ * Toda a copy de qualidade vem do `wifiQualityLabel()` (LocalWifiService) —
+ * não introduz strings em inglês ("Good") em parte alguma.
+ *
+ * Mantém o backdrop com `backdrop-filter: blur` herdado do bug de transparência
+ * resolvido no primeiro APK.
  */
 export function WifiDetailsSheet({
   isOpen,
   diagnostics,
   onClose,
 }: WifiDetailsSheetProps) {
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const backdropRef = useRef<HTMLDivElement>(null);
-  const [showTechnical, setShowTechnical] = useState(false);
+  const [optimizeOpen, setOptimizeOpen] = useState(false);
 
-  useEffect(() => {
-    if (!isOpen) return;
+  // Body scroll lock + Esc + backdrop click são tratados pelo DraggableSheet —
+  // não duplicamos aqui (refator 2026-05).
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
+  const quality: WifiQuality = diagnostics.quality ?? 'unknown';
+  const verdictLabel = wifiQualityLabel(quality);
+  const ribbonColor = ribbonColorFor(quality);
+  const tintBg = ribbonTintFor(quality);
+  const subFrase = subFraseFor(diagnostics);
 
-    const handleBackdropClick = (e: MouseEvent) => {
-      if (e.target === backdropRef.current) {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    backdropRef.current?.addEventListener('click', handleBackdropClick);
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      backdropRef.current?.removeEventListener('click', handleBackdropClick);
-      document.body.style.overflow = '';
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
-  const ssid = diagnostics.ssid && diagnostics.ssid.trim() ? diagnostics.ssid : 'Sua rede';
+  const rssi = diagnostics.rssiDbm;
+  const linkSpeed = diagnostics.linkSpeedMbps;
   const bandText = diagnostics.band === 'unknown' || !diagnostics.band ? '—' : diagnostics.band;
   const channel = diagnostics.channel != null ? String(diagnostics.channel) : '—';
-  const rssi = diagnostics.rssiDbm != null ? `${diagnostics.rssiDbm} dBm` : '—';
-  const linkSpeed = diagnostics.linkSpeedMbps != null ? `${diagnostics.linkSpeedMbps} Mbps` : '—';
-  const quality = diagnostics.quality ?? 'unknown';
-  const qualityLabel = wifiQualityLabel(quality);
-  const gateway = diagnostics.gateway ?? '—';
-  const ipAddress = diagnostics.ipAddress ?? '—';
-  const wifiStandard = diagnostics.platform === 'web' ? '—' : diagnostics.wifiStandard ?? '—';
-  const nearbyNetworksCount = diagnostics.nearbyNetworks?.length ?? 0;
+
+  const recommendation = buildInlineRecommendation(diagnostics);
 
   return (
-    <div ref={backdropRef} className="lk-wifi-sheet__backdrop">
-      <div ref={sheetRef} className="lk-wifi-sheet" role="dialog" aria-modal="true" aria-labelledby="lk-wifi-sheet-title">
-        <header className="lk-wifi-sheet__header">
-          <div className="lk-wifi-sheet__handle" aria-hidden="true" />
-          <div className="lk-wifi-sheet__title-row">
-            <h2 id="lk-wifi-sheet-title" className="lk-wifi-sheet__title">Detalhes Wi-Fi</h2>
-            <button
-              className="lk-wifi-sheet__close"
-              onClick={onClose}
-              aria-label="Fechar detalhes"
-              type="button"
+    <>
+      <DraggableSheet
+        open={isOpen}
+        onClose={onClose}
+        ariaLabelledBy="lk-wifi-sheet-title"
+      >
+        <div className="lk-wifi-sheet__inner">
+          <header className="lk-wifi-sheet__header">
+            <div className="lk-wifi-sheet__title-row">
+              <h2 id="lk-wifi-sheet-title" className="lk-wifi-sheet__title">
+                Detalhes do Wi-Fi
+              </h2>
+              <button
+                className="lk-wifi-sheet__close"
+                onClick={onClose}
+                aria-label="Fechar detalhes"
+                type="button"
+              >
+                <Icon name="close" size={16} color="var(--text-2)" />
+              </button>
+            </div>
+          </header>
+
+          <div className="lk-wifi-sheet__content">
+            {/* 1. Hero verdict ──────────────────────────────────────── */}
+            <section
+              className="lk-wifi-sheet__hero"
+              style={{ ['--ribbon-color' as never]: ribbonColor } as CSSProperties}
             >
-              ✕
+              <div className="lk-wifi-sheet__hero-icon" style={{ background: tintBg, color: ribbonColor }}>
+                <Icon name="wifi" size={26} color={ribbonColor} />
+              </div>
+              <div className="lk-wifi-sheet__hero-text">
+                <p className="lk-wifi-sheet__hero-kicker">Estado do Wi-Fi</p>
+                <p className="lk-wifi-sheet__hero-title">{verdictLabel}</p>
+                {subFrase && <p className="lk-wifi-sheet__hero-sub">{subFrase}</p>}
+              </div>
+            </section>
+
+            {/* 2. Métricas 2x2 ──────────────────────────────────────── */}
+            <section className="lk-wifi-sheet__metrics" aria-label="Métricas Wi-Fi">
+              <Metric
+                label="Sinal"
+                value={rssi != null ? `${rssi}` : '—'}
+                unit={rssi != null ? 'dBm' : ''}
+                accent={signalColor(rssi)}
+              />
+              <Metric
+                label="Velocidade do link"
+                value={linkSpeed != null ? `${linkSpeed}` : '—'}
+                unit={linkSpeed != null ? 'Mbps' : ''}
+                accent={linkSpeedColor(linkSpeed)}
+              />
+              <Metric label="Banda" value={bandText} unit="" />
+              <Metric label="Canal" value={channel} unit="" />
+            </section>
+
+            {/* 3. Canais 5 GHz / 2.4 GHz na área ─────────────────────── */}
+            {(diagnostics.nearbyNetworks?.length ?? 0) > 0 ? (
+              <section className="lk-wifi-sheet__section">
+                <header className="lk-wifi-sheet__section-head">
+                  <h3 className="lk-wifi-sheet__section-title">
+                    Canais {bandText} na área
+                  </h3>
+                  <span className="lk-wifi-sheet__section-count">
+                    {diagnostics.nearbyNetworks!.length}{' '}
+                    {diagnostics.nearbyNetworks!.length === 1 ? 'rede' : 'redes'}
+                  </span>
+                </header>
+                <ChannelQualityChart
+                  nearbyNetworks={diagnostics.nearbyNetworks}
+                  currentChannel={diagnostics.channel}
+                  currentBand={diagnostics.band}
+                  suggestedChannel={diagnostics.suggestedChannel}
+                  isLoading={false}
+                />
+              </section>
+            ) : (
+              <section className="lk-wifi-sheet__section lk-wifi-sheet__section--simple">
+                <p className="lk-wifi-sheet__section-simple-label">Canal atual</p>
+                <p className="lk-wifi-sheet__section-simple-value">
+                  Canal {channel} ({bandText})
+                </p>
+                <p className="lk-wifi-sheet__section-simple-hint">
+                  Lista de redes vizinhas indisponível neste aparelho.
+                </p>
+              </section>
+            )}
+
+            {/* 4. Recomendação inline (condicional) ──────────────────── */}
+            {recommendation && (
+              <aside className="lk-wifi-sheet__recommendation" role="note">
+                <span className="lk-wifi-sheet__recommendation-icon" aria-hidden="true">
+                  <Icon name="bulb" size={16} color="var(--accent)" />
+                </span>
+                <div className="lk-wifi-sheet__recommendation-body">
+                  <p className="lk-wifi-sheet__recommendation-title">{recommendation.title}</p>
+                  <p className="lk-wifi-sheet__recommendation-text">{recommendation.text}</p>
+                </div>
+              </aside>
+            )}
+          </div>
+
+          {/* 5. CTA pareado ──────────────────────────────────────── */}
+          <div className="lk-wifi-sheet__footer">
+            <button
+              type="button"
+              className="lk-wifi-sheet__cta-primary"
+              onClick={() => setOptimizeOpen(true)}
+            >
+              Como otimizar Wi-Fi
+            </button>
+            <button
+              type="button"
+              className="lk-wifi-sheet__cta-secondary"
+              onClick={onClose}
+            >
+              Fechar
             </button>
           </div>
-        </header>
-
-        <div className="lk-wifi-sheet__content">
-          {/* Rede */}
-          <section className="lk-wifi-sheet__section">
-            <h3 className="lk-wifi-sheet__section-title">Rede</h3>
-            <dl className="lk-wifi-sheet__list">
-              <Row label="Nome (SSID)" value={ssid} />
-              <Row label="Frequência" value={bandText} />
-              <Row label="Canal" value={channel} />
-              <Row label="Qualidade do Canal" value={capitalizeFirst(diagnostics.channelQuality ?? '—')} />
-            </dl>
-          </section>
-
-          {/* Desempenho */}
-          <section className="lk-wifi-sheet__section">
-            <h3 className="lk-wifi-sheet__section-title">Desempenho</h3>
-            <dl className="lk-wifi-sheet__list">
-              <Row label="Sinal" value={rssi} />
-              <Row label="Velocidade do Link" value={linkSpeed} />
-              <Row label="Qualidade da Conexão" value={qualityLabel} />
-            </dl>
-          </section>
-
-          {/* Análise de Canais — filtra pela banda atual */}
-          <section className="lk-wifi-sheet__section">
-            <h3 className="lk-wifi-sheet__section-title">Análise de Canais</h3>
-            <ChannelQualityChart
-              nearbyNetworks={diagnostics.nearbyNetworks}
-              currentChannel={diagnostics.channel}
-              currentBand={diagnostics.band}
-              suggestedChannel={diagnostics.suggestedChannel}
-              isLoading={false}
-            />
-          </section>
-
-          {/* Rede Local */}
-          <section className="lk-wifi-sheet__section">
-            <h3 className="lk-wifi-sheet__section-title">Rede Local</h3>
-            <dl className="lk-wifi-sheet__list">
-              <Row label="Gateway" value={gateway} />
-              <Row label="IP Local" value={ipAddress} />
-            </dl>
-          </section>
-
-          {/* Toggle "Mais técnico" */}
-          <button
-            type="button"
-            className={`lk-wifi-sheet__more-toggle ${showTechnical ? 'lk-wifi-sheet__more-toggle--open' : ''}`}
-            onClick={() => setShowTechnical((v) => !v)}
-            aria-expanded={showTechnical}
-          >
-            <span>Informações técnicas</span>
-            <span className="lk-wifi-sheet__more-toggle-arrow" aria-hidden="true">▾</span>
-          </button>
-
-          {showTechnical && (
-            <section className="lk-wifi-sheet__section">
-              <h3 className="lk-wifi-sheet__section-title">Técnico</h3>
-              <dl className="lk-wifi-sheet__list">
-                <Row label="Padrão WiFi" value={wifiStandard} />
-                <Row label="Redes Próximas" value={`${nearbyNetworksCount}`} />
-              </dl>
-            </section>
-          )}
         </div>
-      </div>
-    </div>
+      </DraggableSheet>
+
+      {optimizeOpen && (
+        <WifiOptimizeSheet
+          isOpen={optimizeOpen}
+          onClose={() => setOptimizeOpen(false)}
+        />
+      )}
+    </>
   );
 }
 
-interface RowProps {
+interface MetricProps {
   label: string;
   value: string;
+  unit: string;
+  accent?: 'good' | 'warn' | 'error' | undefined;
 }
 
-function Row({ label, value }: RowProps) {
+function Metric({ label, value, unit, accent }: MetricProps) {
+  const accentClass = accent ? ` lk-wifi-sheet__metric--${accent}` : '';
   return (
-    <div className="lk-wifi-sheet__row">
-      <dt className="lk-wifi-sheet__row-label">{label}</dt>
-      <dd className="lk-wifi-sheet__row-value">{value}</dd>
+    <div className={`lk-wifi-sheet__metric${accentClass}`}>
+      <span className="lk-wifi-sheet__metric-label">{label}</span>
+      <span className="lk-wifi-sheet__metric-value">
+        {value}
+        {unit && <span className="lk-wifi-sheet__metric-unit">{unit}</span>}
+      </span>
     </div>
   );
 }
 
-function capitalizeFirst(str: string): string {
-  if (!str) return '';
-  return str.charAt(0).toUpperCase() + str.slice(1);
+// ── Helpers de cor/copy ────────────────────────────────────────────────
+
+/**
+ * Cor da ribbon e do hero por severidade. Usa as 5 grades canônicas do
+ * `WifiQuality`. Tokens semânticos puxam o tema (dark/light) automaticamente.
+ */
+function ribbonColorFor(quality: WifiQuality): string {
+  switch (quality) {
+    case 'excellent':
+    case 'good':      return 'var(--success)';
+    case 'fair':      return 'var(--warn)';
+    case 'weak':      return 'var(--warn)';
+    case 'critical':  return 'var(--error)';
+    case 'unknown':
+    default:          return 'var(--text-3)';
+  }
+}
+
+function ribbonTintFor(quality: WifiQuality): string {
+  switch (quality) {
+    case 'excellent':
+    case 'good':      return 'rgba(52, 211, 153, 0.14)';
+    case 'fair':
+    case 'weak':      return 'rgba(251, 191, 36, 0.14)';
+    case 'critical':  return 'rgba(248, 113, 113, 0.14)';
+    case 'unknown':
+    default:          return 'var(--surface-2)';
+  }
+}
+
+/**
+ * Sub-frase contextual abaixo do verdict. Mistura sinal + canal numa
+ * descrição curta. Mantém pt-BR e tom objetivo.
+ */
+function subFraseFor(d: WifiDiagnosticResult): string {
+  const q = d.quality ?? 'unknown';
+  const ch = d.channelQuality;
+
+  if (q === 'unknown') return 'Não foi possível avaliar o sinal.';
+
+  const sinal =
+    q === 'excellent' ? 'Sinal forte' :
+    q === 'good'      ? 'Sinal bom' :
+    q === 'fair'      ? 'Sinal médio' :
+    q === 'weak'      ? 'Sinal fraco' :
+                        'Sinal crítico';
+
+  const canal =
+    ch === 'good'   ? 'canal limpo' :
+    ch === 'medium' ? 'canal aceitável' :
+    ch === 'bad'    ? 'canal congestionado' :
+                      undefined;
+
+  return canal ? `${sinal}, ${canal}` : `${sinal}.`;
+}
+
+function signalColor(rssiDbm?: number): 'good' | 'warn' | 'error' | undefined {
+  if (rssiDbm == null) return undefined;
+  if (rssiDbm >= -60) return 'good';
+  if (rssiDbm >= -75) return 'warn';
+  return 'error';
+}
+
+function linkSpeedColor(mbps?: number): 'good' | 'warn' | 'error' | undefined {
+  if (mbps == null) return undefined;
+  if (mbps < 10) return 'error';
+  if (mbps < 30) return 'warn';
+  return undefined;
+}
+
+interface InlineRecommendation {
+  title: string;
+  text: string;
+}
+
+/**
+ * Decide se há uma ação útil para mostrar inline. Ordem de prioridade:
+ *  1. Canal alternativo mais limpo (`channelQuality === 'bad'` + sugestão).
+ *  2. Sinal fraco/crítico — sugere aproximar ou trocar pra 2.4 GHz.
+ *  3. Link speed bem abaixo do esperado pra banda — sugere checar padrão Wi-Fi.
+ * Retorna `null` quando não há ação relevante (Wi-Fi saudável).
+ */
+function buildInlineRecommendation(d: WifiDiagnosticResult): InlineRecommendation | null {
+  // 1. Canal melhor disponível
+  if (d.channelQuality === 'bad' && d.suggestedChannel != null && d.suggestedChannel !== d.channel) {
+    return {
+      title: `Canal ${d.suggestedChannel} está mais limpo`,
+      text: 'Pode reduzir interferência se você trocar nas configurações do roteador.',
+    };
+  }
+
+  // 2. Sinal fraco
+  if (d.quality === 'weak' || d.quality === 'critical') {
+    const naoEh24 = d.band !== '2.4GHz';
+    return {
+      title: 'Sinal fraco neste local',
+      text: naoEh24
+        ? 'Aproxime-se do roteador ou troque para a rede 2.4 GHz, que alcança mais.'
+        : 'Aproxime-se do roteador para melhorar o sinal.',
+    };
+  }
+
+  // 3. Link speed muito abaixo da capacidade da banda
+  if (d.linkSpeedMbps != null && d.band === '5GHz' && d.linkSpeedMbps < 100) {
+    return {
+      title: 'Velocidade abaixo do esperado',
+      text: 'Verifique se o roteador suporta padrão ax (Wi-Fi 6) ou ac (Wi-Fi 5).',
+    };
+  }
+  if (d.linkSpeedMbps != null && d.band === '2.4GHz' && d.linkSpeedMbps < 30) {
+    return {
+      title: 'Velocidade abaixo do esperado',
+      text: 'Em 2.4 GHz, paredes e interferência reduzem a taxa. Considere trocar para 5 GHz.',
+    };
+  }
+
+  return null;
 }
