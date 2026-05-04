@@ -139,6 +139,22 @@ export default function App() {
     }
   }, [test.phase]);
 
+  // Bug-fix 2026-05 (ISP cached): força refresh de ServerInfo (IP/colo/ISP)
+  // quando um novo teste começa. Antes, o ISP era resolvido só no mount do
+  // App e congelava — usuário trocava de Wi-Fi para 4G e o banner continuava
+  // mostrando o ISP da rede anterior. O fetch é assíncrono mas roda em
+  // paralelo com o teste; quando o teste termina (10–20 s depois), a info
+  // já chegou e o `appendRecord` registra o ISP correto.
+  // Importante: usa `useRef` para guardar a função `reload` evitando
+  // re-disparar quando o objeto `deviceInfo` muda (que muda a cada fetch).
+  const deviceInfoReloadRef = useRef(deviceInfo.reload);
+  useEffect(() => { deviceInfoReloadRef.current = deviceInfo.reload; }, [deviceInfo.reload]);
+  useEffect(() => {
+    if (test.phase === 'latency') {
+      deviceInfoReloadRef.current();
+    }
+  }, [test.phase]);
+
   useEffect(() => {
     if (!(
       test.phase === 'done' &&

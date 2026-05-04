@@ -74,6 +74,8 @@ export function appendRecord(
     dnsLatencyMs:       result.dnsLatencyMs,
     dnsResolverIp:      result.dnsResolverIp,
     dnsProvider:        result.dnsProvider,
+    // Resultado parcial (Bug-fix 2026-05).
+    ulFailed:           result.ulFailed,
   };
   const items = [record, ...loadHistory()].slice(0, MAX);
   persist(items);
@@ -100,6 +102,7 @@ export function recordToResult(r: TestRecord): import('../types').SpeedTestResul
     dnsLatencyMs:  r.dnsLatencyMs,
     dnsResolverIp: r.dnsResolverIp,
     dnsProvider:   r.dnsProvider,
+    ulFailed:      r.ulFailed,
   };
 }
 

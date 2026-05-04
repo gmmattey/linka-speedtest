@@ -70,6 +70,15 @@ export interface SpeedTestResult {
   //   registros legados ou quando o resultado vier de outra origem
   //   (fixtures, recordToResult, etc.).
   elapsedMs?: number;
+  // ── Resultado parcial (2026-05) ─────────────────────────────────────
+  // ulFailed: `true` quando a fase de upload falhou (ex.: chunks não
+  //   completaram dentro da janela em uplink celular saturado) mas as
+  //   fases de download e latência produziram amostras válidas. O
+  //   resultado é tratado como "parcial": `ul=0`, mas `dl`/latência são
+  //   confiáveis. UI deve sinalizar isso ao usuário em vez de invalidar
+  //   o teste todo. `undefined`/`false` em testes que mediram upload com
+  //   sucesso ou em registros legados.
+  ulFailed?: boolean;
 }
 
 export interface SpeedTestProgress {
@@ -122,6 +131,10 @@ export interface TestRecord {
   dnsLatencyMs?: number | null;
   dnsResolverIp?: string | null;
   dnsProvider?: string | null;
+  // Resultado parcial (2026-05) — propagado de SpeedTestResult.ulFailed.
+  // Mantém o estado "upload não pôde ser medido" ao revisitar o teste pelo
+  // histórico, evitando que `ul=0` seja exibido como "0,00 Mbps".
+  ulFailed?: boolean;
 }
 
 export interface Classification {

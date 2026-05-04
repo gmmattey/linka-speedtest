@@ -55,15 +55,34 @@ export function useDeviceInfo(serverId = 'cloudflare'): State & { reload: () => 
   });
   const [reloadKey, setReloadKey] = useState(0);
 
-  // Re-detecta tipo de conexão quando o usuário alterna entre WiFi e dados móveis
+  // Re-detecta tipo de conexão quando o usuário alterna entre WiFi e dados móveis.
+  // Bug-fix 2026-05 (ISP cached): além de atualizar `device`, dispara
+  // re-fetch de `getInfo()` (via reloadKey) para que o ISP/colo/IP do banner
+  // de contexto reflita a rede atual. Antes, o ISP só era resolvido no mount
+  // e ficava congelado mesmo após troca de Wi-Fi → móvel (ou troca de
+  // operadora). Chrome Android dispara `connection.change` de forma
+  // confiável; em iOS Safari (que não expõe `navigator.connection`) o
+  // refresh acontece via reload manual em `App.tsx` antes de cada teste.
   useEffect(() => {
     const conn = (navigator as Navigator & { connection?: NetworkInformation }).connection;
     if (!conn) return;
     const handleChange = () => {
       setState((s) => ({ ...s, device: detectDevice() }));
+      setReloadKey((k) => k + 1);
     };
     conn.addEventListener('change', handleChange);
     return () => conn.removeEventListener('change', handleChange);
+  }, []);
+
+  // Bug-fix 2026-05 (ISP cached): também ouve eventos `online` para refrescar
+  // o ISP quando a rede sair/voltar (caso clássico iOS: avião → 5G).
+  useEffect(() => {
+    const handleOnline = () => {
+      setState((s) => ({ ...s, device: detectDevice() }));
+      setReloadKey((k) => k + 1);
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
   }, []);
 
   useEffect(() => {

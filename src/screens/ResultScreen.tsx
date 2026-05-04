@@ -477,6 +477,23 @@ export function ResultScreen({
           );
         })()}
 
+        {/* Bug-fix 2026-05 (upload mobile): aviso de resultado parcial.
+            Aparece quando `ulFailed=true` (DL/latência mediram OK mas
+            upload não completou — típico em uplink celular saturado).
+            Estilo discreto, sem alarme — o resto do resultado é válido. */}
+        {result.ulFailed && (
+          <div
+            className="lk-result__context-bar"
+            role="status"
+            aria-live="polite"
+            style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}
+          >
+            <span className="lk-result__context-bar-meta">
+              Upload não pôde ser medido. Resultado parcial.
+            </span>
+          </div>
+        )}
+
         {/* ── Card unificado de teste (refactor 2026-05) ──────────────────
             Os 4 blocos (PRIMARY, SECONDARY, USE CASES, WI-FI) viviam como
             cards separados, e o "verdict" da medição era um chip
@@ -565,17 +582,35 @@ export function ResultScreen({
               </div>
               <div className="lk-result__primary-cell">
                 <div className="lk-result__primary-cell-label">Upload</div>
-                <div className="lk-result__primary-cell-value" style={ulStyle}>
-                  {formatMbps(animUl, unit)}
-                </div>
-                {contractedUp && contractedUp > 0 ? (
-                  <div className="lk-result__primary-cell-plan">
-                    <span className="lk-result__primary-cell-plan-frac">/ {formatMbps(contractedUp, unit)} {unitLabel}</span>
-                    <span className="lk-result__primary-cell-plan-sep" aria-hidden="true">·</span>
-                    <span className="lk-result__primary-cell-plan-pct" style={ulPctStyle}>{Math.round((result.ul / contractedUp) * 100)}%</span>
-                  </div>
+                {/* Bug-fix 2026-05 (upload mobile): quando ulFailed=true o
+                    teste foi parcial — DL/latência OK, upload sem amostras
+                    válidas (uplink celular saturado). Mostra "—" e legenda
+                    "não medido" em vez de "0,00 Mbps", que daria leitura
+                    enganosa de uplink zerado. */}
+                {result.ulFailed ? (
+                  <>
+                    <div className="lk-result__primary-cell-value" style={{ color: 'var(--text-muted)' }}>
+                      —
+                    </div>
+                    <div className="lk-result__primary-cell-unit" style={{ color: 'var(--text-muted)' }}>
+                      não medido
+                    </div>
+                  </>
                 ) : (
-                  <div className="lk-result__primary-cell-unit">{unitLabel}</div>
+                  <>
+                    <div className="lk-result__primary-cell-value" style={ulStyle}>
+                      {formatMbps(animUl, unit)}
+                    </div>
+                    {contractedUp && contractedUp > 0 ? (
+                      <div className="lk-result__primary-cell-plan">
+                        <span className="lk-result__primary-cell-plan-frac">/ {formatMbps(contractedUp, unit)} {unitLabel}</span>
+                        <span className="lk-result__primary-cell-plan-sep" aria-hidden="true">·</span>
+                        <span className="lk-result__primary-cell-plan-pct" style={ulPctStyle}>{Math.round((result.ul / contractedUp) * 100)}%</span>
+                      </div>
+                    ) : (
+                      <div className="lk-result__primary-cell-unit">{unitLabel}</div>
+                    )}
+                  </>
                 )}
               </div>
             </div>

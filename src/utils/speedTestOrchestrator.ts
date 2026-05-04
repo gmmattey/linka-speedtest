@@ -10,9 +10,13 @@ import {
   runUploadProbe,
   UPLOAD_CONFIG_FAST,
   UPLOAD_CONFIG_COMPLETE,
+  UPLOAD_CONFIG_MOBILE_FAST,
+  UPLOAD_CONFIG_MOBILE_COMPLETE,
+  type UploadProbeResult,
 } from './uploadProbe';
 import { getDnsLatencyMs } from './dnsTiming';
 import { probeDnsResolver, type DnsProbeResult } from './dnsProbe';
+import { toConnectionProfile } from './connectionProfile';
 
 // =============================================================================
 // Erro classificado
@@ -122,7 +126,6 @@ export async function runSpeedTestV2(
   signal: AbortSignal,
   connectionType?: ConnectionType,
 ): Promise<SpeedTestResult> {
-  void connectionType;
   // Tempo total do teste (2026-05): timestamp de início das 3 fases.
   // Capturado em `elapsedMs` no resultado final para o accordion Avançado
   // mostrar "Tempo total do teste" sem precisar carregar o cronômetro pela
@@ -130,7 +133,15 @@ export async function runSpeedTestV2(
   const testStartTime = Date.now();
   const ranges = computeRanges(mode);
   const dlConfig = mode === 'fast' ? DOWNLOAD_CONFIG_FAST : DOWNLOAD_CONFIG_COMPLETE;
-  const ulConfig = mode === 'fast' ? UPLOAD_CONFIG_FAST   : UPLOAD_CONFIG_COMPLETE;
+  // Bug-fix 2026-05 (upload mobile): seleciona preset de upload pelo perfil
+  // de conexão. Em `mobile_broadband` usa chunks menores (256 KB / 1 MB) e
+  // menos streams para evitar `upload_failed` quando o uplink celular é
+  // baixo demais para concluir os chunks padrão (5–10 MB) dentro da janela.
+  const profile = toConnectionProfile(connectionType);
+  const isMobile = profile === 'mobile_broadband';
+  const ulConfig = isMobile
+    ? (mode === 'fast' ? UPLOAD_CONFIG_MOBILE_FAST : UPLOAD_CONFIG_MOBILE_COMPLETE)
+    : (mode === 'fast' ? UPLOAD_CONFIG_FAST        : UPLOAD_CONFIG_COMPLETE);
   const pingCount = mode === 'fast' ? 15 : 25;
 
   // ── Fase 1: Latência ────────────────────────────────────────────────────────
@@ -226,7 +237,12 @@ export async function runSpeedTestV2(
     () => ({ latencyMs: null, resolverIp: null, provider: null }),
   );
 
-  let ulResult;
+  // Bug-fix 2026-05 (upload mobile): se o upload falhar (ex.: chunk não
+  // completa em tempo no uplink celular saturado), preserva DL+latência e
+  // retorna resultado parcial (`ul=0`, `ulFailed=true`) em vez de invalidar
+  // o teste todo. Falhas reais (offline, abort externo) continuam propagando.
+  let ulResult: UploadProbeResult | null = null;
+  let ulFailed = false;
   const ulPhaseStart = performance.now();
   try {
     ulResult = await runUploadProbe(ulConfig, signal, (instant) => {
@@ -239,25 +255,33 @@ export async function runSpeedTestV2(
       });
     });
   } catch (err) {
+    // Cleanup dos pings simultâneos antes de decidir o destino do erro.
     ulPingCtrl.abort();
     await ulPingPromise;
     signal.removeEventListener('abort', abortUlPings);
     if (err instanceof DOMException && err.name === 'AbortError') throw err;
-    rethrowClassified(err, 'upload_failed');
+    if (isOffline()) throw new SpeedTestError('network_offline');
+    // Fallback parcial: já temos download + latência válidos. ul=0 com flag
+    // permite à UI sinalizar "Resultado parcial — upload não pôde ser medido"
+    // sem propagar erro fatal.
+    ulFailed = true;
+    ulResult = null;
   }
-  ulPingCtrl.abort();
-  await ulPingPromise;
-  signal.removeEventListener('abort', abortUlPings);
+  if (!ulFailed) {
+    ulPingCtrl.abort();
+    await ulPingPromise;
+    signal.removeEventListener('abort', abortUlPings);
+  }
 
-  const ul = ulResult!.throughputMbps;
-  const latencyUpload = median(ulPings);
+  const ul = ulResult?.throughputMbps ?? 0;
+  const latencyUpload = ulPings.length > 0 ? median(ulPings) : latencyUnloaded;
 
   // ── Fase 4: Diagnóstico ─────────────────────────────────────────────────────
   const dlDelta = Math.max(0, latencyDownload - latencyUnloaded);
   const ulDelta = Math.max(0, latencyUpload  - latencyUnloaded);
   const bufferbloatSeverity = classifyBufferbloatSeverity(Math.max(dlDelta, ulDelta));
 
-  const allSamples = [...(dlResult!.samples), ...(ulResult!.samples)];
+  const allSamples = [...(dlResult!.samples), ...(ulResult?.samples ?? [])];
   const stabilityScore = computeStabilityFromSamples(allSamples);
 
   // DNS feature (2026-05): aguarda o probe DoH disparado no início do
@@ -279,13 +303,14 @@ export async function runSpeedTestV2(
     mode,
     stabilityScore,
     peakDlMbps:  dlResult!.peakMbps,
-    peakUlMbps:  ulResult!.peakMbps,
+    peakUlMbps:  ulResult?.peakMbps ?? 0,
     bufferbloatSeverity,
     latencyUnloaded,
     latencyDownload,
     latencyUpload,
     dlSamples: dlResult!.samples,
-    ulSamples: ulResult!.samples,
+    ulSamples: ulResult?.samples ?? [],
+    ulFailed,
     dnsLatencyMs,
     dnsResolverIp: dnsProbeResult.resolverIp,
     dnsProvider:   dnsProbeResult.provider,

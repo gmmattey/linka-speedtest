@@ -87,6 +87,8 @@ interface SpeedTestResult {
   dnsProvider?: string | null;     // 'Cloudflare' | 'Google' | 'Quad9' | … | 'DNS do provedor'
   // ── Tempo total do teste (2026-05) ──────────────────
   elapsedMs?: number;              // ms entre início e fim do `runSpeedTestV2()`; consumido pelo accordion "Avançado" (item "Tempo total do teste"). Sem fallback runtime — registros legados ficam undefined.
+  // ── Resultado parcial (2026-05) ─────────────────────
+  ulFailed?: boolean;              // true quando upload falhou mas DL+latência OK (típico em uplink celular saturado). UI exibe "—" + "não medido" no upload e banner "Resultado parcial". Falhas de DL/latência continuam invalidando o teste todo.
   // ── Advanced mode legado (opcionais) ────────────────
   dlP25?: number; dlP75?: number   // Mbps — intervalo de estabilidade DL
   ulP25?: number; ulP75?: number   // Mbps — intervalo de estabilidade UL
@@ -258,10 +260,14 @@ Espelho do `downloadProbe`, usando `cfUploadChunk` (XHR sem listeners em `xhr.up
 
 | Config | durationMs | initialStreams | maxStreams | sizeIndex | warmupMs |
 |---|---|---|---|---|---|
-| `UPLOAD_CONFIG_FAST` | 7.000 | 2 | 3 | 2 (5 MB) | 1.000 |
-| `UPLOAD_CONFIG_COMPLETE` | 18.000 | 2 | 6 | 3 (10 MB) | 2.000 |
+| `UPLOAD_CONFIG_FAST` | 7.000 | 4 | 4 | 2 (5 MB) | 1.000 |
+| `UPLOAD_CONFIG_COMPLETE` | 18.000 | 8 | 8 | 3 (10 MB) | 2.000 |
+| `UPLOAD_CONFIG_MOBILE_FAST` | 7.000 | 3 | 3 | 0 (256 KB) | 1.000 |
+| `UPLOAD_CONFIG_MOBILE_COMPLETE` | 18.000 | 4 | 4 | 1 (1 MB) | 2.000 |
 
 Mesma lógica de janela estável (65%) e fallback com `UL_SIZES[i−1]`.
+
+**Preset por perfil de conexão (Bug-fix 2026-05 — upload mobile):** o orchestrator seleciona `UPLOAD_CONFIG_MOBILE_*` quando `toConnectionProfile(connectionType) === 'mobile_broadband'`. Razão: `cfUploadChunk` só contabiliza bytes ao **completar** o XHR (preflight CORS impede `xhr.upload` progress). Em uplink celular típico (5–15 Mbps), o chunk de 10 MB partido entre 8 streams (~1,25 Mbps cada) leva ≈ 64 s — bem além dos 18 s de `durationMs`. Resultado: nenhum chunk completa, `samples` fica vazio, probe lança `upload_failed`. Os presets mobile reduzem o chunk para 256 KB / 1 MB e o paralelismo para 3–4 streams, garantindo conclusão dentro da janela mesmo em ~3 Mbps.
 
 ---
 
@@ -281,6 +287,15 @@ runSpeedTestV2(mode: 'fast' | 'complete', onProgress, signal, connectionType?): 
 3. **Upload + bufferbloat UL** — mesmo padrão com `ulPingCtrl` → `latencyUpload`
 4. **Diagnóstico** — `dlDelta = max(0, latencyDownload − latencyUnloaded)`; `ulDelta` idem; `severity = classifyBufferbloatSeverity(max(dlDelta, ulDelta))`; `buildDiagnostics(partialResult)`
 5. Retorna `SpeedTestResult` completo com campos v2 (inclui `elapsedMs = Date.now() - testStartTime`, capturado no início do passo 1 — duração total do teste exposta no accordion "Avançado", item "Tempo total do teste")
+
+**Seleção de preset de upload por perfil (Bug-fix 2026-05):** antes de iniciar a fase 1, o orchestrator chama `toConnectionProfile(connectionType)` e escolhe entre `UPLOAD_CONFIG_*` (fixed) ou `UPLOAD_CONFIG_MOBILE_*` (mobile_broadband). Download e latência seguem os mesmos presets em ambos os perfis (download grande não falha em mobile — o motor `runDownloadProbe` contabiliza bytes via `ReadableStream.read()` em tempo real, sem depender de conclusão).
+
+**Resultado parcial em falha de upload (Bug-fix 2026-05):** se `runUploadProbe` lançar (ex.: nenhum chunk completou em uplink celular saturado, mesmo com presets mobile), o orchestrator:
+- Distingue abort externo (`AbortError`) e offline (`navigator.onLine === false`) — esses **continuam** lançando `SpeedTestError`.
+- Em qualquer outra falha, marca `ulFailed = true`, define `ul = 0`, `peakUlMbps = 0`, `ulSamples = []`, `latencyUpload = latencyUnloaded` (fallback do bufferbloat). DL e latência ficam intactos.
+- Retorna `SpeedTestResult` válido. ResultScreen detecta `result.ulFailed` e exibe "—" + "não medido" na cell de upload, mais um banner "Upload não pôde ser medido. Resultado parcial." abaixo do banner de contexto.
+
+Esse caminho preserva o teste em vez de invalidá-lo, alinhado com a UX de teste de internet em mobile (medição de DL+latência sozinha já é útil para diagnóstico).
 
 **Mapeamento de progresso:**
 
@@ -595,7 +610,9 @@ dnsLatencyLabel(grade: DnsLatencyGrade): string  // pt-BR
 
 ### 3.11.2 `dnsProbe.ts` — Identificação do resolver E latência DNS (Fase B 2026-05; refator Safari 2026-05)
 
-Pergunta ao endpoint DoH `whoami.cloudflare-dns.com` qual resolver serviu a query e mede o roundtrip do próprio fetch via `performance.now()`. Devolve latência, IP do resolver e provider mapeado em uma única chamada.
+Pergunta ao endpoint DoH `whoami.cloudflare.com` (via `https://cloudflare-dns.com/dns-query`) qual resolver serviu a query e mede o roundtrip do próprio fetch via `performance.now()`. Devolve latência, IP do resolver e provider mapeado em uma única chamada.
+
+**Bug-3 fix 2026-05 (DNS não identificado):** a URL anterior `whoami.cloudflare-dns.com` não existe e retornava NXDOMAIN, causando "Não identificado" em produção. A correção (a) aponta para `whoami.cloudflare.com` (domínio válido) e (b) adapta o parsing para a nova resposta TXT — agora Cloudflare retorna múltiplos registros (asn, country_code, remote_ip) e o code extrai apenas o `remote_ip`.
 
 ```ts
 type DnsProbeResult = {
@@ -924,6 +941,14 @@ Usado por `GamingVerdict` na ResultScreen para avaliar se as métricas do teste 
 4. `provider.checkAvailability()` → HEAD request de verificação
 5. AbortController no cleanup do useEffect (`cancelled = true`)
 6. `reload()` → incrementa `reloadKey` para re-executar o efeito
+
+**Estratégia de refresh do ISP (Bug-fix 2026-05):** o `ServerInfo` (IP, colo, ISP) era resolvido **uma única vez** no mount do App e ficava congelado mesmo após troca de rede (Wi-Fi → 4G ou troca de operadora). Três gatilhos de refresh foram adicionados:
+
+1. **`navigator.connection.change`** — Chrome Android dispara confiavelmente; o handler atualiza `device` (re-detecta `connectionType`) **e** bumpa `reloadKey` para refetch de `getInfo()`.
+2. **`window.online`** — caso clássico iOS Safari (modo avião → 5G) que não expõe `navigator.connection`. Bumpa `reloadKey` igualmente.
+3. **Início de cada teste** — `App.tsx` ouve `test.phase === 'latency'` e chama `deviceInfoReloadRef.current()` (ref para evitar re-disparo quando o objeto `deviceInfo` muda). O fetch corre em paralelo com o teste; quando `phase === 'done'` (10–20 s depois), `appendRecord` captura o ISP atualizado.
+
+A combinação garante: (a) StartScreen mostra ISP correto após troca de rede mesmo sem iniciar teste; (b) o registro persistido em histórico (`TestRecord.isp`) reflete a rede ativa no momento da medição.
 
 **Heurística de `connectionType`** (em ordem):
 1. `connection.type === 'wifi'` → `'wifi'`
@@ -1897,10 +1922,17 @@ por plataforma para uma hierarquia "recomendação-first":
      `<provedor> · <X> ms — sem necessidade de trocar`.
    - **`no_data`** — fallback do `switch` com `—` no lado direito e
      "Medindo…" enquanto `running === true`.
-2. **Pills compactas** — em `switch`, exclui o `fastest`. Em
+2. **Pills compactas (interativos, 2026-05)** — em `switch`, exclui o `fastest`. Em
    `already_good`, mostra os 3 mais rápidos. Pills `border-radius:
    999px` com nome em `var(--font-display)` + latência em
-   `var(--font-mono)`.
+   `var(--font-mono)`. **Pills são botões clicáveis** (`<button>` semântico)
+   que disparam `setSelectedServerId(p.id)` (state local `useState<string | null>`).
+   Pill ativo recebe classe `.lk-dns-sheet__pill--active` (fundo
+   `var(--accent-tint)` + borda `var(--accent)` + nome em `var(--accent)`).
+   Ao selecionar um pill, `selectedServerStatic` (useMemo) atualiza e
+   consequentemente `steps` e `copyIPs` refletem o servidor escolhido.
+   Permite explorar recomendações de providers alternativos sem forçar
+   adoção imediata.
 3. **Tabs por plataforma** — `ios | android | router`. Auto-detecção
    inicial via `navigator.userAgent` (procura `iPhone|iPad|iPod` →
    `ios`, `Android` → `android`, fallback `android`). Tabs em pill,

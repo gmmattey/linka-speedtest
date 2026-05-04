@@ -25,6 +25,35 @@ export const UPLOAD_CONFIG_COMPLETE: UploadProbeConfig = {
   warmupMs:       2_000,
 };
 
+// ── Presets para `mobile_broadband` (4G/5G) ─────────────────────────────────
+// Bug-fix 2026-05: payload de 5–10 MB com 4–8 streams concorrentes é grande
+// demais para uplink celular típico (5–15 Mbps). O AbortController de
+// `durationMs` dispara antes do PRIMEIRO chunk completar e, como o motor só
+// contabiliza bytes ao concluir o XHR (preflight CORS impede `xhr.upload`
+// progress events), `samples` fica vazio e o probe lança `upload_failed`.
+//
+// Solução: chunks menores (256 KB / 1 MB) e menos paralelismo, garantindo
+// que vários chunks completem dentro da janela mesmo em ~3 Mbps de uplink.
+//
+// Heurística: 1 MB / (3 Mbps / 4 streams) = ~10.6 s por chunk. Com 18 s de
+// duração, cada stream fecha 1–2 chunks → samples suficientes para a
+// janela estável. 256 KB tira o piso ainda mais para baixo no preset FAST.
+export const UPLOAD_CONFIG_MOBILE_FAST: UploadProbeConfig = {
+  durationMs:     7_000,
+  initialStreams:     3,
+  maxStreams:         3,
+  sizeIndex:          0, // 256 KB
+  warmupMs:       1_000,
+};
+
+export const UPLOAD_CONFIG_MOBILE_COMPLETE: UploadProbeConfig = {
+  durationMs:    18_000,
+  initialStreams:     4,
+  maxStreams:         4,
+  sizeIndex:          1, // 1 MB
+  warmupMs:       2_000,
+};
+
 export interface UploadProbeResult {
   throughputMbps: number;
   peakMbps: number;

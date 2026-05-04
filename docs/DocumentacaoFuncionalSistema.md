@@ -210,6 +210,8 @@ Desliza de baixo para cima com `cubic-bezier(0.32,0.72,0,1)`, 300ms. Backdrop es
 | Operadora | `isp` (asOrganization do Cloudflare) |
 | Dispositivo | Tipo (Celular/Tablet/PC) e tipo de conexão |
 
+> **Refresh do ISP/IP/colo (Bug-fix 2026-05).** O `ServerInfo` é refetched automaticamente em três gatilhos: (a) evento `navigator.connection.change` (Chrome Android), (b) evento `window.online` (iOS Safari pós-modo-avião), (c) início de cada teste — quando `phase === 'latency'`, o App dispara `deviceInfo.reload()` em paralelo. Isso garante que trocar de Wi-Fi → 4G ou de operadora atualize o banner "Cloudflare · São Paulo · ISP" e o `TestRecord.isp` persistido, em vez de manter o ISP do teste anterior.
+
 **Seção: Configurações**
 
 - **Unidade** — toggle segmentado: `[Mbps] Gbps` (default: Mbps)
@@ -290,6 +292,8 @@ O Motor v2 executa 3 fases (PING → DOWN → UP), com bufferbloat integrado dur
 Steps exibidos no indicador de progresso: `[PING] [DOWN] [UP]` — sempre iguais nos modos Rápido e Completo.
 
 **Parciais progressivos:** após a fase de latência, o número de latência pode ser exibido no rodapé enquanto o download corre. Após o download, o valor de Mbps pode ser exibido enquanto o upload corre (`SpeedTestProgress.partial`).
+
+**Comportamento em rede móvel (Bug-fix 2026-05):** quando `connectionType === 'mobile'`, o orchestrator usa presets de upload menores (256 KB / 1 MB chunks) para evitar `upload_failed` em uplink celular saturado. Se mesmo assim o upload falhar (uplink < ~3 Mbps + paralelismo), o teste **não é invalidado** — DL e latência são preservados, `result.ulFailed=true`, e a ResultScreen exibe "—" com legenda "não medido" na cell de upload e um banner "Upload não pôde ser medido. Resultado parcial." Isso troca a UX de "tudo deu errado" por "medi o que deu pra medir", alinhado com a expectativa de quem testa no celular.
 
 **Mini-gráfico ao vivo (Bloco Motion, 2026-05):** entre o `Gauge` e o indicador de fases há um sparkline SVG (~64 px de altura, sem libs) que plota a velocidade instantânea durante DL e UL. Linha em `var(--dl)` no download e `var(--ul)` no upload; auto-escala vertical pelo pico amostrado da fase atual. A série é resetada na transição download → upload (descarta pontos da fase anterior). Não há gráfico durante a fase de latência. Implementado em `src/components/LiveChart.tsx`, alimentado por `useSpeedTest().live`.
 
@@ -805,7 +809,11 @@ WifiDetailsSheet:
      Footer igual ao `switch`.
 2. **Pills compactas** — outros servidores medidos. No `switch`,
    exclui o `fastest` (já está em destaque); em `already_good`,
-   mostra os 3 mais rápidos. Limite 3 por espaço visual.
+   mostra os 3 mais rápidos. Limite 3 por espaço visual. Pills são
+   **clicáveis** — ao selecionar um, ele ganha destaque (fundo
+   `var(--accent-tint)` + borda `var(--accent)`) e as instruções
+   (steps + IPs) atualizam automaticamente para aquele servidor.
+   Permite explorar alternativas sem necessidade de trocar imediatamente.
 3. **Tabs por plataforma** — `iPhone | Android | Roteador`.
    Auto-selecionado via `navigator.userAgent`. Quatro plataformas
    anteriores reduzidas a 3 — Windows perde prioridade num app que
