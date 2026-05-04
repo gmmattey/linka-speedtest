@@ -246,8 +246,8 @@ function DiagnosticActionList({
         <div className="lk-result__combined-action lk-result__combined-action--secondary">
           <span>Otimização adicional:</span>
           <strong>
-            Trocar para Cloudflare ou Google DNS pode reduzir a latência das
-            suas conexões. Veja como em Mais detalhes &gt; DNS &gt; Como alterar.
+            Trocar para Cloudflare ou Google pode reduzir a latência dos Serviços de Internet (DNS).
+            Veja como em Mais detalhes &gt; Serviços de Internet &gt; Como alterar.
           </strong>
         </div>
       )}
@@ -457,7 +457,7 @@ export function ResultScreen({
           // DNS feature (2026-05, Fase B): peça DNS no banner — "DNS
           // Cloudflare", "DNS Google", ou "DNS do provedor" (fallback do
           // identificador). Some quando o probe falhou (provider null).
-          if (result.dnsProvider) parts.push(`DNS ${result.dnsProvider}`);
+          if (result.dnsProvider) parts.push(`Serviços de Internet: ${result.dnsProvider}`);
           const rel = formatRelativeTime(result.timestamp);
           if (rel) parts.push(rel);
           // Sem peças, sem banner. Verdict não é mais chip aqui — é ribbon
@@ -627,7 +627,7 @@ export function ResultScreen({
                   className="lk-result__secondary-cell lk-result__secondary-cell--clickable"
                   role="button"
                   tabIndex={0}
-                  aria-label="Abrir guia de DNS"
+                  aria-label="Abrir guia de Serviços de Internet (DNS)"
                   onClick={() => setActiveSheet('dns')}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -784,8 +784,8 @@ export function ResultScreen({
               {
                 icon: <Icon name="ping" size={14} color="var(--text-2)" />,
                 iconBg: 'var(--surface-3)',
-                title: 'DNS',
-                subtitle: 'Provedor, latência e como alterar',
+                title: 'Serviços de Internet',
+                subtitle: 'DNS: provedor, latência e como alterar',
                 showChevron: true,
                 onClick: () => setActiveSheet('dns'),
               },

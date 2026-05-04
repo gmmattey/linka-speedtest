@@ -239,11 +239,11 @@ export function DNSGuideSheet({ open, onClose, result, benchmark }: Props) {
   const primaryCtaIsCopy = recommendation.type !== 'already_good';
 
   return (
-    <DraggableSheet open={open} onClose={onClose} ariaLabel="Trocar de DNS">
+    <DraggableSheet open={open} onClose={onClose} ariaLabel="Configurar Serviços de Internet (DNS)">
       <div className="lk-dns-sheet__inner">
         <header className="lk-dns-sheet__header">
           <div className="lk-dns-sheet__title-row">
-            <h2 className="lk-dns-sheet__title">Trocar de DNS</h2>
+            <h2 className="lk-dns-sheet__title">Configurar Serviços de Internet</h2>
             <button
               type="button"
               className="lk-dns-sheet__close"
@@ -266,12 +266,12 @@ export function DNSGuideSheet({ open, onClose, result, benchmark }: Props) {
           {recommendation.type === 'already_good' ? (
             <section
               className="lk-dns-sheet__hero lk-dns-sheet__hero--already-good"
-              aria-label="DNS atual"
+              aria-label="Serviços de Internet (DNS) atual"
             >
               <div className="lk-dns-sheet__hero-good-icon" aria-hidden="true">
                 <Icon name="check-circle" size={36} color="var(--success)" />
               </div>
-              <p className="lk-dns-sheet__hero-good-title">Seu DNS está excelente</p>
+              <p className="lk-dns-sheet__hero-good-title">Seus Serviços de Internet (DNS) estão excelentes</p>
               <p className="lk-dns-sheet__hero-good-sub">
                 <span className="lk-dns-sheet__hero-good-name">{currentDnsLabel}</span>
                 <span className="lk-dns-sheet__hero-good-dot">·</span>
@@ -284,7 +284,7 @@ export function DNSGuideSheet({ open, onClose, result, benchmark }: Props) {
           ) : (
             <section className="lk-dns-sheet__hero" aria-label="Recomendação">
               <div className={`lk-dns-sheet__hero-side lk-dns-sheet__hero-side--current lk-dns-sheet__hero-side--${currentSeverity}`}>
-                <p className="lk-dns-sheet__hero-kicker">Seu DNS</p>
+                <p className="lk-dns-sheet__hero-kicker">Seu Provedor (DNS)</p>
                 <p className="lk-dns-sheet__hero-name">{currentDnsLabel}</p>
                 <p className="lk-dns-sheet__hero-latency">
                   {currentLatencyMs != null ? `${Math.round(currentLatencyMs)}` : '—'}
