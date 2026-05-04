@@ -14,6 +14,7 @@
 | vite-plugin-pwa | ^1.2 | Manifest + service worker |
 | Capacitor | ^8 | Empacotamento Android nativo do PWA |
 | Android SDK | Platform 36 / Build Tools 36.1 | Build do APK |
+| **APK versão** | **v1.0.0 (code 1000000)** | **[2026-05-04] Debug build assinado; logo PWA integrado** |
 | JDK | 21 LTS | Compilação Gradle/Android |
 | Recharts | latest | Gráficos (HistoryScreen) |
 | jsPDF | latest | Geração de PDF |
@@ -2053,3 +2054,36 @@ A lógica `evaluateGames(result)` foi migrada do `ResultScreen.tsx` integralment
 ### Por que separar das tabs Wi-Fi (`features/local-wifi/`)
 
 A pasta `local-wifi` é específica do diagnóstico Wi-Fi nativo (com plugin Capacitor associado). As sheets `AdvancedSheet` e `GamerSheet` consomem só o `SpeedTestResult` puro (sem capabilities nativas) — separação por domínio justifica a pasta nova.
+
+---
+
+## 8. Mudanças 2026-05-04 (commit `3367a07`)
+
+### Refresh ISP ao Iniciar Teste
+
+**Otimização:** `App.tsx` agora dispara `deviceInfo.reload()` quando `test.phase === 'latency'` (início da medição). Implementação via `useRef` (`deviceInfoReloadRef`) para evitar múltiplos disparos causados por mudanças no objeto `deviceInfo` durante rerenders.
+
+**Impacto:** O ISP capturado em `appendRecord()` (fase `done`) reflete a rede ativa no momento da medição, não a rede no mount do app. Combinado com os gatilhos existentes (`navigator.connection.change`, `window.online`), garante que:
+1. StartScreen mostra ISP correto após troca de rede
+2. Registro persistido em histórico (`TestRecord.isp`) é precisamente o do momento do teste
+
+### Melhorias em Upload e Retry
+
+**`uploadProbe.ts` e `speedTestOrchestrator.ts`:**
+- Lógica de retry aprimorada para falhas de upload em conexões mobile
+- Fallback progressivo entre presets (mobile_broadband vs fixed_broadband)
+- Resultado parcial (`result.ulFailed`) é persistido corretamente no histórico
+
+### Expansão Visual ResultScreen
+
+**`ResultScreen.tsx`:**
+- Incremento na hierarquia visual dos blocos principais (PRIMARY, SECONDARY, USE-CASES)
+- Melhor espaçamento e proporção entre seções
+- Ribbon de cor de verdict agora reflete quality com mais precisão em todos os breakpoints
+
+### Logo Android Integrado
+
+**`android/app/src/main/res/drawable/ic_launcher.png`:**
+- Substituído com `public/icon-512.png` (logo PWA)
+- APK agora exibe o logo da marca linka em todos os estados (launcher, notificações, etc.)
+- Manutenção unificada: mudanças no logo PWA propagam automaticamente ao APK no próximo build

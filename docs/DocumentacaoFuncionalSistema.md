@@ -1722,3 +1722,40 @@ No PWA comum, o item **Diagnóstico Wi-Fi** não é exibido no `ExploreScreen`. 
 - `ExploreScreen` exibe o item **Diagnóstico Wi-Fi** apenas quando `getCapabilities().localWifiDiagnostics === true`
 - `App.tsx` roteia para `screen === 'localwifi'`
 - No PWA comum, a própria tela mostra indisponibilidade segura (sem bridge nativa)
+
+---
+
+## Mudanças Funcionais 2026-05-04
+
+### ISP Atualizado Durante o Teste
+
+Anteriormente, o ISP exibido na `RunningScreen` e persistido no histórico era congelado no mount do App. **Agora:**
+- Ao iniciar um teste (fase `latency`), o `App.tsx` dispara refresh de `ServerInfo` via `deviceInfo.reload()`
+- O fetch de ISP/ISP roda em paralelo com o teste
+- Quando o teste termina (`phase === 'done'`), o `appendRecord()` captura o ISP atualizado
+- **Resultado:** ao trocar de rede (Wi-Fi → 4G) e executar um novo teste, o histórico reflete corretamente qual rede mediu
+
+### Upload em Conexão Mobile
+
+**Comportamento melhorado em conexões celulares:**
+- Presets de upload adaptados: chunks menores (256 KB / 1 MB) em vez dos 10 MB padrão
+- Paralelismo reduzido: 3–4 streams vs 8 padrão
+- Se o upload falhar mesmo assim (uplink saturado < ~3 Mbps):
+  - Download e latência são **preservados**
+  - `result.ulFailed = true`
+  - ResultScreen exibe `"—" + "não medido"` na cell de upload
+  - Banner informativo: `"Upload não pôde ser medido. Resultado parcial."`
+  - **O teste não é invalidado** — mede o que consegue
+
+### Branding Android
+
+- **APK v1.0.0** agora exibe o logo oficial da marca linka em todos os contextos
+- Logo propagado automaticamente do PWA (`public/icon-512.png`) para o launcher Android
+- Atualizações futuras do logo no PWA refletem-se automaticamente no próximo build do APK
+
+### Visual ResultScreen Refinado
+
+- Maior destaque para o bloco PRIMARY (Download + Upload)
+- Melhor proporção entre blocos SECONDARY, USE CASES e WI-FI
+- Ribbon de verdict (border-top) comunica a qualidade com mais precisão visual
+- Espaçamento uniforme em todos os breakpoints (mobile, tablet, desktop)
