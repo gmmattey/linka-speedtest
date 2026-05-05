@@ -161,13 +161,17 @@ export function useDeviceInfo(serverId = 'cloudflare'): State & { reload: () => 
   // ACCESS_FINE_LOCATION, o plugin retorna mobile por padrão (conservador).
   // Se o usuário depois concede a permissão nas Settings do Android e volta
   // pra app, este effect retenta a detecção — agora com permissão, deve
-  // conseguir ler SSID real e atualizar de mobile → wifi. Em PWA, noop.
-  useEffect(() => {
-    if (!isCapacitorNative()) return;
-    const handleAppResume = () => setReloadKey((k) => k + 1);
-    document.addEventListener('resume', handleAppResume);
-    return () => document.removeEventListener('resume', handleAppResume);
-  }, []);
+  // conseguir ler SSID real e atualizar de mobile → wifi.
+  //
+  // Removido: listener de 'resume' causava bump excessivo de reloadKey em
+  // APK (resume dispara frequentemente em transições de lock/unlock). O
+  // Capacitor effect inicial (line 124) já refina a conexão; o listener de
+  // online/offline (line 172) captura mudanças de rede reais. Em PWA, noop.
+  //
+  // Nota: se WiFi permission for concedida nas Settings enquanto app está
+  // em background, a próxima vez que o usuário abrir o app, a detecção
+  // Capacitor (line 124) rodará normalmente e refinará de mobile → wifi.
+  // Não é detecção instantânea, mas evita o loop de atualizações.
 
   // Bug-fix 2026-05 (ISP cached + rede móvel): também ouve `online`/`offline`
   // para refrescar quando a rede sair/voltar (caso clássico iOS: avião → 5G,
