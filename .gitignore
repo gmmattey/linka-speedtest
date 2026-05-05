@@ -26,6 +26,9 @@ dist-ssr
 # Claude Code worktrees (embedded git repos — não commitar)
 .claude/worktrees/
 
+# Claude Code lockfiles do harness (runtime — não versionar)
+.claude/*.lock
+
 # Capacitor / Android toolchain local (não versionado)
 _android-toolchain/
 
