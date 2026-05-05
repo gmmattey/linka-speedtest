@@ -44,8 +44,10 @@ Linka SpeedTest/
 │   │       ├── MainActivity.java                 ← BridgeActivity; registra plugins inline
 │   │       ├── wifi/                              ← Plugins Capacitor internos do projeto
 │   │       │   └── LinkaWifiDiagnosticsPlugin.java ← Diagnóstico Wi-Fi nativo (2026-05)
-│   │       └── packetloss/                        ← Plugin Capacitor packet loss (2026-05)
-│   │           └── PacketLossPlugin.java          ← Mede perda de pacotes via UDP (Android-only)
+│   │       ├── packetloss/                        ← Plugin Capacitor packet loss (2026-05)
+│   │       │   └── PacketLossPlugin.java          ← Mede perda de pacotes via UDP (Android-only)
+│   │       └── network/                           ← Plugins Capacitor de rede local
+│   │           └── LocalNetworkDiscoveryPlugin.java ← Descoberta LAN por observações (ARP/TCP/SSDP/mDNS/NetBIOS)
 │   ├── gradle/                   ← Gradle Wrapper versionado
 │   ├── build.gradle
 │   ├── settings.gradle
@@ -340,6 +342,29 @@ src/
 A pasta nasceu para abrigar o `DNSGuideSheet`, criado quando a `DNSGuideScreen` (rota dedicada) foi descontinuada — agora o guia é overlay acionado pela row "DNS" da section "Mais detalhes" da ResultScreen.
 
 No refator drag-to-resize 2026-05, o `DNSGuideSheet` passou a usar o `DraggableSheet` como base (mesmo padrão do `WifiDetailsSheet` e `WifiOptimizeSheet`).
+
+### Estrutura adicionada — Descoberta de dispositivos na rede local
+
+```txt
+src/
+├── features/
+│   └── local-network/
+│       ├── types.ts
+│       ├── DeviceRegistry.ts
+│       ├── LocalNetworkBridge.ts
+│       ├── LocalNetworkService.ts
+│       ├── useLocalNetworkDiscovery.ts
+│       ├── LocalNetworkScreen.tsx
+│       └── LocalNetworkScreen.css
+└── __tests__/
+    └── localNetworkRegistry.test.ts
+
+android/
+└── app/src/main/java/br/com/linka/speedtest/network/
+    └── LocalNetworkDiscoveryPlugin.java
+```
+
+A feature separa descoberta de presença (`DeviceObservation`) da identidade final (`DeviceRegistry`). Nenhuma fonte monta lista própria de dispositivos.
 
 ### Estrutura adicionada — Feature Result Detail (refator drag-to-resize 2026-05)
 

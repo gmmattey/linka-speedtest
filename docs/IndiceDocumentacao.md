@@ -42,7 +42,7 @@
 
 ## Estado atual (2026-04-30)
 
-### Telas implementadas (14)
+### Telas implementadas (15)
 
 - [x] **StartScreen** — orb pulsante, info de servidor/ISP, atalho para histórico
 - [x] **RunningScreen** — gauge SVG por fase (DL/UL/latência), frase narrativa, estado de erro com retry
@@ -58,6 +58,7 @@
 - [x] **DNSBenchmarkScreen** — verificação de servidores DNS por DoH
 - [x] **DNSGuideScreen** — guia de configuração de DNS
 - [x] **LocalWifiScreen** — diagnóstico Wi-Fi nativo, oculto no PWA comum
+- [x] **LocalNetworkScreen** — descoberta de dispositivos LAN via app nativo, oculto no PWA comum
 
 ### Infraestrutura e design
 

@@ -39,6 +39,9 @@ const ExploreScreen = lazy(() =>
 const LocalWifiScreen = lazy(() =>
   import('./features/local-wifi/LocalWifiScreen').then((m) => ({ default: m.LocalWifiScreen })),
 );
+const LocalNetworkScreen = lazy(() =>
+  import('./features/local-network/LocalNetworkScreen').then((m) => ({ default: m.LocalNetworkScreen })),
+);
 const OnboardingScreen = lazy(() =>
   import('./screens/OnboardingScreen').then((m) => ({ default: m.OnboardingScreen })),
 );
@@ -48,7 +51,7 @@ const OnboardingScreen = lazy(() =>
 // Diagnóstico virou card no Result; gamer/details/dns viraram accordions
 // na section "Mais detalhes"; o guia de DNS virou bottom sheet. Os IDs
 // abaixo refletem apenas as rotas vivas.
-type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter' | 'roomtest' | 'explore' | 'localwifi';
+type Screen = 'start' | 'running' | 'result' | 'history' | 'comparison' | 'beforeafter' | 'roomtest' | 'explore' | 'localwifi' | 'localnetwork';
 
 const THEME_KEY = 'linka.speedtest.theme';
 const ONBOARDING_KEY = 'linka.onboarding.done';
@@ -429,6 +432,7 @@ export default function App() {
   // local da ResultScreen.
   const handleExplore = useCallback(() => goTo('explore'), [goTo]);
   const handleShowLocalWifiDiagnostics = useCallback(() => goTo('localwifi'), [goTo]);
+  const handleShowLocalNetworkDiscovery = useCallback(() => goTo('localnetwork'), [goTo]);
 
   // Onboarding (2026-05): completar marca a flag e nunca mais aparece;
   // resetar (item "Ver tutorial novamente" no HamburgerMenu) limpa a flag
@@ -580,11 +584,14 @@ export default function App() {
             onStartComparison={handleStartComparison}
             onStartBeforeAfter={handleStartBeforeAfter}
             onShowLocalWifiDiagnostics={capabilities.localWifiDiagnostics ? handleShowLocalWifiDiagnostics : undefined}
+            onShowLocalNetworkDiscovery={capabilities.localNetworkDiscovery ? handleShowLocalNetworkDiscovery : undefined}
             onResetOnboarding={handleResetOnboarding}
           />
         );
       case 'localwifi':
         return <LocalWifiScreen onBack={goBack} />;
+      case 'localnetwork':
+        return <LocalNetworkScreen onBack={goBack} />;
       case 'history':
         return (
           <HistoryScreen
@@ -629,8 +636,10 @@ export default function App() {
     handleStartBeforeAfter, handleBAStartBefore, handleBAStartAfter, handleBARetry,
     handleStartProvaReal, handleOpenRoomTest, handleRoomStart,
     handleExplore, handleShowLocalWifiDiagnostics,
+    handleShowLocalNetworkDiscovery,
     handleAppRefresh, handleResetOnboarding,
     goBack, goToReturnTarget, capabilities.localWifiDiagnostics,
+    capabilities.localNetworkDiscovery,
     settings, updateSettings, testMode,
     comparisonStep, comparisonNear, comparisonFar,
     baStep, baBefore, baAfter,

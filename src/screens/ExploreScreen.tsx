@@ -22,6 +22,7 @@ interface Props {
   onStartComparison?: () => void;
   onStartBeforeAfter?: () => void;
   onShowLocalWifiDiagnostics?: () => void;
+  onShowLocalNetworkDiscovery?: () => void;
   /** Reseta a flag `linka.onboarding.done` e reabre o tutorial inicial. */
   onResetOnboarding?: () => void;
 }
@@ -55,10 +56,11 @@ export function ExploreScreen({
   onStartComparison,
   onStartBeforeAfter,
   onShowLocalWifiDiagnostics,
+  onShowLocalNetworkDiscovery,
   onResetOnboarding,
 }: Props) {
   const showToolsSection = !!(
-    onStartComparison || onStartRoomTest || onStartBeforeAfter || onShowLocalWifiDiagnostics
+    onStartComparison || onStartRoomTest || onStartBeforeAfter || onShowLocalWifiDiagnostics || onShowLocalNetworkDiscovery
   );
 
   // Bloco 5 — TopBar System (2026-05).
@@ -149,6 +151,14 @@ export function ExploreScreen({
                   subtitle: 'Sinal local, banda e qualidade do link',
                   showChevron: true,
                   onClick: onShowLocalWifiDiagnostics,
+                }] : []),
+                ...(onShowLocalNetworkDiscovery ? [{
+                  icon: <Icon name="wifi" size={14} color="#fff" />,
+                  iconBg: 'var(--accent)',
+                  title: 'Dispositivos na rede',
+                  subtitle: 'Identificação por evidências locais',
+                  showChevron: true,
+                  onClick: onShowLocalNetworkDiscovery,
                 }] : []),
               ]}
             />

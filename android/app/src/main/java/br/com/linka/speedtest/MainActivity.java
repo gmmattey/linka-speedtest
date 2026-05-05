@@ -6,6 +6,7 @@ import com.getcapacitor.BridgeActivity;
 
 import br.com.linka.speedtest.wifi.LinkaWifiDiagnosticsPlugin;
 import br.com.linka.speedtest.packetloss.PacketLossPlugin;
+import br.com.linka.speedtest.network.LocalNetworkDiscoveryPlugin;
 
 public class MainActivity extends BridgeActivity {
     @Override
@@ -15,6 +16,7 @@ public class MainActivity extends BridgeActivity {
         // e expõe Capacitor.Plugins.<Name> no JS.
         registerPlugin(LinkaWifiDiagnosticsPlugin.class);
         registerPlugin(PacketLossPlugin.class);
+        registerPlugin(LocalNetworkDiscoveryPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

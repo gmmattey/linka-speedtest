@@ -22,7 +22,8 @@ App (estado global)
 │       ├── ComparisonScreen    ← comparativo perto vs longe do roteador
 │       ├── BeforeAfterScreen   ← comparação antes/depois de uma ação
 │       ├── RoomTestScreen      ← seleção de cômodo para Teste por local
-│       └── LocalWifiScreen     ← diagnóstico Wi-Fi local (somente app nativo)
+│       ├── LocalWifiScreen     ← diagnóstico Wi-Fi local (somente app nativo)
+│       └── LocalNetworkScreen  ← dispositivos na rede local (somente app nativo)
 ├── HistoryScreen       ← histórico de testes (acessível de Start, Explore e Result)
 ```
 
@@ -70,6 +71,7 @@ ExploreScreen → [Comparar locais]       → ComparisonScreen   → [‹] → E
 ExploreScreen → [Teste por local]       → RoomTestScreen     → [‹] → ExploreScreen
 ExploreScreen → [Antes e Depois]        → BeforeAfterScreen  → [‹] → ExploreScreen
 ExploreScreen → [Diagnóstico Wi-Fi]     → LocalWifiScreen (somente app nativo)
+ExploreScreen → [Dispositivos na rede]  → LocalNetworkScreen (somente app nativo)
 ```
 
 ### Navegação por gestos
@@ -1851,6 +1853,39 @@ No PWA comum, o item **Diagnóstico Wi-Fi** não é exibido no `ExploreScreen`. 
 - `ExploreScreen` exibe o item **Diagnóstico Wi-Fi** apenas quando `getCapabilities().localWifiDiagnostics === true`
 - `App.tsx` roteia para `screen === 'localwifi'`
 - No PWA comum, a própria tela mostra indisponibilidade segura (sem bridge nativa)
+
+---
+
+## 11a. LocalNetworkScreen (conectada via ExploreScreen)
+
+### Finalidade
+
+Tela dedicada a **Dispositivos na rede** com acesso em `ExploreScreen` somente quando o app roda em ambiente nativo.
+
+Não é uma lista de IPs: a tela consolida evidências locais, traduz nome/tipo quando possível e mostra a origem/confiança da identificação.
+
+### Conteúdo da tela
+
+- Título: `Dispositivos na rede`
+- Aviso de transparência: a linka cruza sinais da rede local e mostra a origem da evidência quando o nome não é confiável.
+- Botão: `Verificar dispositivos`
+- Resultado:
+  - nome de exibição
+  - IP
+  - MAC quando disponível
+  - tipo inferido
+  - origem do nome: modem, SSDP, mDNS, NetBIOS, DNS, fabricante ou IP/MAC
+  - confiança: confirmado, médio, provável ou inferido
+
+### Comportamento no PWA
+
+No PWA comum, o recurso é indisponível. Browser não expõe ARP, MAC, UDP 137, SSDP/mDNS multicast nem TCP scan local.
+
+### Integração atual
+
+- `ExploreScreen` exibe o item **Dispositivos na rede** apenas quando `getCapabilities().localNetworkDiscovery === true`
+- `App.tsx` roteia para `screen === 'localnetwork'`
+- A UI usa `TopBar`, `PageHeader`, card neutro e `IOSList`, sem layout paralelo.
 
 ---
 

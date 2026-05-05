@@ -1,5 +1,6 @@
 export interface AppCapabilities {
   localWifiDiagnostics: boolean;
+  localNetworkDiscovery: boolean;
 }
 
 export function isNativeApp(): boolean {
@@ -15,7 +16,9 @@ export function isNativeApp(): boolean {
 }
 
 export function getCapabilities(): AppCapabilities {
+  const native = isNativeApp();
   return {
-    localWifiDiagnostics: isNativeApp(),
+    localWifiDiagnostics: native,
+    localNetworkDiscovery: native,
   };
 }
