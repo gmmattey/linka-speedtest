@@ -1,110 +1,368 @@
-# AGENTS.md — Instruções para Codex no projeto Linka SpeedTest
+# AGENTS.md — Instruções para agentes IA no projeto linka SpeedTest
 
-> Este arquivo é lido automaticamente pelo **Codex** ao iniciar uma sessão neste repositório. Mantenha-o curto. As regras detalhadas vivem em `docs/`.
+> Este arquivo orienta agentes de código, especialmente Codex, ao trabalhar neste repositório.
+> Mantenha este arquivo curto, prático e operacional.
+>
+> Regras detalhadas vivem em `docs/`.
 
 ---
 
-## 1. Quem é você nesta sessão
+## 1. Escopo
 
-Você é um colaborador de engenharia trabalhando no PWA **linka SpeedTest** — uma Progressive Web App standalone de medição de velocidade de internet, built com Vite 7 + React 19 + TypeScript + CSS Custom Properties. Deploy em Cloudflare Pages. Trate este projeto como um time onde a documentação é fonte da verdade.
+Você está trabalhando no PWA **linka SpeedTest**.
 
-## 2. Leia antes de codar (ordem obrigatória)
+O projeto é uma Progressive Web App standalone de medição de velocidade de internet, construída com Vite, React, TypeScript e CSS Custom Properties, com deploy em Cloudflare Pages.
 
-1. [`docs/IndiceDocumentacao.md`](docs/IndiceDocumentacao.md) — porta de entrada.
-2. [`docs/ManifestoDesenvolvimentoIA.md`](docs/ManifestoDesenvolvimentoIA.md) — **leitura obrigatória integral**.
-3. [`docs/GuiaOrganizacaoPastas.md`](docs/GuiaOrganizacaoPastas.md) — antes de criar qualquer arquivo novo.
-4. Documento específico do domínio:
-   - Tela / fluxo / UX: [`docs/DocumentacaoFuncionalSistema.md`](docs/DocumentacaoFuncionalSistema.md)
-   - Arquitetura / hooks / utils: [`docs/DocumentacaoTecnicaSistema.md`](docs/DocumentacaoTecnicaSistema.md)
-   - Ferramenta / modelo IA: [`docs/GuiaSelecaoModeloIA.md`](docs/GuiaSelecaoModeloIA.md)
+Estas instruções valem para Codex e qualquer outro agente IA que consiga ler, editar e executar comandos neste repositório.
 
-## 3. Regras inegociáveis
+---
 
-- **Atualize a documentação na MESMA tarefa.** Código sem doc atualizada = tarefa incompleta.
-- **Não crie arquivos fora de `GuiaOrganizacaoPastas.md`.** Se a pasta destino não está prevista, atualize o guia primeiro.
-- **Não invente.** Se não está no código nem na doc, é pendência — registre, não fabrique.
-- **Mudança mínima.** Nada além do escopo pedido.
-- **Branding:** "linka" sempre minúsculo. `var(--accent): #6C2BFF`. Sem box-shadow. Zero sombras. Fontes: **Geist** (display + body, uma família única) + **JetBrains Mono** (somente valores tabular-nums em listas técnicas). Não usar Inter, Space Grotesk ou system-ui hardcoded em CSS/TSX.
-- **Copy em pt-BR.** Tom objetivo, sem jargão técnico ao usuário final.
+## 2. Fontes da verdade
 
-## 3.bis Disciplina antes de executar
+Antes de modificar arquivos, leia nesta ordem:
 
-- **Nunca execute modificações sem plano + OK do usuário.** Leitura (Read, Grep, Glob) está liberada.
-- **Pergunte quando houver ambiguidade.** Mais de uma interpretação razoável → pergunte.
-- **Plano quando cabível:** 3+ passos, 2+ arquivos, risco de quebrar build/tipos, decisão arquitetural.
-- **A cada novo pedido avalie** se é continuação direta ou se vale novo contexto.
+1. `docs/IndiceDocumentacao.md`
+2. `docs/ManifestoDesenvolvimentoIA.md`
+3. `docs/GuiaFluxoGit.md`
+4. `docs/GuiaOrganizacaoPastas.md`
+5. Documento específico da tarefa:
 
-## 4. Forças e limitações de Codex aqui
+   * UX, tela ou fluxo: `docs/DocumentacaoFuncionalSistema.md`
+   * Arquitetura, hooks ou utils: `docs/DocumentacaoTecnicaSistema.md`
+   * Escolha de ferramenta/modelo IA: `docs/GuiaSelecaoModeloFerramentaIA.md`
 
-**Use Codex para:**
-- Implementação React/TS cross-file com consistência de tipos
-- Edição e criação de documentação em pt-BR
-- Code review e auditoria de classifier/speedtest
-- Refactor com plano explícito
+Se algo não estiver no código nem na documentação, não invente. Registre como pendência.
 
-**Considere outra ferramenta:**
+---
 
-| Cenário | Sugestão |
-|---|---|
-| Geração de boilerplate React previsível | Codex |
-| Análise de 10+ screenshots iOS/Android | Gemini 2.5 Flash |
-| 4+ sub-tarefas independentes em paralelo | Sub-agentes Codex |
+## 3. Antes de editar
 
-## 4.1 Modelos Codex e quando usar
+Antes de qualquer alteração, faça inspeção inicial:
 
-| Modelo | Quando |
-|---|---|
-| **Haiku 4.5** | Tarefas curtas: renomear, lookup, format |
-| **Sonnet 4.6** | Padrão para implementação e docs |
-| **Opus 4.7** | Decisão arquitetural, refactor cross-file amplo |
+```bash
+git status
+git fetch origin
+```
 
-> Comece pelo menor modelo que resolve. Escale se travar.
+Confirme:
 
-## 5. Como iniciar uma tarefa
+* a branch atual é `main`
+* não há mudanças locais inesperadas
+* o repositório não está atrás da origem
+* não há conflito, merge pendente ou estado Git estranho
 
-Antes de qualquer modificação, informe em uma mensagem:
+Se houver qualquer ambiguidade, pare e informe o usuário.
 
-1. Classificação da tarefa (uma frase).
-2. Ferramenta + modelo recomendado.
-3. Tamanho: Pequeno / Médio / Grande.
-4. Arquivos prováveis a alterar + documentos a atualizar.
-5. Riscos identificados.
+Não crie branch paralela.
 
-Aguarde "OK" antes de modificações amplas ou irreversíveis.
+---
 
-## 6. Como finalizar uma tarefa
+## 4. Protocolo de início
 
-Apresente:
-- Arquivos de código alterados (path + o que mudou).
-- Documentos atualizados.
-- Próximos passos sugeridos.
+Antes de modificar arquivos, envie ao usuário:
 
-## 7. Quando recusar
+```text
+Tarefa: [classificação em uma frase]
+Ferramenta/modelo em uso: [ex.: Codex / modelo atual]
+Classe do modelo: [rápido / padrão / profundo / contexto longo / multimodal / agente]
+Tamanho: Pequeno / Médio / Grande
+Arquivos prováveis: [lista]
+Docs prováveis: [lista]
+Riscos: [lista curta]
+Plano: [3-5 passos]
+```
 
-- Criar arquivo sem previsão em `GuiaOrganizacaoPastas.md`.
-- Refatorar amplamente sem plano.
-- `git push --force` sem confirmação dupla.
-- Comprometer credenciais, tokens, chaves de API no código.
+Aguarde OK antes de editar.
 
-## 8. Ferramentas livres
+Leitura, busca e inspeção são permitidas antes do OK.
+Edição, criação, remoção de arquivo e comandos destrutivos não são permitidos antes do OK.
 
-- Read, Edit, Write, Grep, Glob em qualquer arquivo do projeto.
-- `npm run dev`, `npm run build`, `npm test`.
-- `git status`, `git diff`, `git log`.
+---
 
-## 9. Ferramentas que requerem confirmação
+## 5. Regras inegociáveis
 
-- `git commit`, `git push`.
-- `npx wrangler pages deploy` (deploy em produção).
-- Instalação/remoção de dependências (`npm i`, `npm rm`).
-- Alterações em `vite.config.ts`, `package.json`, `tsconfig*.json`.
+* Trabalhe sempre em `main`.
+* Nunca crie branches paralelas.
+* Faça a menor mudança que resolve o pedido.
+* Não refatore fora do escopo.
+* Não crie arquivos fora da organização prevista em `docs/GuiaOrganizacaoPastas.md`.
+* Se precisar criar novo tipo de arquivo ou pasta não prevista, atualize o guia primeiro.
+* Atualize documentação na mesma tarefa quando mudar comportamento, fluxo, arquitetura, decisão técnica ou organização.
+* Código sem documentação necessária atualizada é tarefa incompleta.
+* Não adicione dependência sem confirmação explícita.
+* Não altere configuração crítica sem confirmação explícita.
+* Nunca inclua tokens, credenciais, chaves de API ou segredos no código.
 
-## 10. Precedência em conflito
+---
 
-1. Mensagem direta do usuário na sessão.
-2. Este `AGENTS.md`.
-3. `docs/ManifestoDesenvolvimentoIA.md`.
-4. Demais documentos em `docs/`.
-5. Convenções inferidas do código.
+## 6. Branding e UI
 
-Se duas regras conflitam, **pare e pergunte**.
+Respeite sempre:
+
+* **linka** sempre minúsculo
+* cor de destaque: `var(--accent): #6C2BFF`
+* sem `box-shadow`
+* zero sombras
+* fonte principal: **Geist**
+* fonte monoespaçada: **JetBrains Mono** apenas para valores técnicos com `tabular-nums`
+* não usar `Inter`, `Space Grotesk` ou `system-ui` hardcoded em CSS/TSX
+* copy em pt-BR, objetiva e sem jargão técnico para usuário final
+
+Se uma sugestão violar esses padrões, ela está errada.
+
+---
+
+## 7. Comandos permitidos
+
+### Inspeção
+
+Permitidos sem confirmação adicional:
+
+```bash
+git status
+git diff
+git log
+git fetch origin
+npm run build
+npm test
+```
+
+Use `npm run build` e `npm test` para validar mudanças quando aplicável.
+
+### Requer confirmação explícita
+
+Peça confirmação específica antes de executar:
+
+```bash
+git commit
+git push
+git push --force
+npm install
+npm uninstall
+npm rm
+npx wrangler pages deploy
+```
+
+Também exigem confirmação explícita alterações em:
+
+* `package.json`
+* `package-lock.json`
+* `vite.config.ts`
+* `tsconfig*.json`
+* configuração de PWA
+* configuração de Cloudflare/Wrangler
+
+Para `git push --force`, peça confirmação dupla e explique o risco.
+
+---
+
+## 8. Domínios de maior risco
+
+Tenha cuidado extra e prefira plano mais detalhado quando mexer em:
+
+### `src/utils/classifier.ts`
+
+Risco: quebrar classificação, diagnóstico ou regra de negócio.
+
+Atenção a:
+
+* thresholds
+* textos interpretativos
+* regras de classificação
+* impacto em testes
+
+### `src/utils/speedtest.ts`
+
+Risco: afetar precisão da medição.
+
+Atenção a:
+
+* EMA
+* P90
+* `AbortController`
+* cálculo de download/upload/latência
+* cancelamento de teste
+* regressão de performance
+
+### `src/utils/serverRegistry.ts`
+
+Risco: quebrar endpoints, fallback ou integração com Cloudflare.
+
+Atenção a:
+
+* URLs
+* seleção de servidor
+* detecção de ISP
+* fallback de erro
+
+### Build/deploy
+
+Risco: quebrar produção.
+
+Atenção a:
+
+* Vite
+* PWA
+* service worker
+* Cloudflare Pages
+* Wrangler
+* TypeScript config
+
+---
+
+## 9. Dependências sensíveis
+
+Não altere sem confirmação explícita:
+
+* `vite-plugin-pwa`
+* `recharts`
+* Vite
+* React
+* TypeScript
+* Wrangler
+* qualquer dependência ligada a build, PWA ou deploy
+
+Se uma dependência parecer desatualizada, registre a recomendação. Não atualize automaticamente.
+
+---
+
+## 10. Testes e validação
+
+Depois de editar código, rode conforme o impacto:
+
+```bash
+npm test
+npm run build
+```
+
+Se não rodar algum comando, explique por quê.
+
+Não diga que testou se não testou.
+Não esconda erro.
+Não declare sucesso parcial como sucesso total.
+
+---
+
+## 11. Documentação
+
+Atualize documentação quando a mudança afetar:
+
+* comportamento do usuário
+* fluxo de tela
+* arquitetura
+* hook/util compartilhado
+* organização de pastas
+* dependência sensível
+* decisão técnica
+* processo de deploy
+* regra de IA/agente
+
+Documentos comuns:
+
+* `docs/DocumentacaoFuncionalSistema.md`
+* `docs/DocumentacaoTecnicaSistema.md`
+* `docs/GuiaOrganizacaoPastas.md`
+* `docs/GuiaFluxoGit.md`
+* `docs/ManifestoDesenvolvimentoIA.md`
+* `docs/GuiaSelecaoModeloFerramentaIA.md`
+
+Se nenhum documento precisar mudar, justifique no encerramento.
+
+---
+
+## 12. Deploy
+
+Nunca faça deploy sem confirmação explícita.
+
+Antes de deploy:
+
+1. `npm run build`
+2. `npm test`
+3. `git status`
+4. confirmação explícita do usuário
+
+Comando padrão:
+
+```bash
+npx wrangler pages deploy dist --project-name linka-speedtest --branch main
+```
+
+Se o repositório tiver configuração própria de Wrangler, siga a documentação local.
+
+---
+
+## 13. Commit e push
+
+Este arquivo não autoriza commit nem push.
+
+Antes de commit:
+
+1. mostre arquivos alterados
+2. resuma as mudanças
+3. peça confirmação explícita
+4. só então execute `git commit`
+
+Antes de push:
+
+1. confirme branch `main`
+2. confirme estado local
+3. peça confirmação explícita
+4. só então execute `git push`
+
+---
+
+## 14. Encerramento da tarefa
+
+Ao finalizar, informe:
+
+* arquivos de código alterados
+* documentos atualizados, listando cada path
+* comandos executados e resultado
+* testes/build executados ou não executados
+* pendências restantes
+* riscos restantes
+* próximos passos sugeridos
+
+Formato sugerido:
+
+```text
+Código alterado:
+- path: resumo
+
+Docs atualizadas:
+- path: resumo
+
+Validação:
+- comando: resultado
+
+Pendências:
+- item ou “nenhuma”
+
+Próximos passos:
+- sugestão objetiva
+```
+
+---
+
+## 15. Quando parar e perguntar
+
+Pare antes de agir se:
+
+* houver conflito entre instruções
+* o pedido exigir branch nova
+* o pedido exigir arquivo fora da organização documentada
+* a mudança for maior que o escopo aprovado
+* houver risco de quebrar build/deploy
+* houver credenciais, tokens ou segredos
+* o usuário pedir deploy, push ou force push sem confirmação clara
+
+Em conflito de regras, use esta precedência:
+
+1. Mensagem direta do usuário na sessão
+2. `AGENTS.md`
+3. `CLAUDE.md`, se existir
+4. `docs/ManifestoDesenvolvimentoIA.md`
+5. demais documentos em `docs/`
+6. convenções inferidas do código
+
+Se ainda houver d
