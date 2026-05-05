@@ -111,6 +111,10 @@ export async function probeDnsResolver(signal?: AbortSignal): Promise<DnsProbeRe
         resolverIp = data_str.replace(/^remote_ip:\s*/, '').trim();
         break;
       }
+      if (/^\d{1,3}(\.\d{1,3}){3}$/.test(data_str)) {
+        resolverIp = data_str;
+        break;
+      }
     }
 
     if (!resolverIp) {
