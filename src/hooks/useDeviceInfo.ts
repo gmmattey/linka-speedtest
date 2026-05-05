@@ -157,6 +157,18 @@ export function useDeviceInfo(serverId = 'cloudflare'): State & { reload: () => 
     return () => conn.removeEventListener('change', handleChange);
   }, []);
 
+  // Bug-fix 2026-05 (WiFi permission): em APK, quando o usuário nega
+  // ACCESS_FINE_LOCATION, o plugin retorna mobile por padrão (conservador).
+  // Se o usuário depois concede a permissão nas Settings do Android e volta
+  // pra app, este effect retenta a detecção — agora com permissão, deve
+  // conseguir ler SSID real e atualizar de mobile → wifi. Em PWA, noop.
+  useEffect(() => {
+    if (!isCapacitorNative()) return;
+    const handleAppResume = () => setReloadKey((k) => k + 1);
+    document.addEventListener('resume', handleAppResume);
+    return () => document.removeEventListener('resume', handleAppResume);
+  }, []);
+
   // Bug-fix 2026-05 (ISP cached + rede móvel): também ouve `online`/`offline`
   // para refrescar quando a rede sair/voltar (caso clássico iOS: avião → 5G,
   // ou Android cabo → mobile via tether USB). Bumpa `reloadKey` para forçar
