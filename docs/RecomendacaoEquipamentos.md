@@ -1,4 +1,4 @@
-## Feature futura — Recomendações automáticas de equipamentos com link comissionado
+## Feature Monetização — Recomendações automáticas de equipamentos com link comissionado
 
 ### Objetivo
 

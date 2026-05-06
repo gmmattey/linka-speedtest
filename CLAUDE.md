@@ -1,118 +1,188 @@
-# CLAUDE.md — Instruções para Claude Code no projeto Linka SpeedTest
+# CLAUDE.md — Instruções para IA no projeto linka SpeedTest
 
-> Este arquivo é lido automaticamente pelo **Claude Code** ao iniciar uma sessão neste repositório. Mantenha-o curto. As regras detalhadas vivem em `docs/`.
-
----
-
-> **Aplicabilidade:** As regras deste projeto — especialmente [`docs/ManifestoDesenvolvimentoIA.md`](docs/ManifestoDesenvolvimentoIA.md) e [`docs/GuiaFluxoGit.md`](docs/GuiaFluxoGit.md) — valem para **qualquer IA** que colabore neste repositório: Claude Code, Cursor, GitHub Copilot, Gemini CLI, etc. Não são específicas ao Claude.
+> Este arquivo é lido automaticamente pelo Claude Code ao iniciar uma sessão neste repositório.
+> Mantenha este arquivo curto. Regras detalhadas vivem em `docs/`.
 
 ---
 
-## 1. Quem é você nesta sessão
+## 1. Aplicabilidade
 
-Você é um colaborador de engenharia trabalhando no PWA **linka SpeedTest** — uma Progressive Web App standalone de medição de velocidade de internet, built com Vite 7 + React 19 + TypeScript + CSS Custom Properties. Deploy em Cloudflare Pages. Trate este projeto como um time onde a documentação é fonte da verdade.
+Estas instruções valem para qualquer IA que colabore neste repositório: Claude Code, Cursor, GitHub Copilot, Gemini CLI, Codex ou outra ferramenta.
 
-## 2. Leia antes de codar (ordem obrigatória)
+As fontes principais são:
 
-0. **Sincronize antes de qualquer edição:** [`docs/GuiaFluxoGit.md`](docs/GuiaFluxoGit.md) — `git fetch origin` → verificar → pull se necessário.
-1. [`docs/IndiceDocumentacao.md`](docs/IndiceDocumentacao.md) — porta de entrada.
-2. [`docs/ManifestoDesenvolvimentoIA.md`](docs/ManifestoDesenvolvimentoIA.md) — **leitura obrigatória integral**.
-3. [`docs/GuiaOrganizacaoPastas.md`](docs/GuiaOrganizacaoPastas.md) — antes de criar qualquer arquivo novo.
+- [`docs/ManifestoDesenvolvimentoIA.md`](docs/ManifestoDesenvolvimentoIA.md)
+- [`docs/GuiaFluxoGit.md`](docs/GuiaFluxoGit.md)
+- [`docs/IndiceDocumentacao.md`](docs/IndiceDocumentacao.md)
+
+---
+
+## 2. Papel nesta sessão
+
+Você é um colaborador de engenharia no PWA **linka SpeedTest**.
+
+O projeto é uma Progressive Web App standalone de medição de velocidade de internet, construída com Vite, React, TypeScript e CSS Custom Properties, com deploy em Cloudflare Pages.
+
+Trate a documentação como fonte da verdade. Se algo não estiver no código nem na documentação, não invente: registre como pendência.
+
+---
+
+## 3. Antes de qualquer edição
+
+Antes de modificar arquivos, faça a sincronização conforme [`docs/GuiaFluxoGit.md`](docs/GuiaFluxoGit.md):
+
+1. Verifique o estado do Git:
+   - `git status`
+   - `git fetch origin`
+2. Confirme se está em `main`.
+3. Se `main` estiver atrás da origem e a árvore estiver limpa, atualize conforme o guia.
+4. Se houver mudanças locais, divergência, conflito ou dúvida, pare e informe o usuário.
+
+Depois leia, nesta ordem:
+
+1. [`docs/IndiceDocumentacao.md`](docs/IndiceDocumentacao.md)
+2. [`docs/ManifestoDesenvolvimentoIA.md`](docs/ManifestoDesenvolvimentoIA.md)
+3. [`docs/GuiaOrganizacaoPastas.md`](docs/GuiaOrganizacaoPastas.md)
 4. Documento específico do domínio:
-   - Tela / fluxo / UX: [`docs/DocumentacaoFuncionalSistema.md`](docs/DocumentacaoFuncionalSistema.md)
-   - Arquitetura / hooks / utils: [`docs/DocumentacaoTecnicaSistema.md`](docs/DocumentacaoTecnicaSistema.md)
-   - Ferramenta / modelo IA: [`docs/GuiaSelecaoModeloIA.md`](docs/GuiaSelecaoModeloIA.md)
+   - Tela, fluxo ou UX: [`docs/DocumentacaoFuncionalSistema.md`](docs/DocumentacaoFuncionalSistema.md)
+   - Arquitetura, hooks ou utils: [`docs/DocumentacaoTecnicaSistema.md`](docs/DocumentacaoTecnicaSistema.md)
+   - Ferramenta ou modelo IA: [`docs/GuiaSelecaoModeloIA.md`](docs/GuiaSelecaoModeloIA.md)
 
-## 3. Regras inegociáveis
+---
 
-- **Branch único:** Trabalhe sempre em `main`. Nunca crie branch paralela (`claude/*`, `feat/*`, ou qualquer outra). Ver [`docs/PoliticaBranchUnico.md`](docs/PoliticaBranchUnico.md).
-- **Atualize a documentação na MESMA tarefa.** Código sem doc atualizada = tarefa incompleta.
-- **Não crie arquivos fora de `GuiaOrganizacaoPastas.md`.** Se a pasta destino não está prevista, atualize o guia primeiro.
-- **Não invente.** Se não está no código nem na doc, é pendência — registre, não fabrique.
-- **Mudança mínima.** Nada além do escopo pedido.
-- **Branding:** "linka" sempre minúsculo. `var(--accent): #6C2BFF`. Sem box-shadow. Zero sombras. Fontes: **Geist** (display + body, uma família única) + **JetBrains Mono** (somente valores tabular-nums em listas técnicas). Não usar Inter, Space Grotesk ou system-ui hardcoded em CSS/TSX.
-- **Copy em pt-BR.** Tom objetivo, sem jargão técnico ao usuário final.
+## 4. Regras inegociáveis
 
-## 3.bis Disciplina antes de executar
+- Trabalhe sempre em `main`. Nunca crie branches paralelas.
+- Não faça alteração sem plano e OK do usuário.
+- Leitura e inspeção são livres. Edição não.
+- Atualize documentação na mesma tarefa em que alterar comportamento, arquitetura, fluxo, decisão técnica ou organização.
+- Código sem documentação necessária atualizada é tarefa incompleta.
+- Não crie arquivos fora da estrutura prevista em [`docs/GuiaOrganizacaoPastas.md`](docs/GuiaOrganizacaoPastas.md).
+- Se a pasta ou tipo de arquivo não estiver previsto, atualize o guia primeiro.
+- Faça a menor mudança que resolve o pedido.
+- Não refatore fora do escopo.
+- Não fabrique regra, requisito, comportamento ou decisão.
+- Se houver ambiguidade real, pergunte antes de alterar.
+- Nunca inclua credenciais, tokens, chaves de API ou segredos no código.
 
-- **Nunca execute modificações sem plano + OK do usuário.** Leitura (Read, Grep, Glob) está liberada.
-- **Pergunte quando houver ambiguidade.** Mais de uma interpretação razoável → pergunte.
-- **Plano quando cabível:** 3+ passos, 2+ arquivos, risco de quebrar build/tipos, decisão arquitetural.
-- **A cada novo pedido avalie** se é continuação direta ou se vale novo contexto.
+---
 
-## 4. Forças e limitações de Claude aqui
+## 5. Branding e UI
 
-**Use Claude para:**
-- Implementação React/TS cross-file com consistência de tipos
-- Edição e criação de documentação em pt-BR
-- Code review e auditoria de classifier/speedtest
-- Refactor com plano explícito
+- Escreva **linka** sempre em minúsculo.
+- Cor de destaque: `var(--accent): #6C2BFF`.
+- Não use box-shadow. Zero sombras.
+- Fonte principal: **Geist** para display e corpo.
+- Fonte monoespaçada: **JetBrains Mono** apenas para valores técnicos com `tabular-nums`.
+- Não use `Inter`, `Space Grotesk` ou `system-ui` hardcoded em CSS/TSX.
+- Copy em pt-BR, objetiva e sem jargão técnico para usuário final.
 
-**Considere outra ferramenta:**
+---
+
+## 6. Como iniciar uma tarefa
+
+Antes de modificar arquivos, envie uma mensagem curta com:
+
+1. Ferramenta/modelo em uso.
+2. Classificação da tarefa.
+3. Tamanho: Pequeno, Médio ou Grande.
+4. Arquivos prováveis a alterar.
+5. Documentos prováveis a atualizar.
+6. Riscos identificados.
+7. Plano resumido.
+
+Aguarde OK antes de editar.
+
+---
+
+## 7. Ferramentas e permissões
+
+### Livre para inspeção
+
+- Read
+- Grep
+- Glob
+- `git status`
+- `git diff`
+- `git log`
+- `git fetch origin`
+
+### Permitido após plano aprovado
+
+- Edit
+- Write
+- `npm run dev`
+- `npm run build`
+- `npm test`
+- alterações em arquivos de código
+- alterações em documentação
+
+### Requer confirmação explícita específica
+
+- `git commit`
+- `git push`
+- `git push --force`
+- deploy com `npx wrangler pages deploy`
+- instalação ou remoção de dependências
+- alterações em:
+  - `package.json`
+  - `package-lock.json`
+  - `vite.config.ts`
+  - `tsconfig*.json`
+
+Para `git push --force`, peça confirmação dupla.
+
+---
+
+## 8. Quando usar outra ferramenta ou modelo
+
+Use a menor ferramenta/modelo suficiente para a tarefa.
+
+Considere alternativa quando:
 
 | Cenário | Sugestão |
 |---|---|
-| Geração de boilerplate React previsível | Codex |
-| Análise de 10+ screenshots iOS/Android | Gemini 2.5 Flash |
-| 4+ sub-tarefas independentes em paralelo | Sub-agentes Claude Code |
+| Boilerplate React previsível | Codex |
+| Análise de muitas screenshots | Gemini |
+| Refactor amplo ou decisão arquitetural | Modelo mais forte |
+| Tarefas independentes de análise | Sub-agentes apenas para leitura/auditoria |
 
-## 4.1 Modelos Claude e quando usar
+Não use sub-agentes para editar arquivos em paralelo sem plano explícito.
 
-| Modelo | Quando |
-|---|---|
-| **Haiku 4.5** | Tarefas curtas: renomear, lookup, format |
-| **Sonnet 4.6** | Padrão para implementação e docs |
-| **Opus 4.7** | Decisão arquitetural, refactor cross-file amplo |
+---
 
-> Comece pelo menor modelo que resolve. Escale se travar.
+## 9. Como finalizar uma tarefa
 
-## 5. Como iniciar uma tarefa
+Ao terminar, informe:
 
-Antes de qualquer modificação, informe em uma mensagem:
-
-1. Ferramenta e modelo **em uso agora** (ex.: "Claude Code / Sonnet 4.6").
-2. Se outro modelo ou ferramenta seria mais adequado para esta tarefa — diga antes de começar.
-3. Classificação da tarefa (uma frase).
-4. Tamanho: Pequeno / Médio / Grande.
-5. Arquivos prováveis a alterar + documentos a atualizar (use a tabela de decisão de `docs/ManifestoDesenvolvimentoIA.md` seção 4.3).
-6. Riscos identificados.
-
-Aguarde "OK" antes de modificações amplas ou irreversíveis.
-
-## 6. Como finalizar uma tarefa
-
-Apresente:
-- Arquivos de código alterados (path + o que mudou).
-- **Documentos atualizados — liste cada um explicitamente** (não apenas "docs atualizadas"). Ex.: "Atualizei `DocumentacaoTecnicaSistema.md` seção X e `GuiaOrganizacaoPastas.md`."
-- Se nenhum documento precisou de atualização, justifique em uma frase por quê.
+- Arquivos de código alterados, com resumo por path.
+- Documentos atualizados, listando cada arquivo explicitamente.
+- Se nenhum documento foi atualizado, explique por quê.
+- Comandos executados e resultado.
+- Pendências ou riscos restantes.
 - Próximos passos sugeridos.
 
-## 7. Quando recusar
+---
 
-- Criar arquivo sem previsão em `GuiaOrganizacaoPastas.md`.
-- Refatorar amplamente sem plano.
-- `git push --force` sem confirmação dupla.
-- Comprometer credenciais, tokens, chaves de API no código.
+## 10. Quando recusar ou parar
 
-## 8. Ferramentas livres
+Pare e peça orientação se o pedido exigir:
 
-- Read, Edit, Write, Grep, Glob em qualquer arquivo do projeto.
-- `npm run dev`, `npm run build`, `npm test`.
-- `git status`, `git diff`, `git log`.
+- Criar arquivo fora da organização documentada.
+- Refatoração ampla sem plano.
+- Resolver conflito de regra entre usuário, `CLAUDE.md` e docs.
+- Usar credenciais, tokens ou segredos.
+- Fazer deploy, commit ou push sem confirmação.
+- Inventar requisito inexistente.
 
-## 9. Ferramentas que requerem confirmação
+---
 
-- `git commit`, `git push`.
-- `npx wrangler pages deploy` (deploy em produção).
-- Instalação/remoção de dependências (`npm i`, `npm rm`).
-- Alterações em `vite.config.ts`, `package.json`, `tsconfig*.json`.
-
-## 10. Precedência em conflito
+## 11. Precedência em conflito
 
 1. Mensagem direta do usuário na sessão.
 2. Este `CLAUDE.md`.
-3. `docs/ManifestoDesenvolvimentoIA.md`.
-4. Demais documentos em `docs/`.
-5. Convenções inferidas do código.
+3. [`docs/ManifestoDesenvolvimentoIA.md`](docs/ManifestoDesenvolvimentoIA.md)
+4. Demais documentos em `docs/`
+5. Convenções inferidas do código
 
-Se duas regras conflitam, **pare e pergunte**.
+Se duas regras conflitarem, pare e pergunte.

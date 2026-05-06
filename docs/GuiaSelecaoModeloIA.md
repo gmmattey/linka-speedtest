@@ -1,197 +1,399 @@
 # Guia de Seleção de Modelo e Ferramenta IA — linka SpeedTest PWA
 
-> Use este guia antes de iniciar qualquer tarefa para escolher a ferramenta e o modelo mais eficientes. Economize custo sem sacrificar qualidade.
+> Use este guia antes de iniciar qualquer tarefa no repositório para escolher a ferramenta e o modelo mais adequados.
+> O objetivo é resolver bem, com o menor custo e o menor risco possível.
 >
-> **Aplicabilidade:** Este guia vale para qualquer IA colaborando neste repositório — Claude Code, Cursor, GitHub Copilot, Gemini CLI, ou outra.
+> **Aplicabilidade:** Este guia vale para qualquer IA colaborando neste repositório — Claude Code, Cursor, GitHub Copilot, Gemini CLI, Codex, ChatGPT, agentes locais ou outra ferramenta.
 
 ---
 
-## 1. Matriz principal: tarefa → ferramenta + modelo
+## 1. Princípio central
 
-| Tarefa | Ferramenta | Modelo/variante | Por quê |
-|---|---|---|---|
-| Renomear identificador, ajuste de CSS simples, lookup | Claude Code | Haiku 4.5 | Custo mínimo, tarefa mecânica |
-| Bug fix isolado, nova feature em 1-2 arquivos | Claude Code | Sonnet 4.6 | Melhor custo/benefício para implementação |
-| Edição ou criação de documentação em pt-BR | Claude Code | Sonnet 4.6 | Lida bem com texto longo estruturado |
-| Refactor cross-file com consistência de tipos | Claude Code | Sonnet 4.6 | Navegação multi-arquivo + TypeScript |
-| Decisão arquitetural (novo hook, nova dependência) | Claude Code | Opus 4.7 | Profundidade de raciocínio compensa custo |
-| Code review crítico (classifier, speedtest) | Claude Code | Opus 4.7 | Lógica complexa exige raciocínio profundo |
-| 4+ sub-tarefas independentes em paralelo | Sub-agentes Claude Code | Sonnet 4.6 | Paralelismo nativo |
-| Edição cirúrgica em arquivo aberto no IDE | Cursor | Agent mode | Contexto de editor, sem abrir sessão nova |
-| Autocompletar enquanto escreve código | GitHub Copilot | — | Inline, sem interromper fluxo de edição |
-| Análise de 10+ screenshots iOS/Android | Gemini 2.5 Flash | — | Multimodal barato, janela 1M+ |
-| Leitura de codebase inteiro de uma vez (50+ arquivos) | Gemini 2.5 Pro | — | Contexto longo, mais barato que Claude Opus para bulk |
-| Perguntas à doc Cloudflare / wrangler | Gemini CLI | 2.5 Flash | Janela grande para colar páginas de doc |
-| Boilerplate React previsível (widget novo no padrão) | Codex / Copilot | — | Loop de geração mais ágil para código repetitivo |
+A escolha do modelo não deve começar pela ferramenta preferida. Deve começar pela tarefa.
+
+Antes de agir, classifique:
+
+1. Qual é o tipo de tarefa?
+2. Qual é o risco de errar?
+3. Quantos arquivos ou fontes precisam ser lidos?
+4. A tarefa exige edição, análise, geração, revisão, multimodalidade ou deploy?
+5. Existe impacto em arquitetura, testes, build, PWA, classificação de velocidade ou produção?
+
+Use o menor modelo/ferramenta que resolve a tarefa com segurança.
+
+Não use modelo caro por preguiça.  
+Não use modelo fraco em tarefa sensível.  
+Não edite código sem entender documentação e escopo.  
+Não invente requisito ausente.
 
 ---
 
-## 2. Modelos Claude detalhados
+## 2. Classes de modelo
 
-| Modelo | ID | Quando usar |
+Use esta classificação genérica, independente de fornecedor.
+
+| Classe | Quando usar | Exemplos de uso |
 |---|---|---|
-| Haiku 4.5 | `claude-haiku-4-5` | Tarefas curtas/mecânicas: renomear, formatar, lookup, perguntas factuais |
-| Sonnet 4.6 | `claude-sonnet-4-6` | **Padrão.** Implementação, bug fix, refactor moderado, docs |
-| Opus 4.7 | `claude-opus-4-7` | Decisão arquitetural, refactor não-trivial cross-file, análise de algoritmo speedtest |
-| Opus 4.6 fast | `/fast` no CLI | Raciocínio Opus com latência menor (quando velocidade importa mais que custo) |
+| Modelo rápido/barato | Tarefa mecânica, baixo risco, pouco contexto | Renomear variável, ajustar copy, lookup local, mudança CSS simples |
+| Modelo padrão de implementação | Código real em escopo pequeno/médio | Bug fix, feature pequena, refactor moderado, documentação técnica |
+| Modelo de raciocínio profundo | Alta complexidade ou alto risco | Arquitetura, algoritmo de speedtest, classifier, refactor amplo |
+| Modelo de contexto longo | Precisa ler muitos arquivos/docs de uma vez | Auditoria do projeto, comparação de 10+ arquivos, leitura extensa de documentação |
+| Modelo multimodal | Precisa analisar imagem, screenshot, vídeo ou PDF visual | Screenshots iOS/Android, fluxo visual, comparação de layout |
+| Autocomplete/inline | Ajuda enquanto o humano escreve código | Completar JSX, CSS, função repetitiva, padrão local |
+| Agente com terminal e filesystem | Precisa navegar repo, editar arquivos, rodar testes/build | Implementação completa, revisão com comandos, validação local |
 
-> **Regra:** comece pelo menor modelo que resolve. Escale se travar.
-> A troca de modelo **não é automática** — use `/model <id>` no CLI do Claude Code.
-
----
-
-## 3. Ferramentas não-Claude: capacidades e limites
-
-### Cursor
-
-**Pontos fortes:**
-- Contexto do arquivo aberto no IDE + arquivos recentes visíveis
-- Edição cirúrgica rápida ("muda só essa função") sem overhead de sessão
-- Agent mode lê e edita vários arquivos de uma vez dentro do projeto
-
-**Limites:**
-- Não tem acesso a ferramentas de sistema (deploy, testes via CLI) por padrão
-- Histórico de sessão mais curto que Claude Code
-- Sem suporte a plano formal + aprovação antes de executar (executa direto)
-
-**Use quando:** você já está no editor, a tarefa é local e cirúrgica, e não quer abrir outra sessão.
+Modelos mudam. O critério fica.
 
 ---
 
-### GitHub Copilot
+## 3. Matriz principal: tarefa → tipo de ferramenta/modelo
 
-**Pontos fortes:**
-- Autocomplete inline enquanto digita — zero latência percebida
-- Bom para completar padrões já estabelecidos no arquivo (segue o estilo local)
-- Chat integrado ao editor (Copilot Chat) para perguntas rápidas
-
-**Limites:**
-- Não lê contexto amplo do projeto — só o arquivo atual e vizinhos imediatos
-- Não executa planos, não atualiza docs, não faz git
-- Propenso a sugerir código fora do padrão do projeto se o arquivo aberto for pouco representativo
-
-**Use quando:** você está escrevendo código novo e quer autocompletar baseado no padrão local. Não substitui Claude ou Cursor para tarefas com escopo maior.
-
----
-
-### Gemini CLI / Gemini 2.5 Flash
-
-**Pontos fortes:**
-- Janela de contexto de 1M+ tokens — cabe o codebase inteiro
-- Multimodal: análise de screenshots, vídeos, PDFs em volume
-- Custo muito menor que Claude Opus para tarefas de leitura em massa
-
-**Limites:**
-- Não tem acesso ao sistema de arquivos local por padrão (depende de integração)
-- Menor precisão em TypeScript cross-file que Claude Code
-- Sem protocolo de plano + aprovação nativo
-
-**Use quando:** análise de muitos screenshots, leitura de doc extensa, comparação de 10+ arquivos de uma vez, ou perguntas à documentação do Cloudflare/Vite/React.
+| Tarefa | Ferramenta/modelo recomendado | Risco | Observação |
+|---|---|---|---|
+| Corrigir typo, copy ou comentário | Modelo rápido/barato ou autocomplete | Baixo | Não precisa modelo forte |
+| Ajuste visual isolado em CSS | Modelo rápido/barato ou padrão | Baixo | Verificar branding e ausência de sombras |
+| Renomear identificador local | Modelo rápido/barato | Baixo | Confirmar impacto com busca |
+| Bug fix em 1-2 arquivos | Agente com filesystem + modelo padrão | Médio | Rodar testes/build se aplicável |
+| Feature pequena em 1-2 arquivos | Agente com filesystem + modelo padrão | Médio | Atualizar documentação se mudar comportamento |
+| Refactor moderado em múltiplos arquivos | Agente com filesystem + modelo padrão forte | Médio/alto | Planejar antes de editar |
+| Refactor amplo cross-file | Agente com filesystem + modelo de raciocínio profundo | Alto | Exige plano, revisão e validação |
+| Decisão arquitetural | Modelo de raciocínio profundo | Alto | Não implementar direto sem decisão registrada |
+| Code review crítico | Modelo de raciocínio profundo | Alto | Priorizar bugs, regressões e riscos ocultos |
+| Análise de 10+ arquivos | Modelo de contexto longo | Médio | Separar leitura/análise de edição |
+| Análise de screenshots em volume | Modelo multimodal | Médio | Ideal para UX visual e comparação de telas |
+| Boilerplate previsível | Ferramenta de geração/autocomplete | Baixo/médio | Revisar para aderência ao projeto |
+| Perguntas sobre documentação externa | Modelo com busca/contexto longo | Médio | Usar docs oficiais quando possível |
+| Alteração de dependência | Agente com filesystem + modelo padrão forte ou profundo | Alto | Exige confirmação específica |
+| Build, testes, deploy | Agente com terminal | Alto | Deploy exige confirmação explícita |
 
 ---
 
-### Gemini 2.5 Pro
+## 4. Escolha por capacidade necessária
 
-**Pontos fortes:**
-- Contexto longo com raciocínio mais profundo que Flash
-- Bom para análise de código em escala (entender um projeto desconhecido de ponta a ponta)
+### 4.1 Quando precisa editar arquivos
 
-**Limites:**
-- Mais caro que Flash; ainda abaixo de Claude Opus em raciocínio TypeScript
-- Mesmo limite de integração com sistema local que Flash
+Use uma ferramenta que consiga:
 
-**Use quando:** você precisa do contexto longo do Gemini mas com mais profundidade de análise.
+- ler o repositório
+- editar arquivos
+- mostrar diff
+- rodar comandos
+- respeitar o fluxo Git
+- atualizar documentação
 
----
+Exemplos: Claude Code, Cursor Agent, Codex em modo agente, agente local equivalente.
 
-### Codex (OpenAI)
-
-**Pontos fortes:**
-- Loop de geração de código repetitivo mais ágil (ex.: criar N telas no mesmo padrão)
-- Bom para scaffolding inicial quando o padrão já está definido
-
-**Limites:**
-- Não conhece as convenções específicas deste projeto sem prompt detalhado
-- Sem acesso a histórico de sessão, docs locais, ou ferramentas de sistema
-- Precisa de revisão: tende a introduzir padrões não alinhados ao design system
-
-**Use quando:** gerar boilerplate React previsível a partir de especificação clara. Sempre revise antes de commitar.
+Não use apenas autocomplete para tarefa que exige rastrear impacto cross-file.
 
 ---
 
-## 4. Protocolo "cost check" — faça no início de cada tarefa
+### 4.2 Quando precisa apenas escrever código repetitivo
 
-Antes de qualquer tool de modificação, envie ao usuário **em uma única mensagem**:
+Use autocomplete ou gerador de código quando:
 
+- o padrão já existe
+- o escopo é pequeno
+- a mudança é local
+- o humano vai revisar antes de aplicar
+
+Exemplos: GitHub Copilot, Cursor inline, Codex, ChatGPT/Codex em geração pontual.
+
+Cuidado: boilerplate errado se espalha rápido. Código repetitivo ruim vira dívida técnica em escala.
+
+---
+
+### 4.3 Quando precisa entender muita coisa antes de mexer
+
+Use modelo de contexto longo quando:
+
+- há muitos arquivos envolvidos
+- a documentação é extensa
+- o pedido exige comparar versões, padrões ou decisões
+- a pergunta é mais “entenda o sistema” do que “mude esta linha”
+
+Exemplos: Gemini Pro/Flash com contexto longo, ChatGPT com contexto longo, Claude/Opus quando disponível, ferramentas locais com indexação do repo.
+
+Se a ferramenta de contexto longo não edita o projeto com segurança, use-a para análise e depois aplique a mudança com agente de filesystem.
+
+---
+
+### 4.4 Quando precisa raciocinar profundamente
+
+Use modelo de raciocínio profundo quando o erro pode quebrar:
+
+- algoritmo de medição
+- classificação de resultado
+- fluxo principal do usuário
+- build/PWA
+- deploy
+- arquitetura de hooks/utils
+- persistência de histórico
+- compatibilidade TypeScript
+
+Não use modelo barato em tarefa onde a economia é menor que o prejuízo de uma regressão.
+
+---
+
+### 4.5 Quando precisa analisar imagens, screenshots ou PDFs visuais
+
+Use modelo multimodal quando o input principal for visual.
+
+Exemplos:
+
+- screenshots de iOS/Android
+- comparação de layout
+- auditoria visual de responsividade
+- fluxos de instalação PWA
+- PDFs com tabelas, prints ou diagramas
+
+Não force uma ferramenta textual a interpretar algo que é claramente visual.
+
+---
+
+## 5. Protocolo de início de tarefa
+
+Antes de qualquer modificação, a IA deve enviar uma mensagem curta ao usuário:
+
+```text
+Tarefa: [classificação em uma frase]
+Ferramenta/modelo em uso: [nome real disponível no ambiente]
+Classe do modelo: [rápido / padrão / profundo / contexto longo / multimodal / autocomplete]
+Ferramenta/modelo mais adequado: [se diferente do atual, diga qual e por quê]
+Tamanho: Pequeno / Médio / Grande
+Arquivos prováveis: [lista]
+Docs prováveis: [lista]
+Riscos: [lista curta]
+Plano: [3-5 passos]
 ```
-**Tarefa:** [classificação em uma frase]
-**Ferramenta + modelo em uso:** [ex: Claude Code / Sonnet 4.6]
-**Modelo mais adequado para esta tarefa:** [se diferente do atual, sugira troca]
-**Tamanho:** Pequeno / Médio / Grande
-**Arquivos prováveis:** [lista]
-**Docs a atualizar:** [lista]
-**Riscos:** [se houver]
-```
 
-### 4.1 Quando pular o cost check
+Depois deve aguardar OK antes de editar arquivos.
 
-- Tarefa explicitamente trivial declarada pelo usuário ("só muda essa linha")
-- Continuação direta no mesmo escopo da mesma sessão
-- Perguntas factuais sem tools
+### Quando pode pular
+
+Pode pular somente quando:
+
+- for pergunta factual sem edição
+- for apenas leitura/inspeção
+- for continuação direta de tarefa já aprovada no mesmo escopo
+- o usuário pedir explicitamente uma alteração trivial, como corrigir um typo específico
+
+Na dúvida, faça o protocolo. É burocracia útil, não enfeite.
 
 ---
 
-## 5. Sinais para recomendar handoff de ferramenta
+## 6. Sinais de que a ferramenta atual não é ideal
 
-Identifique e comunique ao usuário quando a tarefa pede uma ferramenta diferente da atual:
-
-| Sinal | Recomendação |
+| Sinal | Melhor escolha |
 |---|---|
-| 10+ arquivos para ler/analisar de uma vez | Gemini 2.5 Flash ou Pro |
-| 5+ screenshots para comparar | Gemini 2.5 Flash |
-| Edição pontual em arquivo já aberto no IDE | Cursor Agent |
-| Autocompletar código no padrão atual | GitHub Copilot |
-| Geração de código Flutter/Dart (outro projeto) | Abrir sessão no projeto LINKA |
-| Sessão com muito contexto acumulado + nova tarefa independente | Nova sessão Claude Code |
-| Tarefa de DevOps/infra Cloudflare complexa | Gemini CLI + docs Cloudflare |
-| Tarefa arquitetural crítica em Sonnet | Escalar para Opus 4.7 |
+| A tarefa exige terminal, build ou testes | Agente com terminal/filesystem |
+| A tarefa exige editar vários arquivos com consistência | Agente com filesystem + modelo padrão/profundo |
+| A tarefa exige ler muitos arquivos antes de decidir | Modelo de contexto longo |
+| A tarefa exige analisar muitas imagens | Modelo multimodal |
+| A tarefa é autocomplete local | Ferramenta inline |
+| A tarefa é boilerplate previsível | Gerador/autocomplete + revisão |
+| A tarefa envolve arquitetura ou algoritmo | Modelo de raciocínio profundo |
+| A sessão atual está poluída com contexto antigo | Nova sessão ou contexto limpo |
+| A tarefa exige documentação externa atualizada | Ferramenta com busca ou docs oficiais |
 
-**Como comunicar o handoff:**
-> "Esta tarefa é melhor resolvida com [ferramenta/modelo] porque [razão]. Quer que eu continue aqui com as limitações, ou prefere abrir uma sessão nova?"
+Como comunicar:
 
----
+```text
+Esta tarefa parece mais adequada para [classe/ferramenta] porque [motivo].
+Posso continuar aqui com estas limitações: [limitações concretas].
+```
 
-## 6. Especificidades do projeto linka SpeedTest
-
-### Domínios de maior risco (use Opus ou peça revisão)
-
-- `src/utils/classifier.ts` — Lógica de classificação com regras de negócio específicas. Mudança pode quebrar diagnóstico ou testes.
-- `src/utils/speedtest.ts` — Algoritmo de medição com EMA, P90, AbortController. Qualquer mudança afeta precisão.
-- `src/utils/serverRegistry.ts` — Integração com Cloudflare. Mudança de endpoints pode quebrar detecção de ISP.
-
-### Domínios de baixo risco (Sonnet ou Haiku)
-
-- `src/screens/*.css` — Ajustes visuais isolados.
-- `src/utils/format.ts` — Funções de formatação simples.
-- `src/utils/history.ts` — CRUD localStorage com schema simples.
-- `docs/*.md` — Documentação em pt-BR.
-
-### Dependências sensíveis
-
-- `vite-plugin-pwa`: versão fixada em `^1.2` por incompatibilidade com Vite 8. **Não atualizar sem testar.**
-- `recharts`: versão atual. `AreaChart` é o único gráfico usado — evitar introduzir outros tipos.
+Não use isso como desculpa para empurrar trabalho. Se a ferramenta atual resolve bem, resolva.
 
 ---
 
-## 7. Deploy: pré-condições obrigatórias
+## 7. Exemplos de ferramentas por categoria
 
-Antes de qualquer `wrangler pages deploy`:
+> Esta tabela é ilustrativa. Não trate nomes de modelos como contrato fixo.
+> Se uma ferramenta mudar nome, plano ou disponibilidade, use o equivalente mais próximo.
 
-1. `npm run build` sem erros TypeScript
-2. `npm test` — todos os testes passando
-3. Confirmação explícita do usuário
+| Categoria | Exemplos |
+|---|---|
+| Agente com filesystem e terminal | Claude Code, Cursor Agent, Codex agent, agentes locais equivalentes |
+| Autocomplete/inline | GitHub Copilot, Cursor inline, IDE assistant |
+| Contexto longo | Gemini, ChatGPT com contexto longo, Claude com contexto longo, ferramentas de indexação local |
+| Multimodal | Gemini, ChatGPT multimodal, Claude multimodal |
+| Busca/documentação externa | ChatGPT com busca, Gemini CLI, browser/manual + docs oficiais |
+| Geração pontual de boilerplate | Codex, Copilot, Cursor, ChatGPT |
 
-Comando de deploy:
+---
+
+## 8. Especificidades do projeto linka SpeedTest
+
+### 8.1 Domínios de maior risco
+
+Use modelo de raciocínio profundo ou peça revisão adicional quando mexer em:
+
+- `src/utils/classifier.ts`
+  - regras de negócio de classificação
+  - diagnóstico exibido ao usuário
+  - thresholds
+  - textos interpretativos
+
+- `src/utils/speedtest.ts`
+  - algoritmo de medição
+  - EMA
+  - P90
+  - `AbortController`
+  - cálculo de download/upload/latência
+  - precisão percebida pelo usuário
+
+- `src/utils/serverRegistry.ts`
+  - endpoints
+  - integração com Cloudflare
+  - detecção de ISP
+  - fallback de servidor
+
+- configuração de build/deploy
+  - `vite.config.ts`
+  - `package.json`
+  - `package-lock.json`
+  - `tsconfig*.json`
+  - configuração PWA
+  - Cloudflare Pages
+
+### 8.2 Domínios de risco médio
+
+Use modelo padrão de implementação e rode testes/build quando mexer em:
+
+- hooks React
+- estado local/global
+- componentes compartilhados
+- fluxo entre telas
+- histórico de testes
+- persistência em `localStorage`
+- tratamento de erro visível ao usuário
+
+### 8.3 Domínios de baixo risco
+
+Modelo rápido ou padrão é suficiente quando o escopo for isolado:
+
+- ajustes visuais simples em `src/screens/*.css`
+- copy em pt-BR
+- pequenos ajustes em `src/utils/format.ts`
+- documentação em `docs/*.md`
+- renomeações locais sem impacto público
+
+Baixo risco não significa “sem documentação”. Se mudar comportamento, fluxo, decisão ou organização, atualize docs.
+
+---
+
+## 9. Branding e padrões do projeto
+
+Toda ferramenta/modelo deve respeitar:
+
+- **linka** sempre minúsculo
+- cor de destaque: `var(--accent): #6C2BFF`
+- sem `box-shadow`
+- zero sombras
+- fonte principal: **Geist**
+- fonte monoespaçada: **JetBrains Mono** apenas para valores técnicos com `tabular-nums`
+- não usar `Inter`, `Space Grotesk` ou `system-ui` hardcoded em CSS/TSX
+- copy em pt-BR, objetiva e sem jargão técnico para usuário final
+
+Se a IA sugerir algo contra esses padrões, a sugestão está errada.
+
+---
+
+## 10. Dependências sensíveis
+
+Antes de alterar dependências, peça confirmação específica.
+
+Atenção especial para:
+
+- `vite-plugin-pwa`
+  - não atualizar sem testar build, PWA e service worker
+
+- `recharts`
+  - evitar introduzir novos tipos de gráfico sem justificativa
+  - manter o padrão visual do projeto
+
+- Vite / React / TypeScript
+  - mudanças podem afetar build, tipos e compatibilidade do PWA
+
+- Cloudflare / Wrangler
+  - mudanças podem afetar deploy de produção
+
+Alterações em `package.json`, `package-lock.json`, `vite.config.ts` e `tsconfig*.json` exigem confirmação explícita.
+
+---
+
+## 11. Git, commit, push e deploy
+
+Este guia não autoriza commit, push ou deploy.
+
+### Commit
+
+Antes de commitar:
+
+1. Mostrar resumo das alterações.
+2. Mostrar arquivos alterados.
+3. Pedir confirmação explícita.
+4. Só então executar `git commit`.
+
+### Push
+
+Antes de push:
+
+1. Confirmar branch `main`.
+2. Confirmar estado local.
+3. Pedir confirmação explícita.
+4. Só então executar `git push`.
+
+Para `git push --force`, peça confirmação dupla e explique o risco.
+
+### Deploy
+
+Antes de qualquer deploy em Cloudflare Pages:
+
+1. Confirmar que a tarefa foi concluída.
+2. Rodar `npm run build`.
+3. Rodar `npm test`.
+4. Verificar `git status`.
+5. Confirmar explicitamente com o usuário.
+6. Só então executar deploy.
+
+Comando padrão:
+
 ```bash
 npx wrangler pages deploy dist --project-name linka-speedtest --branch main
 ```
+
+Se o projeto estiver usando configuração Wrangler própria, siga a configuração documentada no repositório.
+
+Nunca faça deploy para produção sem confirmação explícita.
+
+---
+
+## 12. Encerramento da tarefa
+
+Ao finalizar, informe:
+
+- arquivos de código alterados
+- documentos atualizados, listando cada path
+- comandos executados e resultado
+- testes/build executados ou não executados
+- pendências restantes
+- próximos passos sugeridos
+
+Se nenhum documento foi atualizado, explique em uma frase por quê.
+
+---
+
+## 13. Manutenção deste guia
+
+Atualize este guia quando:
+
+- uma nova ferramenta entrar no fluxo do projeto
+- uma categoria de modelo deixar de fazer sentido
+- o time mudar o padrão de aprovação
+- uma dependência sensível mudar
+- uma tarefa recorrente exigir critério próprio
+
+Evite transformar este guia em catálogo de fornecedor.
+
+O guia deve ensinar a escolher bem, não decorar nome de modelo.
