@@ -86,6 +86,10 @@ export interface SpeedTestResult {
   // `undefined` = não anotado (registros legados ou origem desconhecida).
   // UI mostra label "estimado" quando ≠ 'native' para transparência.
   packetLossSource?: 'native' | 'estimated';
+  // ── Contexto Wi-Fi via Atalho iOS (2026-05) ─────────────────────────
+  // Dados coletados pelo Atalho LINKA WiFi Context e associados a este
+  // resultado. `undefined` = teste feito sem contexto Wi-Fi do atalho.
+  wifiContext?: WifiContext;
 }
 
 export interface SpeedTestProgress {
@@ -146,6 +150,8 @@ export interface TestRecord {
   // Permite que o histórico mostre o label "estimado" coerentemente ao
   // revisitar testes anteriores.
   packetLossSource?: 'native' | 'estimated';
+  // Contexto Wi-Fi via Atalho iOS (2026-05) — propagado de SpeedTestResult.
+  wifiContext?: WifiContext;
 }
 
 export interface Classification {
@@ -223,4 +229,29 @@ export interface CombineDiagnosticsInput {
   connectionType: ConnectionType;
   wifi?: WifiDiagnosticResult;
   mobile?: MobileDiagnosticResult;
+}
+
+// ── Contexto Wi-Fi via Atalho iOS ───────────────────────────────────────────
+// Dados coletados pelo Atalho LINKA WiFi Context e devolvidos ao PWA via URL.
+// Fase 1: recebidos por query string simples. Fase 2+: base64url-json.
+
+export type WifiContextSource = 'ios-shortcut' | 'android-native' | 'manual' | 'unknown';
+
+export interface WifiContext {
+  version: number;
+  source: WifiContextSource;
+  sessionId: string;
+  collectedAt: number;
+  available: boolean;
+  ssid?: string;
+  bssid?: string;
+  rssiDbm?: number;
+  noiseDbm?: number;
+  snrDb?: number;
+  channel?: number;
+  txRateMbps?: number;
+  rxRateMbps?: number;
+  linkSpeedMbps?: number;
+  wifiStandard?: string;
+  localIp?: string;
 }

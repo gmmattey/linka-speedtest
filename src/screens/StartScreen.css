@@ -177,6 +177,40 @@
   line-height: 1.45;
 }
 
+/* ── Botão Wi-Fi Atalho iOS ──────────────────────── */
+
+.lk-start__wifi-shortcut {
+  margin-bottom: 10px;
+}
+
+.lk-start__wifi-shortcut-btn {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  cursor: pointer;
+  transition: background var(--t-fast);
+}
+
+.lk-start__wifi-shortcut-btn:active {
+  background: var(--accent-tint);
+}
+
+.lk-start__wifi-shortcut-hint {
+  margin: 6px 2px 0;
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.45;
+}
+
 /* ── Último resultado ────────────────────────────── */
 
 .lk-start__last {

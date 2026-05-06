@@ -14,7 +14,14 @@ import { appendRecord, previousRecord, recordToResult } from './utils/history';
 import { averageSpeedResults } from './utils/provaReal';
 import { performAppRefresh } from './utils/appRefresh';
 import { getCapabilities } from './platform/capabilities';
-import type { SpeedTestResult, TestRecord } from './types';
+import {
+  parseWifiCallback,
+  savePendingWifiContext,
+  consumePendingWifiContext,
+  runWifiShortcut,
+  generateSessionId,
+} from './features/ios-wifi-context/wifiShortcut';
+import type { SpeedTestResult, TestRecord, WifiContext } from './types';
 
 // Code splitting (2026-05): screens secundárias e o overlay de onboarding
 // vão para chunks separados via React.lazy. StartScreen/RunningScreen/
@@ -74,6 +81,10 @@ function readOnboardingDone(): boolean {
 }
 
 export default function App() {
+  // Contexto Wi-Fi via Atalho iOS (2026-05): persiste entre o callback de
+  // retorno do atalho e a conclusão do próximo teste.
+  const pendingWifiContextRef = useRef<WifiContext | null>(null);
+
   const [theme, setTheme] = useState<'dark' | 'light'>(readInitialTheme);
   // Onboarding (primeira execução, 2026-05): true → não mostra. Flag em
   // localStorage `linka.onboarding.done`. Reset disponível pelo
@@ -129,6 +140,28 @@ export default function App() {
       window.removeEventListener('online',  handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
+  }, []);
+
+  // Contexto Wi-Fi via Atalho iOS (2026-05): detecta retorno do atalho na URL.
+  // Roda apenas uma vez no mount — o atalho abre a returnUrl com query string.
+  // Limpa a URL para não re-processar em refreshes e guarda em sessionStorage
+  // para sobreviver a uma re-renderização (caso o iOS abra no Safari).
+  useEffect(() => {
+    const { pathname, search } = window.location;
+    const isCallback = pathname === '/wifi-callback' || search.includes('sid=');
+    if (!isCallback) {
+      // Também tenta consumir um contexto salvo de uma sessão anterior
+      const saved = consumePendingWifiContext();
+      if (saved) pendingWifiContextRef.current = saved;
+      return;
+    }
+    const ctx = parseWifiCallback(search);
+    if (ctx) {
+      pendingWifiContextRef.current = ctx;
+      savePendingWifiContext(ctx);
+    }
+    // Limpa a URL sem recarregar a página
+    window.history.replaceState({}, '', '/');
   }, []);
 
   useEffect(() => {
@@ -222,6 +255,9 @@ export default function App() {
           setProvaRealSession(null);
           const prev = previousRecord();
           setPrevious(prev);
+          const wifiCtx = pendingWifiContextRef.current;
+          pendingWifiContextRef.current = null;
+          if (wifiCtx) averaged.wifiContext = wifiCtx;
           const newRecord = appendRecord(averaged, {
             serverName: deviceInfo.server!.name,
             isp: deviceInfo.server!.isp,
@@ -229,6 +265,7 @@ export default function App() {
             connectionType: deviceInfo.device!.connectionType,
             testMode: 'complete',
             locationTag: locationTagRef.current ?? undefined,
+            wifiContext: wifiCtx ?? undefined,
           });
           locationTagRef.current = null;
           setLastRecord(newRecord);
@@ -241,6 +278,9 @@ export default function App() {
       // ── Fluxo normal ─────────────────────────────────────────────────
       const prev = previousRecord();
       setPrevious(prev);
+      const wifiCtxNormal = pendingWifiContextRef.current;
+      pendingWifiContextRef.current = null;
+      if (wifiCtxNormal) test.result!.wifiContext = wifiCtxNormal;
       const newRecord = appendRecord(test.result!, {
         serverName: deviceInfo.server!.name,
         isp: deviceInfo.server!.isp,
@@ -248,6 +288,7 @@ export default function App() {
         connectionType: deviceInfo.device!.connectionType,
         testMode,
         locationTag: locationTagRef.current ?? undefined,
+        wifiContext: wifiCtxNormal ?? undefined,
       });
       locationTagRef.current = null;
       setLastRecord(newRecord);
@@ -430,6 +471,11 @@ export default function App() {
   // Diagnóstico virou card no Result; gamer/details/dns viraram accordions
   // na section "Mais detalhes" do Result; o guia de DNS virou bottom sheet
   // local da ResultScreen.
+  const handleOpenWifiShortcut = useCallback(() => {
+    const sessionId = generateSessionId();
+    runWifiShortcut(sessionId);
+  }, []);
+
   const handleExplore = useCallback(() => goTo('explore'), [goTo]);
   const handleShowLocalWifiDiagnostics = useCallback(() => goTo('localwifi'), [goTo]);
   const handleShowLocalNetworkDiscovery = useCallback(() => goTo('localnetwork'), [goTo]);
@@ -623,6 +669,7 @@ export default function App() {
             onShowHistory={handleShowHistory}
             onExplore={handleExplore}
             onRefresh={handleAppRefresh}
+            onOpenWifiShortcut={handleOpenWifiShortcut}
           />
         );
     }
@@ -631,7 +678,7 @@ export default function App() {
     test.phase, test.instantMbps, test.result,
     deviceInfo,
     previous, lastRecord, historyInitialId,
-    handleStart, handleStartComparison, handleCancel, handleRetry, handleShowHistory, handleShowLastResult,
+    handleStart, handleStartComparison, handleCancel, handleRetry, handleShowHistory, handleShowLastResult, handleOpenWifiShortcut,
     handleComparisonStartNear, handleComparisonStartFar, handleComparisonRetryNear,
     handleStartBeforeAfter, handleBAStartBefore, handleBAStartAfter, handleBARetry,
     handleStartProvaReal, handleOpenRoomTest, handleRoomStart,

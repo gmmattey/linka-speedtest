@@ -6,6 +6,7 @@ import type {
   SpeedTestMode,
   ConnectionProfile,
   RuleSetVersion,
+  WifiContext,
 } from '../types';
 import { classify, RULE_SET_VERSION } from './classifier';
 import { toConnectionProfile } from './connectionProfile';
@@ -43,6 +44,7 @@ export function appendRecord(
     connectionProfile?: ConnectionProfile;
     ruleSetVersion?: RuleSetVersion;
     locationTag?: string;
+    wifiContext?: WifiContext;
   },
 ): TestRecord {
   const c = classify(result);
@@ -79,6 +81,8 @@ export function appendRecord(
     // Origem do packet loss (2026-05) — propagado pra UI poder marcar
     // "estimado" coerentemente em revisitas pelo histórico.
     packetLossSource:   result.packetLossSource,
+    // Contexto Wi-Fi via Atalho iOS (2026-05).
+    wifiContext:        meta.wifiContext ?? result.wifiContext,
   };
   const items = [record, ...loadHistory()].slice(0, MAX);
   persist(items);
@@ -107,6 +111,7 @@ export function recordToResult(r: TestRecord): import('../types').SpeedTestResul
     dnsProvider:   r.dnsProvider,
     ulFailed:      r.ulFailed,
     packetLossSource: r.packetLossSource,
+    wifiContext:   r.wifiContext,
   };
 }
 

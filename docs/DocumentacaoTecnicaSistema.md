@@ -90,6 +90,8 @@ interface SpeedTestResult {
   elapsedMs?: number;              // ms entre início e fim do `runSpeedTestV2()`; consumido pelo accordion "Avançado" (item "Tempo total do teste"). Sem fallback runtime — registros legados ficam undefined.
   // ── Resultado parcial (2026-05) ─────────────────────
   ulFailed?: boolean;              // true quando upload falhou mas DL+latência OK (típico em uplink celular saturado). UI exibe "—" + "não medido" no upload e banner "Resultado parcial". Falhas de DL/latência continuam invalidando o teste todo.
+  // ── Contexto Wi-Fi via Atalho iOS (2026-05) ─────────
+  wifiContext?: WifiContext;       // dados coletados pelo Atalho LINKA WiFi Context antes do teste; undefined = sem atalho
   // ── Advanced mode legado (opcionais) ────────────────
   dlP25?: number; dlP75?: number   // Mbps — intervalo de estabilidade DL
   ulP25?: number; ulP75?: number   // Mbps — intervalo de estabilidade UL
@@ -2512,7 +2514,59 @@ A pasta `local-wifi` é específica do diagnóstico Wi-Fi nativo (com plugin Cap
 
 ---
 
-## 14. Onboarding (primeira execução, 2026-05)
+## 14. Feature Contexto Wi-Fi via Atalho iOS — `src/features/ios-wifi-context/` (2026-05)
+
+### Objetivo
+Complementar o resultado do speedtest com dados locais do Wi-Fi do iPhone coletados pelo Atalho iOS "LINKA WiFi Context". O PWA não consegue obter SSID, RSSI, canal, padrão Wi-Fi e taxas de link de forma confiável no iOS — o atalho preenche essa lacuna.
+
+### Tipos novos (em `src/types/index.ts`)
+```ts
+type WifiContextSource = 'ios-shortcut' | 'android-native' | 'manual' | 'unknown';
+
+interface WifiContext {
+  version: number;
+  source: WifiContextSource;
+  sessionId: string;
+  collectedAt: number;    // Unix ms — usado para expiração (TTL 2 min)
+  available: boolean;
+  ssid?: string;
+  bssid?: string;
+  rssiDbm?: number;       // faixa válida: -100 a -20
+  noiseDbm?: number;      // faixa válida: -120 a -20
+  snrDb?: number;         // faixa válida: 0 a 80
+  channel?: number;       // faixa válida: 1 a 233
+  txRateMbps?: number;
+  rxRateMbps?: number;
+  linkSpeedMbps?: number;
+  wifiStandard?: string;  // ex.: '802.11ax'
+  localIp?: string;
+}
+```
+
+### Arquivos da feature
+- **`wifiShortcut.ts`** — `isIOS()`, `runWifiShortcut(sessionId)` (abre deep link `shortcuts://`), `parseWifiCallback(search)` (query string → `WifiContext`), `savePendingWifiContext` / `consumePendingWifiContext` (sessionStorage, TTL 2 min), `classifyRssi`, `rssiLabel`, `formatWifiStandard`.
+- **`WifiContextCard.tsx` + `.css`** — card no resultado com IOSList mostrando sinal, canal, padrão e taxa negociada. Exibido na ResultScreen quando `result.wifiContext` está presente.
+
+### Fluxo
+1. StartScreen detecta iOS via `isIOS()` e exibe botão outlined "Medir com contexto Wi-Fi do iPhone".
+2. Toque chama `runWifiShortcut(sessionId)` — abre `shortcuts://run-shortcut?name=LINKA%20WiFi%20Context&...`.
+3. Atalho coleta dados e abre `https://<app>/wifi-callback?sid=...&rssi=...&channel=...`.
+4. No mount do App, `useEffect` detecta `pathname === '/wifi-callback'` ou `search.includes('sid=')`, parseia, salva em `sessionStorage` e limpa a URL (`history.replaceState`).
+5. Ao final do teste, `pendingWifiContextRef` é consumido e anexado a `test.result!.wifiContext` antes de chamar `appendRecord`.
+6. `appendRecord` em `history.ts` propaga `wifiContext` para `TestRecord`.
+7. ResultScreen renderiza `<WifiContextCard>` quando o campo está presente.
+
+### SPA routing
+`public/_redirects` com `/* /index.html 200` garante que a Cloudflare Pages sirva o app para `/wifi-callback?...` em vez de retornar 404.
+
+### Fases futuras
+- **Fase 2:** classificadores avançados + diagnóstico combinado Wi-Fi × speedtest.
+- **Fase 3:** mascaramento de BSSID/IP no PDF/compartilhamento.
+- **Fase 4:** migração para `ctx=base64url-json` no retorno do atalho.
+
+---
+
+## 15. Onboarding (primeira execução, 2026-05)
 
 ### Objetivo
 Apresentar o app a quem abre pela primeira vez sem prejudicar quem já o conhece. Carousel de 3 cards exibido como overlay full-screen apenas na primeira execução; não é uma rota e não bloqueia o histórico de back/forward.
