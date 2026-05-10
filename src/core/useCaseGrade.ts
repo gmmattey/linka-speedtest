@@ -21,8 +21,8 @@
  */
 
 import type { SpeedTestResult, ConnectionProfile } from '../types';
-import { PROFILES, type ProfileRules } from './profiles';
-import type { UseCaseId, UseCaseVerdict } from './types';
+import { profiles } from './profiles';
+import type { UseCaseId, UseCaseVerdict, ProfileRules } from './types';
 
 export type UseCaseGrade = 'A' | 'B' | 'C' | 'D' | 'F';
 
@@ -67,47 +67,38 @@ export function gradeMetric(
   value: number,
   rules: ProfileRules,
 ): UseCaseGrade {
-  const q = rules.quality;
-  const f = rules.flags;
-
   switch (metric) {
     case 'dl': {
-      if (value >= q.excellent.dl) return 'A';
-      if (value >= q.good.dl)      return 'B';
-      if (value >= q.fair.dl)      return 'C';
-      if (value >= q.fair.dl / 2)  return 'D';
+      if (value >= rules.excellent.download) return 'A';
+      if (value >= rules.good.download)      return 'B';
+      if (value >= rules.fair.download)      return 'C';
+      if (value >= rules.fair.download / 2)  return 'D';
       return 'F';
     }
     case 'ul': {
-      if (value >= q.excellent.ul) return 'A';
-      if (value >= q.good.ul)      return 'B';
-      if (value >= q.fair.ul)      return 'C';
-      if (value >= q.fair.ul / 2)  return 'D';
+      if (value >= rules.excellent.upload) return 'A';
+      if (value >= rules.good.upload)      return 'B';
+      if (value >= rules.fair.upload)      return 'C';
+      if (value >= rules.fair.upload / 2)  return 'D';
       return 'F';
     }
     case 'latency': {
-      if (value <= q.excellent.latency) return 'A';
-      if (value <= q.good.latency)      return 'B';
-      if (value <= q.fair.latency)      return 'C';
-      if (value <= q.fair.latency * 1.6) return 'D';
+      if (value <= rules.excellent.latency) return 'A';
+      if (value <= rules.good.latency)      return 'B';
+      if (value <= rules.fair.latency)      return 'C';
+      if (value <= rules.fair.latency * 1.6) return 'D';
       return 'F';
     }
     case 'jitter': {
-      // `fair` não inclui jitter; usamos os limiares de flags como teto C/D.
-      if (value <= q.excellent.jitter) return 'A';
-      if (value <= q.good.jitter)      return 'B';
-      if (value <= f.unstable)         return 'C';
-      if (value <= f.veryUnstable)     return 'D';
-      return 'F';
+      if (value <= rules.excellent.jitter) return 'A';
+      if (value <= rules.good.jitter)      return 'B';
+      return 'C';
     }
     case 'packetLoss': {
-      if (value <= q.excellent.packetLoss) return 'A';
-      if (value <= q.good.packetLoss)      return 'B';
-      if (value <= q.fair.packetLoss)      return 'C';
-      // `f.packetLoss * 2.5` é o mesmo número que dispara veryUnstable em
-      // `interpret.ts` (5% no profile fixo, 5% no móvel).
-      if (value <= f.packetLoss * 2.5)     return 'D';
-      return 'F';
+      if (value <= rules.excellent.packetLoss) return 'A';
+      if (value <= rules.good.packetLoss)      return 'B';
+      if (value <= rules.fair.packetLoss)      return 'C';
+      return 'D';
     }
   }
 }
@@ -134,7 +125,7 @@ export function useCaseGrade(
   metrics: SpeedTestResult,
   profile: ConnectionProfile,
 ): UseCaseGrade {
-  const rules = PROFILES[profile];
+  const rules = profiles[profile];
   const relevant = RELEVANT_PER_USE_CASE[useCase.id];
   const grades = relevant.map((m) => gradeMetric(m, metricValue(m, metrics), rules));
   return worstGrade(grades);

@@ -187,8 +187,14 @@ const ICON_PATHS: Record<string, React.ReactNode> = {
   cellular:      <path d="M4 20h2v-3H4zM10 20h2v-7h-2zM16 20h2V8h-2z" />,
   'check-circle': <><circle cx="12" cy="12" r="9" /><path d="M9 12l2 2 4-4" /></>,
   'trending-up':  <><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></>,
+  'trending-down': <><polyline points="23 18 13.5 8.5 8.5 13.5 1 6" /><polyline points="17 18 23 18 23 12" /></>,
   document:      <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></>,
   swap:          <><path d="M4 17l4-4-4-4" /><path d="M20 7l-4 4 4 4" /><path d="M12 4v16" /></>,
+  person:        <><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>,
+  business:      <><rect x="2" y="7" width="20" height="13" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></>,
+  info:          <><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></>,
+  delete:        <><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></>,
+  vibration:     <><path d="M2 8l2 2-2 2 2 2-2 2" /><path d="M22 8l-2 2 2 2-2 2 2 2" /><rect x="8" y="5" width="8" height="14" rx="2" /></>,
 };
 
 export function Icon({ name, size = 18, stroke = 1.6, color = 'currentColor' }: IconProps) {

@@ -13,6 +13,12 @@ export interface Settings {
   // de fase, conclusão e erro do teste. Default `true` — usuário pode
   // desativar pelo HamburgerMenu.
   useHaptics: boolean;
+  // Ajustes espelhados do Kotlin (Fase 1, 2026-05)
+  userName: string;
+  providerName: string;
+  region: string;
+  qualityAlertsActive: boolean;
+  alertThresholdMbps: number;
 }
 
 const KEY = 'linka.speedtest.settings.v1';
@@ -25,6 +31,11 @@ const DEFAULTS: Settings = {
   contractedUp: null,
   defaultMode: 'complete',
   useHaptics: true,
+  userName: '',
+  providerName: '',
+  region: '',
+  qualityAlertsActive: false,
+  alertThresholdMbps: 0,
 };
 
 function load(): Settings {

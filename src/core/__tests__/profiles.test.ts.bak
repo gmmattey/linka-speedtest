@@ -1,0 +1,105 @@
+import { profiles, getUseCaseThresholds } from '../profiles';
+import type { ConnectionProfile, UseCaseId } from '../types';
+
+describe('profiles', () => {
+  // Teste para verificar se os perfis de conexão estão definidos corretamente
+  test('should have predefined profiles for fixed_broadband and mobile_broadband', () => {
+    expect(profiles).toHaveProperty('fixed_broadband');
+    expect(profiles).toHaveProperty('mobile_broadband');
+    expect(Object.keys(profiles.fixed_broadband)).toBeGreaterThan(0);
+    expect(Object.keys(profiles.mobile_broadband)).toBeGreaterThan(0);
+  });
+
+  // Teste para verificar os thresholds de banda larga fixa
+  test('should have correct thresholds for fixed_broadband', () => {
+    const fixedProfile = profiles.fixed_broadband;
+    expect(fixedProfile.downloadExcellent).toBe(500);
+    expect(fixedProfile.uploadExcellent).toBe(100);
+    expect(fixedProfile.latencyExcellent).toBe(20);
+    expect(fixedProfile.jitterExcellent).toBe(5);
+    expect(fixedProfile.packetLossExcellent).toBe(0.5);
+
+    expect(fixedProfile.downloadGood).toBe(150);
+    expect(fixedProfile.uploadGood).toBe(30);
+    expect(fixedProfile.latencyGood).toBe(40);
+    expect(fixedProfile.jitterGood).toBe(15);
+    expect(fixedProfile.packetLossGood).toBe(1.5);
+
+    expect(fixedProfile.downloadFair).toBe(50);
+    expect(fixedProfile.uploadFair).toBe(5);
+    expect(fixedProfile.latencyFair).toBe(80);
+    expect(fixedProfile.jitterFair).toBe(30);
+    expect(fixedProfile.packetLossFair).toBe(2);
+
+    // Thresholds genéricos
+    expect(fixedProfile.download).toBe(10);
+    expect(fixedProfile.upload).toBe(3);
+    expect(fixedProfile.latency).toBe(100);
+    expect(fixedProfile.jitter).toBe(50);
+    expect(fixedProfile.packetLoss).toBe(2);
+    expect(fixedProfile.packetLossHigh).toBe(5);
+  });
+
+  // Teste para verificar os thresholds de banda larga móvel
+  test('should have correct thresholds for mobile_broadband', () => {
+    const mobileProfile = profiles.mobile_broadband;
+    expect(mobileProfile.downloadExcellent).toBe(100);
+    expect(mobileProfile.uploadExcellent).toBe(20);
+    expect(mobileProfile.latencyExcellent).toBe(30);
+    expect(mobileProfile.jitterExcellent).toBe(10);
+    expect(mobileProfile.packetLossExcellent).toBe(1);
+
+    expect(mobileProfile.downloadGood).toBe(40);
+    expect(mobileProfile.uploadGood).toBe(10);
+    expect(mobileProfile.latencyGood).toBe(60);
+    expect(mobileProfile.jitterGood).toBe(25);
+    expect(mobileProfile.packetLossGood).toBe(2);
+
+    expect(mobileProfile.downloadFair).toBe(10);
+    expect(mobileProfile.uploadFair).toBe(2);
+    expect(mobileProfile.latencyFair).toBe(120);
+    expect(mobileProfile.jitterFair).toBe(50);
+    expect(mobileProfile.packetLossFair).toBe(3);
+
+    // Thresholds genéricos
+    expect(mobileProfile.download).toBe(5);
+    expect(mobileProfile.upload).toBe(1);
+    expect(mobileProfile.latency).toBe(150);
+    expect(mobileProfile.jitter).toBe(60);
+    expect(mobileProfile.packetLoss).toBe(3);
+    expect(mobileProfile.packetLossHigh).toBe(7);
+  });
+
+  // Teste para verificar a função getUseCaseThresholds
+  describe('getUseCaseThresholds', () => {
+    // Teste para um use case sem thresholds específicos definidos
+    test('should return general profile thresholds if no specific use case thresholds are defined', () => {
+      const useCaseId = 'streaming_4k'; // Um use case que não tem thresholds específicos definidos
+      const fixedThresholds = getUseCaseThresholds('fixed_broadband', useCaseId);
+      expect(fixedThresholds).toEqual(profiles.fixed_broadband);
+
+      const mobileThresholds = getUseCaseThresholds('mobile_broadband', useCaseId);
+      expect(mobileThresholds).toEqual(profiles.mobile_broadband);
+    });
+
+    // Teste para um use case com thresholds específicos (se fossem implementados)
+    test('should return specific use case thresholds if defined', () => {
+      // Exemplo hipotético: Se 'gaming' tivesse thresholds mais rigorosos para latência/jitter no móvel
+      // const gamingMobileThresholds = getUseCaseThresholds('mobile_broadband', 'gaming');
+      // expect(gamingMobileThresholds?.latency).toBe(100); // Exemplo: latência mais alta para games no móvel
+      // expect(gamingMobileThresholds?.jitter).toBe(40); // Exemplo: jitter mais alto para games no móvel
+      
+      // Atualmente, a função retorna os thresholds gerais.
+      // Para este teste, verificamos que o retorno é o esperado com a implementação atual.
+      const gamingFixedThresholds = getUseCaseThresholds('fixed_broadband', 'gaming');
+      expect(gamingFixedThresholds).toEqual(profiles.fixed_broadband);
+
+      const gamingMobileThresholds = getUseCaseThresholds('mobile_broadband', 'gaming');
+      expect(gamingMobileThresholds).toEqual(profiles.mobile_broadband);
+    });
+
+    // Teste para um perfil não definido (deve retornar undefined ou um fallback seguro)
+    // Não há como testar um perfil inexistente diretamente, mas podemos garantir que o fallback funciona.
+    // Se a função `profiles[profile]` retornar undefined, o `??` em `getUseCaseThresholds` cuida disso.
+  });
+});

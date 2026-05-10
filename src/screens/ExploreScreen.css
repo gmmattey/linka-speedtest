@@ -34,10 +34,225 @@
 
 .lk-explore__section-label {
   margin: 0;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-3);
   padding: 0 2px;
+}
+
+/* ── Settings Specifics (Fase 1, 2026-05) ─────────── */
+
+.lk-settings-toggle {
+  width: 48px;
+  height: 28px;
+  border-radius: 14px;
+  background: var(--bg-3);
+  position: relative;
+  transition: background 0.2s ease;
+  cursor: pointer;
+}
+
+.lk-settings-toggle--active {
+  background: var(--accent);
+}
+
+.lk-settings-toggle__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 24px;
+  height: 24px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.lk-settings-toggle--active .lk-settings-toggle__thumb {
+  transform: translateX(20px);
+}
+
+/* ── Sheets ───────────────────────────────────────── */
+
+.lk-settings-sheet-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+}
+
+.lk-settings-sheet {
+  width: 100%;
+  background: var(--bg);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  padding: 20px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.2);
+}
+
+.lk-settings-sheet__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.lk-settings-sheet__header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.lk-settings-sheet__close {
+  background: var(--bg-2);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* ── Forms ────────────────────────────────────────── */
+
+.lk-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.lk-settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lk-settings-field span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.lk-settings-field input {
+  background: var(--bg-2);
+  border: 1.5px solid var(--bg-3);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.lk-settings-field input:focus {
+  border-color: var(--accent);
+}
+
+.lk-settings-field input:disabled {
+  opacity: 0.5;
+}
+
+.lk-settings-save {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 8px;
+  cursor: pointer;
+}
+
+.lk-settings-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-2);
+  padding: 12px 16px;
+  border-radius: 12px;
+}
+
+.lk-settings-toggle-row span {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* ── Data/About ───────────────────────────────────── */
+
+.lk-settings-data {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lk-settings-data p {
+  font-size: 14px;
+  color: var(--text-2);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.lk-settings-btn {
+  border: none;
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+.lk-settings-btn--warn {
+  background: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+  border: 1.5px solid rgba(255, 193, 7, 0.2);
+}
+
+.lk-settings-btn--danger {
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+  border: 1.5px solid rgba(244, 67, 54, 0.2);
+}
+
+.lk-settings-about {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lk-settings-about-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--bg-3);
+}
+
+.lk-settings-about-row span:first-child {
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+.lk-settings-about-row span:last-child {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.lk-settings-about-desc {
+  font-size: 13px;
+  color: var(--text-3);
+  line-height: 1.5;
+  margin-top: 16px;
 }

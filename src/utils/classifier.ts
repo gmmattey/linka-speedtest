@@ -37,4 +37,3 @@ export function classify(r: SpeedTestResult): Classification {
 
   return { primary, tags };
 }
-

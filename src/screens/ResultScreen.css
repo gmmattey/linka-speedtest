@@ -152,7 +152,7 @@
 .lk-result__primary-cell-value {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 52px;
+  font-size: 56px;
   line-height: 1;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
@@ -172,10 +172,10 @@
    % de entrega. O fallback `var(--cell-glow, var(--dl-glow))` mantém o
    azul/verde de marca quando o plano não está cadastrado. */
 .lk-result__primary-cell:nth-child(1) .lk-result__primary-cell-value {
-  text-shadow: 0 0 16px var(--cell-glow, var(--dl-glow)) !important;
+  text-shadow: 0 0 20px var(--cell-glow, var(--dl-glow)) !important;
 }
 .lk-result__primary-cell:nth-child(2) .lk-result__primary-cell-value {
-  text-shadow: 0 0 16px var(--cell-glow, var(--ul-glow)) !important;
+  text-shadow: 0 0 20px var(--cell-glow, var(--ul-glow)) !important;
 }
 
 .lk-result__primary-cell-unit {
@@ -224,7 +224,7 @@
 
 @media (min-width: 600px) {
   .lk-result__primary-cell-value {
-    font-size: 64px;
+    font-size: 72px;
   }
 }
 
@@ -307,9 +307,8 @@
 .lk-result__secondary-cell-value {
   font-family: var(--font-display);
   font-weight: 500;
-  /* Compactado de 14→13px com a 4ª cell (DNS) adicionada — caber em
-     mobile 375px sem cortar valor + unidade. ≥600px volta a 15px. */
-  font-size: 13px;
+  /* Aumentado de 13px para 14px para melhor legibilidade no mobile. */
+  font-size: 14px;
   line-height: 1.1;
   letter-spacing: -0.005em;
   font-variant-numeric: tabular-nums;
@@ -339,7 +338,7 @@
 
 @media (min-width: 600px) {
   .lk-result__secondary-cell-value {
-    font-size: 15px;
+    font-size: 16px;
   }
 }
 
@@ -382,20 +381,19 @@
      labels do mesmo card. */
   font-family: var(--font-body);
   font-weight: 500;
-  font-size: 9px;
+  font-size: 10px;
   color: var(--text-3);
   text-align: center;
 }
 
 /* Chip de grade por use case (refactor visual 2026-05): substitui o
    antigo "OK / Atenção / Ruim" por "<grade> · <label>" (ex. "B · Bom").
-   Cor segue `gradeStyle()` em ResultScreen.tsx. Font 8.5px para o pior
-   caso ("F · Crítico", 11 chars) caber em ~74px de cell em mobile 375. */
+   Cor segue `gradeStyle()` em ResultScreen.tsx. Font aumentado para 9px. */
 .lk-result__use-row__chip {
   font-family: var(--font-mono);
-  font-size: 8.5px;
+  font-size: 9px;
   font-weight: 600;
-  padding: 2px 5px;
+  padding: 3px 6px;
   border-radius: 10px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -528,8 +526,8 @@
      `transparent` deixa o glow invisível (estado neutro de fallback). A
      animação `lk-result-diag-glow` (mais abaixo) faz o pulse em volta
      dessa mesma cor — em runtimes com reduced-motion, o glow vira estático
-     mas mantém a cor. */
-  box-shadow: 0 0 24px var(--diag-glow-color, transparent);
+     mas mantém a cor. Aumentado de 24px para 32px para melhor destaque. */
+  box-shadow: 0 0 32px var(--diag-glow-color, transparent);
 }
 
 .lk-result__combined-kicker {
@@ -544,7 +542,7 @@
 .lk-result__combined-title {
   margin: 0 0 6px;
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text);
   line-height: 1.3;
@@ -645,8 +643,8 @@
    estático (box-shadow na regra base de `.lk-result__combined`)
    permanece — degradação graciosa. */
 @keyframes lk-result-diag-glow {
-  0%, 100% { box-shadow: 0 0 24px var(--diag-glow-color, transparent); }
-  50%      { box-shadow: 0 0 32px var(--diag-glow-color, transparent); }
+  0%, 100% { box-shadow: 0 0 32px var(--diag-glow-color, transparent); }
+  50%      { box-shadow: 0 0 40px var(--diag-glow-color, transparent); }
 }
 
 /* ── Diagnóstico — estado COM AÇÃO (refator 2026-05) ────────────────────

@@ -7,7 +7,6 @@ import type {
   ConnectionProfile,
   RuleSetVersion,
 } from '../types';
-import { classify, RULE_SET_VERSION } from './classifier';
 import { toConnectionProfile } from './connectionProfile';
 
 const KEY = 'linka.speedtest.history.v1';
@@ -45,7 +44,6 @@ export function appendRecord(
     locationTag?: string;
   },
 ): TestRecord {
-  const c = classify(result);
   const record: TestRecord = {
     id: `${result.timestamp}-${Math.random().toString(36).slice(2, 8)}`,
     timestamp: result.timestamp,
@@ -54,15 +52,13 @@ export function appendRecord(
     latency: result.latency,
     jitter: result.jitter,
     packetLoss: result.packetLoss,
-    quality: c.primary,
-    tags: Array.from(c.tags),
     serverName: meta.serverName,
     isp: meta.isp,
     deviceType: meta.deviceType,
     connectionType: meta.connectionType,
     testMode: meta.testMode,
     connectionProfile: meta.connectionProfile ?? toConnectionProfile(meta.connectionType),
-    ruleSetVersion: meta.ruleSetVersion ?? RULE_SET_VERSION,
+    ruleSetVersion: meta.ruleSetVersion,
     locationTag: meta.locationTag,
     // Motor v2 — opcionais; undefined para registros legados
     stabilityScore:     result.stabilityScore,

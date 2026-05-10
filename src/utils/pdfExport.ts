@@ -22,7 +22,7 @@ const COLORS = {
 const LOGO_HTML = `<span style="font-family:'Geist',system-ui,sans-serif;font-weight:700;font-size:20px;letter-spacing:-0.03em;color:${COLORS.accent};">linka</span>`;
 
 export async function exportResultPdf(result: SpeedTestResult, serverName: string, isp?: string) {
-  const interpreted = interpretSpeedTestResult({ metrics: result, profile: 'fixed_broadband' });
+  const interpreted = interpretSpeedTestResult(result, 'fixed_broadband', []);
 
   const node = document.createElement('div');
   node.style.cssText = 'position:fixed;left:-9999px;top:0;width:720px;padding:40px;background:#FFFFFF;color:#0D0D1A;font-family:Geist,system-ui,sans-serif;font-size:14px;';
@@ -47,15 +47,15 @@ export async function exportResultPdf(result: SpeedTestResult, serverName: strin
       </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;padding-top:16px;border-top:1px solid ${COLORS.border};">
-      <div><div style="color:${COLORS.muted};font-size:11px;">Resposta</div><div style="font-family:'Geist',sans-serif;font-weight:600;font-size:18px;">${formatMs(result.latency)} ms</div></div>
-      <div><div style="color:${COLORS.muted};font-size:11px;">Oscilação</div><div style="font-family:'Geist',sans-serif;font-weight:600;font-size:18px;">${formatMs(result.jitter)} ms</div></div>
-      <div><div style="color:${COLORS.muted};font-size:11px;">Estabilidade</div><div style="font-family:'Geist',sans-serif;font-weight:600;font-size:18px;">${resolveCopy(interpreted.copyKeys.stabilityLabelKey)}</div></div>
+      <div><div style="color:${COLORS.muted};font-size:11px;">${resolveCopy('metric.latency.label')}</div><div style="font-family:'Geist',sans-serif;font-weight:600;font-size:18px;">${formatMs(result.latency)} ms</div></div>
+      <div><div style="color:${COLORS.muted};font-size:11px;">${resolveCopy('metric.jitter.label')}</div><div style="font-family:'Geist',sans-serif;font-weight:600;font-size:18px;">${formatMs(result.jitter)} ms</div></div>
+      <div><div style="color:${COLORS.muted};font-size:11px;">${resolveCopy('stability.' + interpreted.stability.level)}</div><div style="font-family:'Geist',sans-serif;font-weight:600;font-size:18px;">${resolveCopy('stability.' + interpreted.stability.level)}</div></div>
     </div>
     <div style="margin-bottom:24px;">
       <div style="font-family:'Geist',sans-serif;font-weight:600;font-size:15px;margin-bottom:8px;">O que isso significa?</div>
       ${interpreted.copyKeys.diagnosisKeys.map((k) => resolveCopy(k)).map((p) => `<p style="margin:0 0 8px 0;line-height:1.5;">${p}</p>`).join('')}
     </div>
-    <div style="margin-top:32px;color:#9CA3AF;font-size:10px;">Gerado por linka SpeedTest · linka.app · ${formatDate(result.timestamp)}</div>
+    <div style="margin-top:32px;color:#9CA3AF;font-size:10px;">Gerado por LINKA SpeedTest</div>
     <div style="margin-top:6px;color:#9CA3AF;font-size:9px;">Medições feitas via Cloudflare Speed Test. Não substitui aferição oficial via EAQ Anatel — serve como prova circunstancial em reclamações.</div>
   `;
 
@@ -85,9 +85,14 @@ export async function exportHistoryPdf(items: TestRecord[]) {
   const avgLat = items.reduce((s, r) => s + r.latency, 0)    / n;
   const avgJit = items.reduce((s, r) => s + r.jitter, 0)     / n;
   const avgLos = items.reduce((s, r) => s + r.packetLoss, 0) / n;
-  const avgInterpreted = interpretSpeedTestResult({ metrics: { dl: avgDl, ul: avgUl, latency: avgLat, jitter: avgJit, packetLoss: avgLos, timestamp: 0 }, profile: 'fixed_broadband' });
+  const avgInterpreted = interpretSpeedTestResult(
+    { dl: avgDl, ul: avgUl, latency: avgLat, jitter: avgJit, packetLoss: avgLos, timestamp: 0 } as SpeedTestResult,
+    'fixed_broadband',
+  );
 
-  const rows = items.map((r) => `
+  const rows = items.map((r) => {
+    const interpretedRecord = interpretSpeedTestResult(r as SpeedTestResult, 'fixed_broadband');
+    return `
     <tr>
       <td>${formatDate(r.timestamp)}</td>
       <td style="color:${COLORS.dl}">${formatMbps(r.dl)}</td>
@@ -95,9 +100,10 @@ export async function exportHistoryPdf(items: TestRecord[]) {
       <td>${formatMs(r.latency)}</td>
       <td>${formatMs(r.jitter)}</td>
       <td>${r.packetLoss.toFixed(1)}%</td>
-      <td>${resolveCopy(`quality.${r.quality}`)}</td>
+      <td>${resolveCopy(interpretedRecord.copyKeys.headlineKey)}</td>
       <td>${r.isp && r.isp !== '—' ? r.isp : '—'}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
   const node = document.createElement('div');
   node.style.cssText = 'position:fixed;left:-9999px;top:0;width:960px;padding:40px;background:#FFFFFF;color:#0D0D1A;font-family:Geist,system-ui,sans-serif;font-size:12px;';
@@ -109,7 +115,7 @@ export async function exportHistoryPdf(items: TestRecord[]) {
     <div style="background:${COLORS.bg};border-left:4px solid ${COLORS.accent};padding:14px 18px;border-radius:8px;margin-bottom:24px;">
       <div style="font-family:'Geist',sans-serif;font-weight:700;font-size:16px;">${resolveCopy(avgInterpreted.copyKeys.headlineKey)} — média</div>
       <div style="color:${COLORS.muted};font-size:12px;margin-top:4px;">
-        ↓ ${formatMbps(avgDl)} Mbps · ↑ ${formatMbps(avgUl)} Mbps · Resposta ${formatMs(avgLat)} ms
+        ↓ ${formatMbps(avgDl)} Mbps · ↑ ${formatMbps(avgUl)} Mbps · ${resolveCopy('metric.latency.label')} ${formatMs(avgLat)} ms
       </div>
     </div>
     <table style="width:100%;border-collapse:collapse;font-size:11px;">
@@ -118,16 +124,16 @@ export async function exportHistoryPdf(items: TestRecord[]) {
           <th style="text-align:left;padding:6px 4px;">Data</th>
           <th style="text-align:right;padding:6px 4px;">↓ DL</th>
           <th style="text-align:right;padding:6px 4px;">↑ UL</th>
-          <th style="text-align:right;padding:6px 4px;">Resp.</th>
-          <th style="text-align:right;padding:6px 4px;">Oscil.</th>
-          <th style="text-align:right;padding:6px 4px;">Perda</th>
+          <th style="text-align:right;padding:6px 4px;">${resolveCopy('metric.latency.label')}.</th>
+          <th style="text-align:right;padding:6px 4px;">${resolveCopy('metric.jitter.label')}.</th>
+          <th style="text-align:right;padding:6px 4px;">${resolveCopy('metric.packetLoss.label')}</th>
           <th style="text-align:left;padding:6px 4px;">Qualidade</th>
           <th style="text-align:left;padding:6px 4px;">Operadora</th>
         </tr>
       </thead>
       <tbody style="font-family:'Geist',sans-serif;">${rows}</tbody>
     </table>
-    <div style="margin-top:32px;color:#9CA3AF;font-size:10px;">Gerado por linka SpeedTest · linka.app</div>
+    <div style="margin-top:32px;color:#9CA3AF;font-size:10px;">Gerado por LINKA SpeedTest</div>
     <div style="margin-top:6px;color:#9CA3AF;font-size:9px;">Medições feitas via Cloudflare Speed Test. Não substitui aferição oficial via EAQ Anatel — serve como prova circunstancial em reclamações.</div>
   `;
 

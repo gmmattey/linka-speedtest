@@ -575,16 +575,10 @@ export default function App() {
           <ExploreScreen
             theme={theme}
             onToggleTheme={onToggleTheme}
-            contractedDown={settings.contractedDown}
-            contractedUp={settings.contractedUp}
-            onUpdateContracted={(down, up) => updateSettings({ contractedDown: down, contractedUp: up })}
+            settings={settings}
+            onUpdateSettings={updateSettings}
             onBack={goBack}
             onShowHistory={handleShowHistory}
-            onStartRoomTest={handleOpenRoomTest}
-            onStartComparison={handleStartComparison}
-            onStartBeforeAfter={handleStartBeforeAfter}
-            onShowLocalWifiDiagnostics={capabilities.localWifiDiagnostics ? handleShowLocalWifiDiagnostics : undefined}
-            onShowLocalNetworkDiscovery={capabilities.localNetworkDiscovery ? handleShowLocalNetworkDiscovery : undefined}
             onResetOnboarding={handleResetOnboarding}
           />
         );

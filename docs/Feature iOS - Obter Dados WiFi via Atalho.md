@@ -1,75 +1,75 @@
-# LINKA SpeedTest — Feature: Contexto Wi‑Fi via Atalho iOS
+﻿# LINKA SpeedTest â€” Feature: Contexto Wiâ€‘Fi via Atalho iOS
 
 ## 1. Resumo executivo
 
-A feature **Contexto Wi‑Fi via Atalho iOS** permite complementar o resultado do LINKA SpeedTest com informações locais da rede Wi‑Fi do iPhone, coletadas por um Atalho do app Atalhos do iOS.
+A feature **Contexto Wiâ€‘Fi via Atalho iOS** permite complementar o resultado do LINKA SpeedTest com informaÃ§Ãµes locais da rede Wiâ€‘Fi do iPhone, coletadas por um Atalho do app Atalhos do iOS.
 
-O objetivo não é substituir o teste de velocidade do LINKA. O objetivo é enriquecer o diagnóstico com dados que o PWA, sozinho, não consegue obter de forma confiável no iOS, como SSID, BSSID, canal, RSSI, ruído, padrão Wi‑Fi e taxas de link RX/TX.
+O objetivo nÃ£o Ã© substituir o teste de velocidade do LINKA. O objetivo Ã© enriquecer o diagnÃ³stico com dados que o PWA, sozinho, nÃ£o consegue obter de forma confiÃ¡vel no iOS, como SSID, BSSID, canal, RSSI, ruÃ­do, padrÃ£o Wiâ€‘Fi e taxas de link RX/TX.
 
-Com isso, o LINKA consegue separar melhor três cenários comuns:
+Com isso, o LINKA consegue separar melhor trÃªs cenÃ¡rios comuns:
 
 - internet ruim;
-- Wi‑Fi local ruim;
-- internet aparentemente boa, mas experiência ruim por latência, oscilação ou perda.
+- Wiâ€‘Fi local ruim;
+- internet aparentemente boa, mas experiÃªncia ruim por latÃªncia, oscilaÃ§Ã£o ou perda.
 
-A feature deve ser transparente para o usuário, sem coleta invisível, sem automação silenciosa e sem exposição desnecessária de dados sensíveis.
+A feature deve ser transparente para o usuÃ¡rio, sem coleta invisÃ­vel, sem automaÃ§Ã£o silenciosa e sem exposiÃ§Ã£o desnecessÃ¡ria de dados sensÃ­veis.
 
 ---
 
 ## 2. Problema
 
-O LINKA SpeedTest mede a experiência real do aparelho/navegador até a internet, usando endpoints externos. Isso é correto para medir navegação, streaming, chamadas, jogos e trabalho remoto.
+O LINKA SpeedTest mede a experiÃªncia real do aparelho/navegador atÃ© a internet, usando endpoints externos. Isso Ã© correto para medir navegaÃ§Ã£o, streaming, chamadas, jogos e trabalho remoto.
 
-Porém, em iPhone/PWA, o navegador não expõe de forma confiável dados locais do Wi‑Fi. Isso limita o diagnóstico, porque um teste ruim pode ser causado por:
+PorÃ©m, em iPhone/PWA, o navegador nÃ£o expÃµe de forma confiÃ¡vel dados locais do Wiâ€‘Fi. Isso limita o diagnÃ³stico, porque um teste ruim pode ser causado por:
 
-- sinal Wi‑Fi fraco;
-- usuário longe do roteador;
+- sinal Wiâ€‘Fi fraco;
+- usuÃ¡rio longe do roteador;
 - rede em 2.4 GHz congestionada;
 - canal ruim;
 - baixa taxa de link;
 - instabilidade local;
 - problema real da operadora;
-- saturação da rede doméstica;
-- limitação do aparelho.
+- saturaÃ§Ã£o da rede domÃ©stica;
+- limitaÃ§Ã£o do aparelho.
 
-Sem contexto Wi‑Fi, o app pode acertar a medição, mas errar a explicação.
+Sem contexto Wiâ€‘Fi, o app pode acertar a mediÃ§Ã£o, mas errar a explicaÃ§Ã£o.
 
 ---
 
 ## 3. Objetivo da feature
 
-Permitir que usuários de iPhone rodem um Atalho iOS complementar antes do speedtest para coletar dados locais do Wi‑Fi e devolver esses dados ao PWA LINKA.
+Permitir que usuÃ¡rios de iPhone rodem um Atalho iOS complementar antes do speedtest para coletar dados locais do Wiâ€‘Fi e devolver esses dados ao PWA LINKA.
 
-O PWA deve então usar esses dados para:
+O PWA deve entÃ£o usar esses dados para:
 
-- exibir contexto do Wi‑Fi no resultado;
-- enriquecer o diagnóstico final;
-- sugerir ações práticas;
-- diferenciar problema de Wi‑Fi de problema de internet;
-- registrar os dados no histórico local do teste;
-- permitir exportação controlada, com ocultação de dados sensíveis por padrão.
+- exibir contexto do Wiâ€‘Fi no resultado;
+- enriquecer o diagnÃ³stico final;
+- sugerir aÃ§Ãµes prÃ¡ticas;
+- diferenciar problema de Wiâ€‘Fi de problema de internet;
+- registrar os dados no histÃ³rico local do teste;
+- permitir exportaÃ§Ã£o controlada, com ocultaÃ§Ã£o de dados sensÃ­veis por padrÃ£o.
 
 ---
 
-## 4. Não objetivos
+## 4. NÃ£o objetivos
 
-Esta feature não pretende:
+Esta feature nÃ£o pretende:
 
 - medir velocidade entre iPhone e roteador;
 - medir throughput LAN real;
 - medir sinal GPON/fibra;
 - acessar dados administrativos do roteador;
 - substituir ferramentas como iperf3;
-- rodar automaticamente sem ação do usuário;
+- rodar automaticamente sem aÃ§Ã£o do usuÃ¡rio;
 - coletar dados em segundo plano;
-- prometer prova regulatória contra operadora;
-- expor IP, BSSID ou identificadores sensíveis em relatórios públicos por padrão.
+- prometer prova regulatÃ³ria contra operadora;
+- expor IP, BSSID ou identificadores sensÃ­veis em relatÃ³rios pÃºblicos por padrÃ£o.
 
 ---
 
-## 5. Público-alvo
+## 5. PÃºblico-alvo
 
-### Usuário final
+### UsuÃ¡rio final
 
 Pessoa comum que quer saber se a internet serve para:
 
@@ -77,41 +77,41 @@ Pessoa comum que quer saber se a internet serve para:
 - streaming 4K;
 - videochamadas;
 - home office;
-- navegação geral.
+- navegaÃ§Ã£o geral.
 
-Esse usuário não deve ser exposto a termos técnicos brutos como “RSSI”, “jitter”, “BSSID” e “TX Rate” sem tradução.
+Esse usuÃ¡rio nÃ£o deve ser exposto a termos tÃ©cnicos brutos como â€œRSSIâ€, â€œjitterâ€, â€œBSSIDâ€ e â€œTX Rateâ€ sem traduÃ§Ã£o.
 
-### Usuário técnico
+### UsuÃ¡rio tÃ©cnico
 
-Pessoa que quer ver detalhes avançados do teste, útil para suporte, instalação, diagnóstico doméstico ou comparação entre cômodos.
+Pessoa que quer ver detalhes avanÃ§ados do teste, Ãºtil para suporte, instalaÃ§Ã£o, diagnÃ³stico domÃ©stico ou comparaÃ§Ã£o entre cÃ´modos.
 
-Para esse usuário, o app pode oferecer um bloco “Detalhes avançados”.
+Para esse usuÃ¡rio, o app pode oferecer um bloco â€œDetalhes avanÃ§adosâ€.
 
 ---
 
-## 6. Visão funcional
+## 6. VisÃ£o funcional
 
 ### Fluxo principal
 
-1. Usuário abre o LINKA SpeedTest no iPhone.
+1. UsuÃ¡rio abre o LINKA SpeedTest no iPhone.
 2. O app detecta ambiente iOS/PWA.
-3. O app exibe a opção: **Medir com contexto Wi‑Fi do iPhone**.
-4. Usuário toca no botão.
+3. O app exibe a opÃ§Ã£o: **Medir com contexto Wiâ€‘Fi do iPhone**.
+4. UsuÃ¡rio toca no botÃ£o.
 5. O PWA chama o deep link do app Atalhos.
-6. O Atalho LINKA Wi‑Fi Context é executado.
-7. O Atalho coleta os dados locais da rede Wi‑Fi.
+6. O Atalho LINKA Wiâ€‘Fi Context Ã© executado.
+7. O Atalho coleta os dados locais da rede Wiâ€‘Fi.
 8. O Atalho abre de volta o PWA com os dados codificados na URL.
-9. O PWA valida e salva temporariamente o contexto Wi‑Fi.
-10. O PWA inicia o speedtest ou oferece botão para iniciar.
+9. O PWA valida e salva temporariamente o contexto Wiâ€‘Fi.
+10. O PWA inicia o speedtest ou oferece botÃ£o para iniciar.
 11. Ao final, o resultado une:
-    - métricas do speedtest;
-    - contexto Wi‑Fi;
-    - diagnóstico combinado;
-    - recomendações práticas.
+    - mÃ©tricas do speedtest;
+    - contexto Wiâ€‘Fi;
+    - diagnÃ³stico combinado;
+    - recomendaÃ§Ãµes prÃ¡ticas.
 
 ---
 
-## 7. Experiência do usuário
+## 7. ExperiÃªncia do usuÃ¡rio
 
 ### 7.1 Tela inicial
 
@@ -122,27 +122,27 @@ Iniciar teste
 ```
 
 ```txt
-Medir com contexto Wi‑Fi do iPhone
+Medir com contexto Wiâ€‘Fi do iPhone
 ```
 
 Texto de apoio:
 
 ```txt
-O contexto Wi‑Fi ajuda a diferenciar problema de sinal do Wi‑Fi de problema da internet.
+O contexto Wiâ€‘Fi ajuda a diferenciar problema de sinal do Wiâ€‘Fi de problema da internet.
 ```
 
-### 7.2 Usuário sem atalho instalado
+### 7.2 UsuÃ¡rio sem atalho instalado
 
-Se o usuário tocar no botão e o atalho não existir, o iOS pode não executar nada ou abrir o app Atalhos sem resultado útil.
+Se o usuÃ¡rio tocar no botÃ£o e o atalho nÃ£o existir, o iOS pode nÃ£o executar nada ou abrir o app Atalhos sem resultado Ãºtil.
 
-O PWA deve mostrar uma tela de instrução antes da primeira tentativa:
+O PWA deve mostrar uma tela de instruÃ§Ã£o antes da primeira tentativa:
 
 ```txt
-Para medir também o sinal Wi‑Fi do iPhone, instale o atalho LINKA Wi‑Fi Context.
-Depois volte aqui e toque novamente em “Medir com contexto Wi‑Fi”.
+Para medir tambÃ©m o sinal Wiâ€‘Fi do iPhone, instale o atalho LINKA Wiâ€‘Fi Context.
+Depois volte aqui e toque novamente em â€œMedir com contexto Wiâ€‘Fiâ€.
 ```
 
-Deve haver botão:
+Deve haver botÃ£o:
 
 ```txt
 Instalar atalho
@@ -151,16 +151,16 @@ Instalar atalho
 E outro:
 
 ```txt
-Continuar sem contexto Wi‑Fi
+Continuar sem contexto Wiâ€‘Fi
 ```
 
 ### 7.3 Retorno com sucesso
 
-Quando o PWA receber os dados do atalho, exibir confirmação discreta:
+Quando o PWA receber os dados do atalho, exibir confirmaÃ§Ã£o discreta:
 
 ```txt
-Contexto Wi‑Fi recebido.
-Agora vamos medir sua conexão.
+Contexto Wiâ€‘Fi recebido.
+Agora vamos medir sua conexÃ£o.
 ```
 
 ### 7.4 Retorno incompleto
@@ -168,16 +168,16 @@ Agora vamos medir sua conexão.
 Se alguns campos vierem ausentes:
 
 ```txt
-Recebemos parte dos dados do Wi‑Fi. O teste continuará normalmente.
+Recebemos parte dos dados do Wiâ€‘Fi. O teste continuarÃ¡ normalmente.
 ```
 
 ### 7.5 Falha ou cancelamento
 
-Se o usuário cancelar o atalho ou voltar manualmente:
+Se o usuÃ¡rio cancelar o atalho ou voltar manualmente:
 
 ```txt
-Não foi possível coletar o contexto Wi‑Fi.
-Você ainda pode fazer o teste normal.
+NÃ£o foi possÃ­vel coletar o contexto Wiâ€‘Fi.
+VocÃª ainda pode fazer o teste normal.
 ```
 
 ---
@@ -186,19 +186,19 @@ Você ainda pode fazer o teste normal.
 
 ```mermaid
 flowchart TD
-    A[Usuário no PWA LINKA] --> B{Ambiente iOS?}
-    B -- Não --> C[Teste normal]
-    B -- Sim --> D[Botão: Medir com contexto Wi‑Fi]
+    A[UsuÃ¡rio no PWA LINKA] --> B{Ambiente iOS?}
+    B -- NÃ£o --> C[Teste normal]
+    B -- Sim --> D[BotÃ£o: Medir com contexto Wiâ€‘Fi]
     D --> E[Deep link shortcuts://run-shortcut]
-    E --> F[Atalho LINKA Wi‑Fi Context]
-    F --> G[Coleta dados locais do Wi‑Fi]
+    E --> F[Atalho LINKA Wiâ€‘Fi Context]
+    F --> G[Coleta dados locais do Wiâ€‘Fi]
     G --> H[Abre returnUrl do PWA com payload]
     H --> I[PWA valida payload]
-    I --> J[Salva wifiContext temporário]
+    I --> J[Salva wifiContext temporÃ¡rio]
     J --> K[Executa LINKA SpeedTest]
     K --> L[Combina speedtest + wifiContext]
-    L --> M[Resultado e diagnóstico]
-    M --> N[Histórico local]
+    L --> M[Resultado e diagnÃ³stico]
+    M --> N[HistÃ³rico local]
     M --> O[PDF/Compartilhamento com privacidade]
 ```
 
@@ -210,7 +210,7 @@ flowchart TD
 flowchart LR
     subgraph iOS
       S[App Atalhos]
-      W[Atalho LINKA Wi‑Fi Context]
+      W[Atalho LINKA Wiâ€‘Fi Context]
     end
 
     subgraph PWA
@@ -228,7 +228,7 @@ flowchart LR
 
     UI -->|shortcuts://| S
     S --> W
-    W -->|https://linka-speedtest.../wifi-callback| CB
+    W -->|https://linkaSpeedtestPwa.../wifi-callback| CB
     CB --> UI
     UI --> ST
     ST --> CF
@@ -244,55 +244,55 @@ flowchart LR
 
 ### 10.1 PWA LINKA
 
-Responsável por:
+ResponsÃ¡vel por:
 
-- detectar se o usuário está em iOS;
-- exibir CTA de contexto Wi‑Fi;
+- detectar se o usuÃ¡rio estÃ¡ em iOS;
+- exibir CTA de contexto Wiâ€‘Fi;
 - abrir o atalho via deep link;
 - receber retorno por URL;
 - validar o payload;
-- persistir contexto temporário;
+- persistir contexto temporÃ¡rio;
 - iniciar teste;
-- cruzar dados Wi‑Fi com speedtest;
-- mostrar diagnóstico combinado;
-- salvar histórico;
-- exportar relatório respeitando privacidade.
+- cruzar dados Wiâ€‘Fi com speedtest;
+- mostrar diagnÃ³stico combinado;
+- salvar histÃ³rico;
+- exportar relatÃ³rio respeitando privacidade.
 
-### 10.2 Atalho iOS LINKA Wi‑Fi Context
+### 10.2 Atalho iOS LINKA Wiâ€‘Fi Context
 
-Responsável por:
+ResponsÃ¡vel por:
 
 - receber `returnUrl` e `sessionId` do PWA;
-- coletar dados de rede via ações do app Atalhos;
+- coletar dados de rede via aÃ§Ãµes do app Atalhos;
 - montar payload de retorno;
 - abrir o PWA novamente com os dados.
 
 ### 10.3 Motor de speedtest
 
-Responsável por:
+ResponsÃ¡vel por:
 
-- latência descarregada;
+- latÃªncia descarregada;
 - download;
 - upload;
-- latência durante download;
-- latência durante upload;
+- latÃªncia durante download;
+- latÃªncia durante upload;
 - bufferbloat;
 - estabilidade;
 - DNS;
-- perda/falhas estimadas ou nativas quando disponíveis.
+- perda/falhas estimadas ou nativas quando disponÃ­veis.
 
-### 10.4 Motor de diagnóstico
+### 10.4 Motor de diagnÃ³stico
 
-Responsável por combinar:
+ResponsÃ¡vel por combinar:
 
 - velocidade medida;
-- latência;
-- oscilação;
+- latÃªncia;
+- oscilaÃ§Ã£o;
 - perda/falha;
 - estabilidade;
-- tipo de conexão;
-- contexto Wi‑Fi local;
-- perfil de uso do usuário.
+- tipo de conexÃ£o;
+- contexto Wiâ€‘Fi local;
+- perfil de uso do usuÃ¡rio.
 
 ---
 
@@ -300,7 +300,7 @@ Responsável por combinar:
 
 ### 11.1 Payload enviado do PWA para o Atalho
 
-O PWA deve abrir o Atalho passando um JSON simples no parâmetro `text`.
+O PWA deve abrir o Atalho passando um JSON simples no parÃ¢metro `text`.
 
 Exemplo:
 
@@ -308,7 +308,7 @@ Exemplo:
 {
   "version": 1,
   "sessionId": "st_1730000000000_ab12cd",
-  "returnUrl": "https://linka-speedtest.pages.dev/wifi-callback",
+  "returnUrl": "https://linkaSpeedtestPwa.pages.dev/wifi-callback",
   "startedAt": 1730000000000,
   "source": "linka-pwa"
 }
@@ -339,12 +339,12 @@ window.location.href =
 
 ### 11.3 Payload retornado pelo Atalho ao PWA
 
-Opção recomendada: retornar via query string com payload compactado em Base64 URL-safe.
+OpÃ§Ã£o recomendada: retornar via query string com payload compactado em Base64 URL-safe.
 
 URL:
 
 ```txt
-https://linka-speedtest.pages.dev/wifi-callback?ctx=<base64url-json>
+https://linkaSpeedtestPwa.pages.dev/wifi-callback?ctx=<base64url-json>
 ```
 
 JSON interno:
@@ -373,13 +373,13 @@ JSON interno:
 
 ### 11.4 Fallback simples por query string
 
-Se Base64 for difícil no Atalho, usar query string explícita:
+Se Base64 for difÃ­cil no Atalho, usar query string explÃ­cita:
 
 ```txt
 /wifi-callback?sid=st_123&rssi=-67&noise=-91&tx=286&rx=344&channel=149&standard=802.11ax
 ```
 
-Menos elegante, mas mais fácil de montar no app Atalhos.
+Menos elegante, mas mais fÃ¡cil de montar no app Atalhos.
 
 ---
 
@@ -416,7 +416,7 @@ export interface WifiContext {
 }
 ```
 
-### 12.2 Integração com resultado do speedtest
+### 12.2 IntegraÃ§Ã£o com resultado do speedtest
 
 Adicionar ao `SpeedTestResult`:
 
@@ -437,16 +437,16 @@ export interface SpeedTestResult {
 
 ---
 
-## 13. Validação do payload
+## 13. ValidaÃ§Ã£o do payload
 
 O PWA deve validar:
 
 - `version` suportada;
 - `sessionId` igual ao esperado, quando existir;
 - `collectedAt` recente;
-- campos numéricos dentro de faixas plausíveis;
-- ausência de caracteres perigosos em strings;
-- tamanho máximo do payload;
+- campos numÃ©ricos dentro de faixas plausÃ­veis;
+- ausÃªncia de caracteres perigosos em strings;
+- tamanho mÃ¡ximo do payload;
 - origem esperada da rota de callback.
 
 ### 13.1 Faixas sugeridas
@@ -462,23 +462,23 @@ const WIFI_LIMITS = {
 };
 ```
 
-### 13.2 Expiração
+### 13.2 ExpiraÃ§Ã£o
 
-Contexto Wi‑Fi deve expirar rápido.
+Contexto Wiâ€‘Fi deve expirar rÃ¡pido.
 
-Recomendação:
+RecomendaÃ§Ã£o:
 
 ```txt
 Validade: 2 minutos
 ```
 
-Motivo: o usuário pode trocar de rede, andar para outro cômodo ou alternar entre Wi‑Fi e dados móveis.
+Motivo: o usuÃ¡rio pode trocar de rede, andar para outro cÃ´modo ou alternar entre Wiâ€‘Fi e dados mÃ³veis.
 
 ---
 
-## 14. Regras de diagnóstico Wi‑Fi
+## 14. Regras de diagnÃ³stico Wiâ€‘Fi
 
-### 14.1 Classificação por RSSI
+### 14.1 ClassificaÃ§Ã£o por RSSI
 
 ```ts
 function classifyRssi(rssi?: number) {
@@ -491,7 +491,7 @@ function classifyRssi(rssi?: number) {
 }
 ```
 
-### 14.2 Classificação por SNR
+### 14.2 ClassificaÃ§Ã£o por SNR
 
 ```ts
 function classifySnr(snr?: number) {
@@ -504,9 +504,9 @@ function classifySnr(snr?: number) {
 }
 ```
 
-### 14.3 Classificação por taxa de link
+### 14.3 ClassificaÃ§Ã£o por taxa de link
 
-A taxa de link não deve ser exibida como velocidade real. Ela deve ser chamada de “taxa negociada com o Wi‑Fi” ou “capacidade do link naquele momento”.
+A taxa de link nÃ£o deve ser exibida como velocidade real. Ela deve ser chamada de â€œtaxa negociada com o Wiâ€‘Fiâ€ ou â€œcapacidade do link naquele momentoâ€.
 
 ```ts
 function classifyLinkRate(rate?: number) {
@@ -521,70 +521,70 @@ function classifyLinkRate(rate?: number) {
 
 ---
 
-## 15. Diagnóstico combinado
+## 15. DiagnÃ³stico combinado
 
-### 15.1 Internet ruim + Wi‑Fi ruim
+### 15.1 Internet ruim + Wiâ€‘Fi ruim
 
-Condição:
+CondiÃ§Ã£o:
 
 - download baixo ou upload baixo;
-- RSSI fraco/crítico ou SNR baixo.
+- RSSI fraco/crÃ­tico ou SNR baixo.
 
 Mensagem:
 
 ```txt
-O teste ficou abaixo do esperado e o sinal Wi‑Fi neste ponto também parece fraco. Antes de culpar a operadora, teste mais perto do roteador.
+O teste ficou abaixo do esperado e o sinal Wiâ€‘Fi neste ponto tambÃ©m parece fraco. Antes de culpar a operadora, teste mais perto do roteador.
 ```
 
-Ação sugerida:
+AÃ§Ã£o sugerida:
 
 ```txt
 Aproxime o aparelho do roteador e repita o teste.
 ```
 
-### 15.2 Internet ruim + Wi‑Fi bom
+### 15.2 Internet ruim + Wiâ€‘Fi bom
 
-Condição:
+CondiÃ§Ã£o:
 
 - download/upload baixo;
 - RSSI bom/excelente;
 - SNR bom/excelente;
-- taxa de link razoável.
+- taxa de link razoÃ¡vel.
 
 Mensagem:
 
 ```txt
-O Wi‑Fi parece adequado neste ponto, mas a velocidade medida ficou baixa. O gargalo pode estar na internet, no roteador, no horário de uso ou na operadora.
+O Wiâ€‘Fi parece adequado neste ponto, mas a velocidade medida ficou baixa. O gargalo pode estar na internet, no roteador, no horÃ¡rio de uso ou na operadora.
 ```
 
-Ação sugerida:
+AÃ§Ã£o sugerida:
 
 ```txt
-Repita o teste em outro horário e, se possível, compare com outro aparelho.
+Repita o teste em outro horÃ¡rio e, se possÃ­vel, compare com outro aparelho.
 ```
 
-### 15.3 Latência ruim + Wi‑Fi ruim
+### 15.3 LatÃªncia ruim + Wiâ€‘Fi ruim
 
-Condição:
+CondiÃ§Ã£o:
 
-- latência alta, jitter alto ou bufferbloat;
+- latÃªncia alta, jitter alto ou bufferbloat;
 - RSSI/SNR ruim.
 
 Mensagem:
 
 ```txt
-A resposta da conexão ficou instável e o Wi‑Fi também parece fraco. Isso pode afetar jogos, chamadas e reuniões mesmo quando há Mbps suficientes.
+A resposta da conexÃ£o ficou instÃ¡vel e o Wiâ€‘Fi tambÃ©m parece fraco. Isso pode afetar jogos, chamadas e reuniÃµes mesmo quando hÃ¡ Mbps suficientes.
 ```
 
-Ação sugerida:
+AÃ§Ã£o sugerida:
 
 ```txt
-Teste mais perto do roteador ou use uma rede de 5 GHz/6 GHz, se disponível.
+Teste mais perto do roteador ou use uma rede de 5 GHz/6 GHz, se disponÃ­vel.
 ```
 
-### 15.4 Velocidade boa + Wi‑Fi ruim
+### 15.4 Velocidade boa + Wiâ€‘Fi ruim
 
-Condição:
+CondiÃ§Ã£o:
 
 - download/upload bons;
 - RSSI ruim.
@@ -592,30 +592,30 @@ Condição:
 Mensagem:
 
 ```txt
-A velocidade passou, mas o sinal Wi‑Fi está no limite. A conexão pode oscilar em chamadas, jogos ou ao se mover pela casa.
+A velocidade passou, mas o sinal Wiâ€‘Fi estÃ¡ no limite. A conexÃ£o pode oscilar em chamadas, jogos ou ao se mover pela casa.
 ```
 
-Ação sugerida:
+AÃ§Ã£o sugerida:
 
 ```txt
-Considere melhorar a cobertura Wi‑Fi nesse ambiente.
+Considere melhorar a cobertura Wiâ€‘Fi nesse ambiente.
 ```
 
-### 15.5 Wi‑Fi bom + latência sob carga ruim
+### 15.5 Wiâ€‘Fi bom + latÃªncia sob carga ruim
 
-Condição:
+CondiÃ§Ã£o:
 
 - RSSI bom;
 - velocidade boa;
-- latência durante download/upload sobe muito.
+- latÃªncia durante download/upload sobe muito.
 
 Mensagem:
 
 ```txt
-O sinal Wi‑Fi parece bom, mas a resposta piora quando a conexão está em uso. Isso indica possível saturação do roteador ou da conexão.
+O sinal Wiâ€‘Fi parece bom, mas a resposta piora quando a conexÃ£o estÃ¡ em uso. Isso indica possÃ­vel saturaÃ§Ã£o do roteador ou da conexÃ£o.
 ```
 
-Ação sugerida:
+AÃ§Ã£o sugerida:
 
 ```txt
 Evite downloads pesados durante chamadas e jogos, ou avalie um roteador com melhor controle de fila.
@@ -623,25 +623,25 @@ Evite downloads pesados durante chamadas e jogos, ou avalie um roteador com melh
 
 ---
 
-## 16. Linguagem para usuário final
+## 16. Linguagem para usuÃ¡rio final
 
-Evitar termos técnicos na superfície principal.
+Evitar termos tÃ©cnicos na superfÃ­cie principal.
 
 ### Preferir
 
 ```txt
 resposta
-oscilação
-sinal Wi‑Fi
-falhas na conexão
+oscilaÃ§Ã£o
+sinal Wiâ€‘Fi
+falhas na conexÃ£o
 estabilidade
-cobertura Wi‑Fi
+cobertura Wiâ€‘Fi
 ```
 
 ### Evitar na interface principal
 
 ```txt
-latência
+latÃªncia
 jitter
 packet loss
 RSSI
@@ -652,7 +652,7 @@ RX Rate
 bufferbloat
 ```
 
-Esses termos podem aparecer apenas em “Detalhes avançados”.
+Esses termos podem aparecer apenas em â€œDetalhes avanÃ§adosâ€.
 
 ---
 
@@ -661,69 +661,69 @@ Esses termos podem aparecer apenas em “Detalhes avançados”.
 ### 17.1 Card simples
 
 ```txt
-Contexto Wi‑Fi
+Contexto Wiâ€‘Fi
 
 Sinal: Bom
 Canal: 149
-Padrão: Wi‑Fi 6
-Taxa negociada: 286 Mbps envio / 344 Mbps recepção
+PadrÃ£o: Wiâ€‘Fi 6
+Taxa negociada: 286 Mbps envio / 344 Mbps recepÃ§Ã£o
 
-O Wi‑Fi parece adequado neste ponto da casa.
+O Wiâ€‘Fi parece adequado neste ponto da casa.
 ```
 
-### 17.2 Detalhes avançados
+### 17.2 Detalhes avanÃ§ados
 
 ```txt
-Detalhes avançados
+Detalhes avanÃ§ados
 
 SSID: Minha Rede
 BSSID: oculto
 RSSI: -67 dBm
-Ruído: -91 dBm
+RuÃ­do: -91 dBm
 SNR: 24 dB
 Canal: 149
 TX Rate: 286 Mbps
 RX Rate: 344 Mbps
-Padrão: 802.11ax
+PadrÃ£o: 802.11ax
 IP local: oculto
 ```
 
 ### 17.3 Aviso sobre taxa de link
 
 ```txt
-A taxa negociada do Wi‑Fi não é a velocidade real da internet. Ela indica a qualidade do link entre o aparelho e o roteador naquele momento.
+A taxa negociada do Wiâ€‘Fi nÃ£o Ã© a velocidade real da internet. Ela indica a qualidade do link entre o aparelho e o roteador naquele momento.
 ```
 
 ---
 
-## 18. Privacidade e segurança
+## 18. Privacidade e seguranÃ§a
 
-### 18.1 Dados sensíveis
+### 18.1 Dados sensÃ­veis
 
-Tratar como sensíveis:
+Tratar como sensÃ­veis:
 
 - BSSID;
 - IP local;
-- IP público;
+- IP pÃºblico;
 - SSID, dependendo do contexto;
-- localização aproximada derivada de IP;
+- localizaÃ§Ã£o aproximada derivada de IP;
 - timestamp combinado com identificadores de rede.
 
-### 18.2 Política de exibição
+### 18.2 PolÃ­tica de exibiÃ§Ã£o
 
-Por padrão:
+Por padrÃ£o:
 
 - mostrar SSID apenas no app local;
 - ocultar BSSID;
 - ocultar IP local;
-- ocultar IP público em PDF/compartilhamento;
-- permitir botão “mostrar detalhes avançados”;
+- ocultar IP pÃºblico em PDF/compartilhamento;
+- permitir botÃ£o â€œmostrar detalhes avanÃ§adosâ€;
 - mascarar identificadores.
 
-Exemplo de máscara:
+Exemplo de mÃ¡scara:
 
 ```txt
-BSSID: aa:bb:••:••:ee:ff
+BSSID: aa:bb:â€¢â€¢:â€¢â€¢:ee:ff
 IP local: 192.168.1.xxx
 ```
 
@@ -731,17 +731,17 @@ IP local: 192.168.1.xxx
 
 Ao compartilhar resultado:
 
-- não incluir BSSID por padrão;
-- não incluir IP local por padrão;
-- não incluir IP público por padrão;
-- incluir apenas diagnóstico textual e métricas principais;
-- oferecer opção avançada: “incluir dados técnicos”, desativada por padrão.
+- nÃ£o incluir BSSID por padrÃ£o;
+- nÃ£o incluir IP local por padrÃ£o;
+- nÃ£o incluir IP pÃºblico por padrÃ£o;
+- incluir apenas diagnÃ³stico textual e mÃ©tricas principais;
+- oferecer opÃ§Ã£o avanÃ§ada: â€œincluir dados tÃ©cnicosâ€, desativada por padrÃ£o.
 
 ### 18.4 Armazenamento
 
-O histórico continua local.
+O histÃ³rico continua local.
 
-Os dados Wi‑Fi devem ser salvos apenas no histórico local do navegador, sem backend, salvo decisão futura explícita.
+Os dados Wiâ€‘Fi devem ser salvos apenas no histÃ³rico local do navegador, sem backend, salvo decisÃ£o futura explÃ­cita.
 
 ---
 
@@ -760,22 +760,22 @@ Responsabilidades:
 - ler query string;
 - decodificar payload;
 - validar dados;
-- salvar `wifiContext` temporário;
-- redirecionar para tela de teste ou iniciar medição.
+- salvar `wifiContext` temporÃ¡rio;
+- redirecionar para tela de teste ou iniciar mediÃ§Ã£o.
 
 ### 19.3 `/shortcut-help`
 
-Tela de instrução para instalar/configurar o Atalho.
+Tela de instruÃ§Ã£o para instalar/configurar o Atalho.
 
 ### 19.4 `/result/:id`
 
-Resultado com contexto Wi‑Fi, quando disponível.
+Resultado com contexto Wiâ€‘Fi, quando disponÃ­vel.
 
 ---
 
-## 20. Implementação no PWA
+## 20. ImplementaÃ§Ã£o no PWA
 
-### 20.1 Detecção de iOS
+### 20.1 DetecÃ§Ã£o de iOS
 
 ```ts
 export function isIOS(): boolean {
@@ -785,7 +785,7 @@ export function isIOS(): boolean {
 }
 ```
 
-### 20.2 Detecção de PWA standalone
+### 20.2 DetecÃ§Ã£o de PWA standalone
 
 ```ts
 export function isStandalonePwa(): boolean {
@@ -873,7 +873,7 @@ export function consumePendingWifiContext(): WifiContext | null {
 
 ---
 
-## 21. Implementação do Atalho iOS
+## 21. ImplementaÃ§Ã£o do Atalho iOS
 
 ### 21.1 Nome do Atalho
 
@@ -881,7 +881,7 @@ export function consumePendingWifiContext(): WifiContext | null {
 LINKA WiFi Context
 ```
 
-O nome deve ser estável, pois será chamado pelo deep link.
+O nome deve ser estÃ¡vel, pois serÃ¡ chamado pelo deep link.
 
 ### 21.2 Entrada
 
@@ -895,7 +895,7 @@ Campos esperados:
 - `startedAt`;
 - `source`.
 
-### 21.3 Ações principais no Atalho
+### 21.3 AÃ§Ãµes principais no Atalho
 
 Fluxo sugerido:
 
@@ -905,22 +905,22 @@ Fluxo sugerido:
 3. Extrair JSON ou tratar como texto
 4. Obter returnUrl
 5. Obter sessionId
-6. Get Network Details → Network Name
-7. Get Network Details → BSSID
-8. Get Network Details → Wi‑Fi Standard
-9. Get Network Details → RSSI
-10. Get Network Details → Noise
+6. Get Network Details â†’ Network Name
+7. Get Network Details â†’ BSSID
+8. Get Network Details â†’ Wiâ€‘Fi Standard
+9. Get Network Details â†’ RSSI
+10. Get Network Details â†’ Noise
 11. Calcular SNR = RSSI - Noise
-12. Get Network Details → Channel Number
-13. Get Network Details → TX Rate
-14. Get Network Details → RX Rate
-15. Get Network Details → Local IP Address, se disponível
+12. Get Network Details â†’ Channel Number
+13. Get Network Details â†’ TX Rate
+14. Get Network Details â†’ RX Rate
+15. Get Network Details â†’ Local IP Address, se disponÃ­vel
 16. Montar payload
 17. Codificar payload ou montar query string
 18. Abrir URL de retorno
 ```
 
-### 21.4 Retorno simples recomendado para primeira versão
+### 21.4 Retorno simples recomendado para primeira versÃ£o
 
 Para reduzir dificuldade no Atalho, usar query string simples na V1:
 
@@ -946,32 +946,32 @@ Na V2, migrar para `ctx=<base64url-json>`.
 
 ## 22. Estados de erro
 
-### 22.1 Atalho não instalado
+### 22.1 Atalho nÃ£o instalado
 
 Sintoma:
 
-- deep link não retorna;
-- usuário permanece no app Atalhos;
-- usuário volta sem contexto.
+- deep link nÃ£o retorna;
+- usuÃ¡rio permanece no app Atalhos;
+- usuÃ¡rio volta sem contexto.
 
 Tratamento:
 
 - oferecer teste normal;
-- manter instrução de instalação;
-- não bloquear o produto.
+- manter instruÃ§Ã£o de instalaÃ§Ã£o;
+- nÃ£o bloquear o produto.
 
 ### 22.2 Dados ausentes
 
 Sintoma:
 
-- iOS não retorna campo específico;
-- usuário não está em Wi‑Fi;
-- ação do Atalho falha.
+- iOS nÃ£o retorna campo especÃ­fico;
+- usuÃ¡rio nÃ£o estÃ¡ em Wiâ€‘Fi;
+- aÃ§Ã£o do Atalho falha.
 
 Tratamento:
 
-- preencher apenas campos disponíveis;
-- `available=false` se nenhum dado útil foi coletado;
+- preencher apenas campos disponÃ­veis;
+- `available=false` se nenhum dado Ãºtil foi coletado;
 - continuar teste normal.
 
 ### 22.3 Dados expirados
@@ -979,7 +979,7 @@ Tratamento:
 Sintoma:
 
 - callback antigo aberto depois;
-- usuário alternou rede.
+- usuÃ¡rio alternou rede.
 
 Tratamento:
 
@@ -990,70 +990,70 @@ Tratamento:
 
 Sintoma:
 
-- iOS abre o domínio no Safari.
+- iOS abre o domÃ­nio no Safari.
 
 Tratamento:
 
 - app deve funcionar normalmente no Safari;
-- não depender exclusivamente de estado em memória;
+- nÃ£o depender exclusivamente de estado em memÃ³ria;
 - usar query string e sessionStorage/localStorage;
 - manter UX tolerante.
 
 ---
 
-## 23. Histórico
+## 23. HistÃ³rico
 
-Adicionar `wifiContext` ao histórico local.
+Adicionar `wifiContext` ao histÃ³rico local.
 
-No histórico, exibir resumo:
+No histÃ³rico, exibir resumo:
 
 ```txt
-Wi‑Fi: Bom sinal • Canal 149 • Wi‑Fi 6
+Wiâ€‘Fi: Bom sinal â€¢ Canal 149 â€¢ Wiâ€‘Fi 6
 ```
 
-Em detalhes do histórico:
+Em detalhes do histÃ³rico:
 
 ```txt
 Sinal: -67 dBm
-Ruído: -91 dBm
+RuÃ­do: -91 dBm
 SNR: 24 dB
 Taxa negociada: 286/344 Mbps
 ```
 
-Dados sensíveis devem continuar ocultos por padrão.
+Dados sensÃ­veis devem continuar ocultos por padrÃ£o.
 
 ---
 
-## 24. Exportação PDF
+## 24. ExportaÃ§Ã£o PDF
 
-### 24.1 PDF padrão
+### 24.1 PDF padrÃ£o
 
 Incluir:
 
-- diagnóstico final;
+- diagnÃ³stico final;
 - download;
 - upload;
 - resposta;
-- oscilação;
+- oscilaÃ§Ã£o;
 - estabilidade;
-- resumo Wi‑Fi sem identificadores sensíveis.
+- resumo Wiâ€‘Fi sem identificadores sensÃ­veis.
 
-Não incluir por padrão:
+NÃ£o incluir por padrÃ£o:
 
 - BSSID;
 - IP local;
-- IP público;
-- SSID completo, caso o usuário escolha ocultar.
+- IP pÃºblico;
+- SSID completo, caso o usuÃ¡rio escolha ocultar.
 
-### 24.2 PDF técnico
+### 24.2 PDF tÃ©cnico
 
-Permitir opção:
+Permitir opÃ§Ã£o:
 
 ```txt
-Incluir detalhes técnicos do Wi‑Fi
+Incluir detalhes tÃ©cnicos do Wiâ€‘Fi
 ```
 
-Deve vir desligada por padrão.
+Deve vir desligada por padrÃ£o.
 
 ---
 
@@ -1065,16 +1065,16 @@ Fluxo principal via Atalho.
 
 Requisitos:
 
-- usuário precisa instalar o Atalho;
-- usuário precisa tocar no botão;
+- usuÃ¡rio precisa instalar o Atalho;
+- usuÃ¡rio precisa tocar no botÃ£o;
 - retorno via URL;
-- sem execução silenciosa.
+- sem execuÃ§Ã£o silenciosa.
 
 ### 25.2 Android PWA
 
 Sem Atalho.
 
-Usar fluxo atual de detecção web quando disponível.
+Usar fluxo atual de detecÃ§Ã£o web quando disponÃ­vel.
 
 ### 25.3 Android APK / Capacitor
 
@@ -1091,86 +1091,86 @@ unknown
 
 ### 25.4 Desktop
 
-Não exibir CTA de Atalho iOS.
+NÃ£o exibir CTA de Atalho iOS.
 
 ---
 
-## 26. Plano de implementação
+## 26. Plano de implementaÃ§Ã£o
 
-### Fase 1 — MVP funcional
+### Fase 1 â€” MVP funcional
 
 1. Criar rota `/wifi-callback`.
 2. Criar tipo `WifiContext`.
 3. Criar parser de query string simples.
-4. Criar botão no PWA para abrir Atalho.
+4. Criar botÃ£o no PWA para abrir Atalho.
 5. Criar Atalho iOS V1 com query string simples.
 6. Salvar contexto em sessionStorage.
-7. Anexar `wifiContext` ao próximo resultado.
+7. Anexar `wifiContext` ao prÃ³ximo resultado.
 8. Exibir card simples no resultado.
 
-### Fase 2 — Diagnóstico combinado
+### Fase 2 â€” DiagnÃ³stico combinado
 
-1. Criar classificador Wi‑Fi.
-2. Criar regras cruzando Wi‑Fi + speedtest.
-3. Ajustar textos para usuário final.
-4. Criar detalhes avançados.
-5. Adicionar contexto ao histórico.
+1. Criar classificador Wiâ€‘Fi.
+2. Criar regras cruzando Wiâ€‘Fi + speedtest.
+3. Ajustar textos para usuÃ¡rio final.
+4. Criar detalhes avanÃ§ados.
+5. Adicionar contexto ao histÃ³rico.
 
-### Fase 3 — Privacidade e exportação
+### Fase 3 â€” Privacidade e exportaÃ§Ã£o
 
 1. Mascarar BSSID/IP.
 2. Atualizar PDF.
 3. Atualizar compartilhamento.
-4. Criar opção “incluir dados técnicos”.
+4. Criar opÃ§Ã£o â€œincluir dados tÃ©cnicosâ€.
 5. Revisar textos de privacidade.
 
-### Fase 4 — Robustez
+### Fase 4 â€” Robustez
 
 1. Migrar retorno para `ctx=base64url-json`.
-2. Adicionar validação forte.
-3. Adicionar expiração.
-4. Criar testes unitários.
+2. Adicionar validaÃ§Ã£o forte.
+3. Adicionar expiraÃ§Ã£o.
+4. Criar testes unitÃ¡rios.
 5. Testar iOS Safari e PWA instalado.
 6. Testar cancelamento e atalho ausente.
 
 ---
 
-## 27. Critérios de aceite
+## 27. CritÃ©rios de aceite
 
 ### Funcionais
 
-- Usuário em iOS vê opção de medir com contexto Wi‑Fi.
-- Botão abre o Atalho instalado.
-- Atalho coleta dados disponíveis da rede.
+- UsuÃ¡rio em iOS vÃª opÃ§Ã£o de medir com contexto Wiâ€‘Fi.
+- BotÃ£o abre o Atalho instalado.
+- Atalho coleta dados disponÃ­veis da rede.
 - Atalho retorna ao PWA com dados.
 - PWA valida e salva contexto.
-- Resultado mostra bloco de contexto Wi‑Fi.
+- Resultado mostra bloco de contexto Wiâ€‘Fi.
 - Teste normal continua funcionando sem Atalho.
-- Cancelamento não quebra o app.
-- Histórico registra resumo Wi‑Fi quando disponível.
-- PDF não expõe BSSID/IP por padrão.
+- Cancelamento nÃ£o quebra o app.
+- HistÃ³rico registra resumo Wiâ€‘Fi quando disponÃ­vel.
+- PDF nÃ£o expÃµe BSSID/IP por padrÃ£o.
 
-### Técnicos
+### TÃ©cnicos
 
-- Parser ignora dados inválidos.
-- Payload expira após tempo definido.
-- Campos sensíveis são mascarados.
-- Código não depende de estado em memória após retorno.
-- Feature não quebra Android, desktop ou PWA normal.
-- Testes cobrem parsing, validação e classificação Wi‑Fi.
+- Parser ignora dados invÃ¡lidos.
+- Payload expira apÃ³s tempo definido.
+- Campos sensÃ­veis sÃ£o mascarados.
+- CÃ³digo nÃ£o depende de estado em memÃ³ria apÃ³s retorno.
+- Feature nÃ£o quebra Android, desktop ou PWA normal.
+- Testes cobrem parsing, validaÃ§Ã£o e classificaÃ§Ã£o Wiâ€‘Fi.
 
 ### UX
 
-- Usuário entende que o Atalho é opcional.
-- Usuário entende que taxa Wi‑Fi não é velocidade real da internet.
-- Mensagens evitam tecnicês na visão principal.
-- Detalhes técnicos ficam acessíveis, mas não dominam a tela.
+- UsuÃ¡rio entende que o Atalho Ã© opcional.
+- UsuÃ¡rio entende que taxa Wiâ€‘Fi nÃ£o Ã© velocidade real da internet.
+- Mensagens evitam tecnicÃªs na visÃ£o principal.
+- Detalhes tÃ©cnicos ficam acessÃ­veis, mas nÃ£o dominam a tela.
 
 ---
 
 ## 28. Testes sugeridos
 
-### 28.1 Testes unitários
+### 28.1 Testes unitÃ¡rios
 
 - `parseWifiCallback()` com payload completo.
 - `parseWifiCallback()` com campos faltando.
@@ -1179,15 +1179,15 @@ Não exibir CTA de Atalho iOS.
 - `classifyRssi()`.
 - `classifySnr()`.
 - `classifyLinkRate()`.
-- regras de diagnóstico combinado.
+- regras de diagnÃ³stico combinado.
 
 ### 28.2 Testes manuais iOS
 
-- iPhone em Wi‑Fi 2.4 GHz.
-- iPhone em Wi‑Fi 5 GHz.
+- iPhone em Wiâ€‘Fi 2.4 GHz.
+- iPhone em Wiâ€‘Fi 5 GHz.
 - iPhone longe do roteador.
 - iPhone perto do roteador.
-- iPhone em dados móveis.
+- iPhone em dados mÃ³veis.
 - Atalho instalado.
 - Atalho ausente.
 - Atalho cancelado.
@@ -1197,73 +1197,73 @@ Não exibir CTA de Atalho iOS.
 
 ### 28.3 Testes de privacidade
 
-- PDF padrão sem IP/BSSID.
+- PDF padrÃ£o sem IP/BSSID.
 - Compartilhamento sem IP/BSSID.
-- Histórico local com detalhes ocultos.
-- Botão de detalhes técnicos funcionando.
+- HistÃ³rico local com detalhes ocultos.
+- BotÃ£o de detalhes tÃ©cnicos funcionando.
 
 ---
 
-## 29. Riscos e mitigação
+## 29. Riscos e mitigaÃ§Ã£o
 
-### Risco: Atalho não instalado
+### Risco: Atalho nÃ£o instalado
 
-Mitigação:
+MitigaÃ§Ã£o:
 
 - feature opcional;
-- tela de instalação;
-- teste normal sempre disponível.
+- tela de instalaÃ§Ã£o;
+- teste normal sempre disponÃ­vel.
 
 ### Risco: iOS muda comportamento do deep link
 
-Mitigação:
+MitigaÃ§Ã£o:
 
 - fluxo tolerante;
 - fallback manual;
-- não tornar o Atalho obrigatório.
+- nÃ£o tornar o Atalho obrigatÃ³rio.
 
 ### Risco: retorno abre no Safari
 
-Mitigação:
+MitigaÃ§Ã£o:
 
 - callback por URL completa;
 - app funcional fora do standalone;
 - estado persistido via URL/sessionStorage.
 
-### Risco: usuário interpreta TX/RX como velocidade contratada
+### Risco: usuÃ¡rio interpreta TX/RX como velocidade contratada
 
-Mitigação:
+MitigaÃ§Ã£o:
 
 - texto claro;
-- chamar de “taxa negociada do Wi‑Fi”;
-- explicar que não é velocidade real da internet.
+- chamar de â€œtaxa negociada do Wiâ€‘Fiâ€;
+- explicar que nÃ£o Ã© velocidade real da internet.
 
-### Risco: exposição de identificadores
+### Risco: exposiÃ§Ã£o de identificadores
 
-Mitigação:
+MitigaÃ§Ã£o:
 
-- ocultar por padrão;
+- ocultar por padrÃ£o;
 - mascarar;
-- opção avançada desligada.
+- opÃ§Ã£o avanÃ§ada desligada.
 
 ---
 
 ## 30. Roadmap futuro
 
-### 30.1 Comparação por ambiente
+### 30.1 ComparaÃ§Ã£o por ambiente
 
 Permitir nomear local do teste:
 
 ```txt
 Sala
 Quarto
-Escritório
+EscritÃ³rio
 Perto do roteador
 ```
 
-Com isso, o usuário consegue comparar cobertura Wi‑Fi por cômodo.
+Com isso, o usuÃ¡rio consegue comparar cobertura Wiâ€‘Fi por cÃ´modo.
 
-### 30.2 Relatório de cobertura simples
+### 30.2 RelatÃ³rio de cobertura simples
 
 Gerar resumo:
 
@@ -1275,55 +1275,55 @@ O quarto apresentou sinal fraco e menor estabilidade que a sala.
 
 Gerar QR Code ou link curto para instalar o Atalho LINKA.
 
-### 30.4 Modo suporte técnico
+### 30.4 Modo suporte tÃ©cnico
 
-Criar modo com mais detalhes para técnicos:
+Criar modo com mais detalhes para tÃ©cnicos:
 
 - BSSID mascarado;
 - canal;
 - banda inferida;
 - taxa de link;
 - RSSI/SNR;
-- horário;
-- comparação com teste anterior.
+- horÃ¡rio;
+- comparaÃ§Ã£o com teste anterior.
 
-### 30.5 Integração nativa iOS futura
+### 30.5 IntegraÃ§Ã£o nativa iOS futura
 
 Caso o LINKA vire app nativo iOS, substituir o Atalho por coleta nativa via APIs permitidas.
 
 ---
 
-## 31. Decisão recomendada
+## 31. DecisÃ£o recomendada
 
-Implementar a feature como complemento opcional, com fluxo assistido pelo usuário.
+Implementar a feature como complemento opcional, com fluxo assistido pelo usuÃ¡rio.
 
-Não tentar executar o Atalho automaticamente de forma invisível.
+NÃ£o tentar executar o Atalho automaticamente de forma invisÃ­vel.
 
-Não tentar transformar o Atalho em speedtest paralelo.
+NÃ£o tentar transformar o Atalho em speedtest paralelo.
 
-O Atalho deve coletar somente o contexto local do Wi‑Fi. O LINKA continua responsável por medir velocidade, estabilidade, resposta e diagnóstico.
+O Atalho deve coletar somente o contexto local do Wiâ€‘Fi. O LINKA continua responsÃ¡vel por medir velocidade, estabilidade, resposta e diagnÃ³stico.
 
-Essa separação deixa a arquitetura mais limpa, reduz risco técnico e melhora a explicação para o usuário final.
+Essa separaÃ§Ã£o deixa a arquitetura mais limpa, reduz risco tÃ©cnico e melhora a explicaÃ§Ã£o para o usuÃ¡rio final.
 
 ---
 
 ## 32. Nome sugerido da feature
 
-Opções:
+OpÃ§Ãµes:
 
-- **Contexto Wi‑Fi**
-- **Diagnóstico Wi‑Fi do iPhone**
-- **Prova de Wi‑Fi**
-- **LINKA Wi‑Fi Context**
-- **Teste com contexto Wi‑Fi**
+- **Contexto Wiâ€‘Fi**
+- **DiagnÃ³stico Wiâ€‘Fi do iPhone**
+- **Prova de Wiâ€‘Fi**
+- **LINKA Wiâ€‘Fi Context**
+- **Teste com contexto Wiâ€‘Fi**
 
-Recomendação:
+RecomendaÃ§Ã£o:
 
 ```txt
-Teste com contexto Wi‑Fi
+Teste com contexto Wiâ€‘Fi
 ```
 
-Motivo: é claro para usuário comum e não promete mais do que entrega.
+Motivo: Ã© claro para usuÃ¡rio comum e nÃ£o promete mais do que entrega.
 
 ---
 
@@ -1333,24 +1333,25 @@ Motivo: é claro para usuário comum e não promete mais do que entrega.
 [ ] Criar tipo WifiContext
 [ ] Criar rota /wifi-callback
 [ ] Criar parser de retorno simples
-[ ] Criar validação de payload
+[ ] Criar validaÃ§Ã£o de payload
 [ ] Criar sessionStorage para contexto pendente
-[ ] Criar botão iOS no StartScreen
-[ ] Criar tela de instrução do Atalho
+[ ] Criar botÃ£o iOS no StartScreen
+[ ] Criar tela de instruÃ§Ã£o do Atalho
 [ ] Criar Atalho LINKA WiFi Context
 [ ] Testar deep link shortcuts://run-shortcut
 [ ] Testar retorno para PWA
 [ ] Anexar wifiContext ao SpeedTestResult
-[ ] Criar card de contexto Wi‑Fi no resultado
-[ ] Criar detalhes avançados
-[ ] Criar regras de diagnóstico combinado
-[ ] Atualizar histórico
+[ ] Criar card de contexto Wiâ€‘Fi no resultado
+[ ] Criar detalhes avanÃ§ados
+[ ] Criar regras de diagnÃ³stico combinado
+[ ] Atualizar histÃ³rico
 [ ] Atualizar PDF
 [ ] Atualizar compartilhamento
-[ ] Mascarar dados sensíveis
-[ ] Criar testes unitários
+[ ] Mascarar dados sensÃ­veis
+[ ] Criar testes unitÃ¡rios
 [ ] Validar em iOS Safari
 [ ] Validar em PWA instalado
 [ ] Validar fallback sem Atalho
 ```
+
 

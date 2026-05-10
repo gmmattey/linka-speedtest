@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import type { ConnectionType, DeviceInfo, GamingProfile, ServerInfo } from '../types';
 import type { Settings } from '../hooks/useSettings';
 import { SERVERS, coloToCity } from '../utils/serverRegistry';
+import { resolveCopy } from '../core';
 import { PathRow } from './PathRow';
 import './BottomSheet.css';
 
@@ -131,7 +132,7 @@ export function BottomSheet({ open, onToggle, onClose, device, server, loading, 
             <Row label="Provedor"    value={loading ? '…' : (server?.isp ?? '—')} />
             <Row label="Localização" value={loading ? '…' : (server?.loc && server.colo ? `${server.loc} · ${server.colo}` : (server?.loc ?? '—'))} />
             <Row label="Seu IP"      value={loading ? '…' : (server?.ip ?? '—')} />
-            <Row label="Dispositivo" value={loading ? '…' : `${device?.deviceType === 'mobile' ? 'Celular' : device?.deviceType === 'tablet' ? 'Tablet' : 'PC'} · ${effectiveConnection === 'wifi' ? 'Wi-Fi' : effectiveConnection === 'mobile' ? 'Dados móveis' : 'Cabo'}`} />
+            <Row label="Dispositivo" value={loading ? '…' : `${device?.deviceType === 'mobile' ? 'Celular' : device?.deviceType === 'tablet' ? 'Tablet' : 'PC'} · ${effectiveConnection === 'wifi' ? 'Wi-Fi' : effectiveConnection === 'mobile' ? 'Dados móveis' : effectiveConnection === 'cable' ? 'Cabo' : resolveCopy('connectionType.unknown.label')}`} />
           </div>
 
           {/* Settings section */}

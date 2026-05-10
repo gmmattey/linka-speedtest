@@ -1,5 +1,5 @@
 {
-  "name": "linka-speedtest",
+  "name": "linkaSpeedtestPwa",
   "private": true,
   "version": "1.0.0",
   "license": "MIT",
@@ -40,3 +40,4 @@
     "vitest": "^4.1.5"
   }
 }
+

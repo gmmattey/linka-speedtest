@@ -89,20 +89,17 @@ export function HistoryScreen({
     const avgJit = items.reduce((s, r) => s + r.jitter, 0)     / n;
     const avgLos = items.reduce((s, r) => s + r.packetLoss, 0) / n;
 
-    const last5 = items.slice(0, 5);
-    const syntheticLoss = (last5.filter((r) => r.quality === 'slow' || r.quality === 'unavailable').length / last5.length) * 100;
-
     const avgMetrics: SpeedTestResult = {
       dl: avgDl, ul: avgUl, latency: avgLat, jitter: avgJit,
-      packetLoss: Math.max(avgLos, syntheticLoss),
+      packetLoss: avgLos,
       timestamp: 0,
     };
-    const interpreted = interpretSpeedTestResult({ metrics: avgMetrics, profile: dominantProfile(items), history: items });
+    const interpreted = interpretSpeedTestResult(avgMetrics, dominantProfile(items), items);
     const unstable = interpreted.stability.level === 'unstable' || interpreted.stability.level === 'oscillating';
     return {
       avgDl, avgUl, n,
       headline: unstable
-        ? resolveCopy(interpreted.copyKeys.stabilityLabelKey)
+        ? `Conexão ${interpreted.stability.level === 'very_stable' ? 'muito estável' : interpreted.stability.level === 'stable' ? 'estável' : interpreted.stability.level === 'oscillating' ? 'oscilante' : 'instável'}`
         : resolveCopy(interpreted.copyKeys.headlineKey),
     };
   }, [items]);
@@ -167,7 +164,7 @@ export function HistoryScreen({
       packetLoss: sample.reduce((s, r) => s + r.packetLoss, 0) / n,
       timestamp:  mountTime,
     };
-    const interpreted = interpretSpeedTestResult({ metrics: avg, profile: dominantProfile(sample), history: sample });
+    const interpreted = interpretSpeedTestResult(avg, dominantProfile(sample), sample);
     const lines = interpreted.copyKeys.diagnosisKeys.map((k) => resolveCopy(k));
     return { lines: lines.slice(0, 2), windowLabel: recent.length > 0 ? '24h' : 'recente' };
   }, [items, mountTime]);
@@ -323,9 +320,6 @@ export function HistoryScreen({
                   >
                     <div className="lk-history__row1">
                       <span className="lk-history__date">{formatDate(r.timestamp)}</span>
-                      <Chip variant={qualityToChipVariant(r.quality)}>
-                        {resolveCopy(`quality.${r.quality}`)}
-                      </Chip>
                     </div>
                     <div className="lk-history__row2">
                       <span className="lk-history__dl">↓ {formatMbps(r.dl, unit)}</span>
@@ -388,13 +382,13 @@ export function HistoryScreen({
 }
 
 function HistoryDetail({ record, onBack, unit }: { record: TestRecord; onBack: () => void; unit: 'mbps' | 'gbps' }) {
-  const interpreted = useMemo(() => interpretSpeedTestResult({
-    metrics: {
+  const interpreted = useMemo(() => interpretSpeedTestResult(
+    {
       dl: record.dl, ul: record.ul, latency: record.latency,
       jitter: record.jitter, packetLoss: record.packetLoss, timestamp: record.timestamp,
-    },
-    profile: record.connectionProfile ?? 'fixed_broadband',
-  }), [record]);
+    } as SpeedTestResult,
+    record.connectionProfile ?? 'fixed_broadband',
+  ), [record]);
 
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
 
@@ -447,14 +441,17 @@ function HistoryDetail({ record, onBack, unit }: { record: TestRecord; onBack: (
         />
 
         <div className="lk-hist-detail__hero">
-          <Chip variant={qualityToChipVariant(interpreted.quality)}>
-            {resolveCopy(`quality.${interpreted.quality}`)}
+          <Chip variant={qualityToChipVariant(interpreted.primary)}>
+            {resolveCopy(`quality.${interpreted.primary}`)}
           </Chip>
           <div className="lk-hist-detail__title">
             {resolveCopy(interpreted.copyKeys.headlineKey)}
           </div>
           <p className="lk-hist-detail__sub">
-            {resolveCopy(interpreted.copyKeys.stabilityLabelKey)}
+            {interpreted.stability.level === 'very_stable' ? 'Conexão muito estável' :
+             interpreted.stability.level === 'stable' ? 'Conexão estável' :
+             interpreted.stability.level === 'oscillating' ? 'Conexão oscilante' :
+             'Conexão instável'}
           </p>
           {/* Bug-fix 2026-05 (rede móvel): ícone do tipo de conexão visível
               no hero do detalhe — clarifica de que rede o teste veio. */}

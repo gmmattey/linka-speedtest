@@ -89,12 +89,15 @@ export function StartScreen({
     const type = device.connectionType;
     if (type === 'wifi') return 'Wi-Fi';
     if (type === 'mobile') return 'Dados móveis';
-    return 'Cabo';
+    if (type === 'cable') return 'Cabo';
+    if (type === 'unknown') return resolveCopy('connectionType.unknown.label');
+    return 'Conexão';
   })();
 
   const connectionSub = (() => {
     if (!isOnline) return 'Sem conexão';
     if (loading) return 'Detectando…';
+    if (device?.connectionType === 'unknown') return resolveCopy('connectionType.unknown.guidance');
     return 'Conectado';
   })();
 
@@ -126,7 +129,7 @@ export function StartScreen({
         scrolled={scrolled}
         leftSlot={
           <span className="lk-start__logo">
-            li<span style={{ color: 'var(--accent)' }}>n</span>ka
+            Linka
           </span>
         }
         rightActions={[{
@@ -171,13 +174,13 @@ export function StartScreen({
             className={`lk-start__mode-btn${selectedMode === 'fast' ? ' lk-start__mode-btn--active' : ''}`}
             onClick={() => handleModeChange('fast')}
           >
-            Rápido
+            {resolveCopy('dataConsumption.quick_test.label')}
           </button>
           <button
             className={`lk-start__mode-btn${selectedMode === 'complete' ? ' lk-start__mode-btn--active' : ''}`}
             onClick={() => handleModeChange('complete')}
           >
-            Completo
+            {resolveCopy('dataConsumption.complete_test.label')}
           </button>
         </div>
 
@@ -185,11 +188,11 @@ export function StartScreen({
         <div className="lk-start__info">
           {selectedMode === 'fast' ? (
             <>
-              <div>Download, upload e resposta · cerca de 30s</div>
+              <div>{resolveCopy('dataConsumption.quick_test.purpose')} · {resolveCopy('dataConsumption.quick_test.usage')}</div>
             </>
           ) : (
             <>
-              <div>Teste mais completo para entender estabilidade · cerca de 60s</div>
+              <div>{resolveCopy('dataConsumption.complete_test.purpose')} · {resolveCopy('dataConsumption.complete_test.usage')}</div>
             </>
           )}
           {server && <div>{serverLabel}</div>}
@@ -229,7 +232,7 @@ export function StartScreen({
           <IOSList
             items={[
               ...(device ? [{
-                icon: <Icon name={device.connectionType === 'wifi' ? 'wifi' : device.connectionType === 'mobile' ? 'cellular' : 'router'} size={14} color="#fff" />,
+                icon: <Icon name={device.connectionType === 'wifi' ? 'wifi' : device.connectionType === 'mobile' ? 'cellular' : device.connectionType === 'cable' ? 'router' : 'network'} size={14} color="#fff" />,
                 iconBg: 'var(--info)',
                 title: connectionLabel ?? 'Conexão',
                 subtitle: connectionSub,

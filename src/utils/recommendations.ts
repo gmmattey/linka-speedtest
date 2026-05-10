@@ -155,7 +155,7 @@ export function buildRecommendations(
   }
 
   if (isDownloadLow) {
-    const recurringSlow = hasRecurringProblem(recentHistory, (r) => r.quality === 'slow');
+    const recurringSlow = hasRecurringProblem(recentHistory, (r) => r.dl < 10);
     if (recurringSlow) {
       recs.push(rec(
         'contact_op', 'Fale com a operadora',

@@ -42,7 +42,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: var(--space-md) 14px;
+  padding: 16px 14px;
   background: var(--surface-deep);
   border: 1px solid var(--border);
   border-left: 3px solid var(--text-3);
@@ -65,13 +65,13 @@
   margin: 0;
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text);
 }
 
 .lk-history__trend-comparison {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-2);
 }
 
@@ -163,7 +163,7 @@
   gap: var(--space-lg);
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 22px;
+  font-size: 28px;
   letter-spacing: -0.5px;
   font-variant-numeric: tabular-nums;
 }
@@ -173,7 +173,7 @@
 
 .lk-history__summary-quality {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-2);
 }
 
@@ -201,7 +201,7 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
-  padding: 13px 14px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--border-subtle);
   cursor: pointer;
   transition: background var(--t-fast);
@@ -251,7 +251,7 @@
   gap: var(--space-md);
   font-family: var(--font-mono);
   font-weight: 600;
-  font-size: 15px;
+  font-size: 16px;
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }
@@ -433,7 +433,7 @@
 .lk-hist-detail__title {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 26px;
+  font-size: 32px;
   letter-spacing: -0.01em;
   line-height: 1.15;
   margin-top: 0;

@@ -13,30 +13,5 @@
 
 export { interpretSpeedTestResult } from './interpret';
 export { resolveCopy } from './copyDictionary';
-export { runHeadlessTest } from './embed';
 export { useCaseGrade, gradeMetric, type UseCaseGrade } from './useCaseGrade';
-export type { HeadlessTestOptions, HeadlessTestResult } from './embed';
-export {
-  PROFILES,
-  GAMING_PROFILES,
-  type ProfileRules,
-  type QualityThresholds,
-  type FlagThresholds,
-  type UseCaseThresholds,
-  type GamingProfileId,
-  type GamingProfileDef,
-  type GamingProfileThresholds,
-} from './profiles';
-export type {
-  BlockingFactor,
-  InterpretedCopyKeys,
-  InterpretedRecommendation,
-  InterpretedResult,
-  InterpretFlags,
-  InterpretInput,
-  RecommendationTrigger,
-  StabilityLevel,
-  UseCaseId,
-  UseCaseStatus,
-  UseCaseVerdict,
-} from './types';
+export type { UseCaseId } from './types';

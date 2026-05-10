@@ -1,0 +1,407 @@
+// src/core/__tests__/interpret.test.ts
+import { interpretSpeedTestResult } from '../interpret';
+import type { SpeedTestResult, ConnectionProfile, TestRecord, InterpretedResult, BlockingFactor, UseCaseVerdict } from '../types';
+import { RULE_SET_VERSION } from '../utils/classifier';
+
+// Mock data para testes
+const mockSpeedTestResultBase: SpeedTestResult = {
+  dl: 500,
+  ul: 100,
+  latency: 20,
+  jitter: 5,
+  packetLoss: 0.5,
+  timestamp: Date.now(),
+  mode: 'normal',
+  dnsLatencyMs: 10,
+  ulFailed: false,
+  packetLossSource: 'native',
+};
+
+const mockProfileFixed: ConnectionProfile = 'fixed_broadband';
+const mockProfileMobile: ConnectionProfile = 'mobile_broadband';
+
+// Helper para criar um resultado de teste com métricas específicas
+const metrics = (overrides: Partial<SpeedTestResult>): SpeedTestResult => ({
+  ...mockSpeedTestResultBase,
+  ...overrides,
+});
+
+// Helper para rodar a interpretação com perfil e histórico (mock)
+const runInterpretation = (
+  result: SpeedTestResult,
+  profile: ConnectionProfile,
+  history: TestRecord[] = [],
+): InterpretedResult => {
+  // Garante que o profile seja sempre um valor válido para os testes
+  const validProfile = profile || 'fixed_broadband'; // Default to fixed_broadband if undefined
+  return interpretSpeedTestResult(result, validProfile, history);
+};
+
+
+describe('interpretSpeedTestResult', () => {
+  // --- Testes para Qualidade Primária e Flags ---
+
+  test('should return excellent quality for ideal fixed broadband conditions', () => {
+    const result: SpeedTestResult = metrics({ dl: 550, ul: 120, latency: 15, jitter: 3, packetLoss: 0.2 });
+    const interpreted = runInterpretation(result, mockProfileFixed);
+    expect(interpreted.primary).toBe('excellent');
+    expect(interpreted.flags).toEqual({
+      highLatency: false, lowUpload: false, unstable: false, packetLoss: false, veryUnstable: false,
+    });
+    expect(interpreted.copyKeys.headlineKey).toBe('quality.excellent');
+    expect(interpreted.copyKeys.shortPhraseKey).toBe('shortPhrase.excellent_fixed_broadband');
+  });
+
+  test('should return good quality for good fixed broadband conditions', () => {
+    const result: SpeedTestResult = metrics({ dl: 200, ul: 40, latency: 45, jitter: 12, packetLoss: 1.0 });
+    const interpreted = runInterpretation(result, mockProfileFixed);
+    expect(interpreted.primary).toBe('good');
+    expect(interpreted.flags).toEqual({
+      highLatency: false, lowUpload: false, unstable: false, packetLoss: false, veryUnstable: false,
+    });
+    expect(interpreted.copyKeys.headlineKey).toBe('quality.good');
+    expect(interpreted.copyKeys.shortPhraseKey).toBe('shortPhrase.good_fixed_broadband');
+  });
+
+  test('should return fair quality for fair fixed broadband conditions and trigger relevant flags', () => {
+    const result: SpeedTestResult = {
+      dl: 70, ul: 4, latency: 95, jitter: 45, packetLoss: 1.8, timestamp: Date.now(),
+    };
+    const interpreted = runInterpretation(result, mockProfileFixed);
+    expect(interpreted.primary).toBe('fair');
+    // Fixed thresholds: dlFair=10, ulFair=3, latFair=80, jitterFair=30, lossFair=2
+    // Flags thresholds: lat>80(highLatency), ul<5(lowUpload), jitter>50(unstable), loss>2(packetLoss/unstable), loss>5||jitter>80(veryUnstable)
+    expect(interpreted.flags.highLatency).toBe(true); // latency 95 > 80
+    expect(interpreted.flags.lowUpload).toBe(false); // ul 4 is NOT < 3
+    expect(interpreted.flags.unstable).toBe(false); // jitter 45 is NOT > 50
+    expect(interpreted.flags.packetLoss).toBe(false); // packetLoss 1.8 is NOT > 2
+    expect(interpreted.flags.veryUnstable).toBe(false); // packetLoss 1.8 not > 5 AND jitter 45 not > 80
+
+    const resultFairWithFlagsTriggered: SpeedTestResult = {
+      dl: 70, ul: 2, latency: 110, jitter: 60, packetLoss: 3, timestamp: Date.now(),
+    };
+    const interpretedFairWithFlagsTriggered = runInterpretation(resultFairWithFlagsTriggered, mockProfileFixed);
+    expect(interpretedFairWithFlagsTriggered.primary).toBe('fair');
+    expect(interpretedFairWithFlagsTriggered.flags).toEqual({
+      highLatency: true, // latency 110 > 80
+      lowUpload: true, // ul 2 < 3
+      unstable: true, // jitter 60 > 50
+      packetLoss: true, // packetLoss 3 > 2
+      veryUnstable: false, // packetLoss 3 is NOT > 5 AND jitter 60 is NOT > 80.
+    });
+    
+    const resultFairWithVeryUnstable: SpeedTestResult = {
+      dl: 70, ul: 2, latency: 110, jitter: 90, packetLoss: 6, timestamp: Date.now(),
+    };
+    const interpretedFairWithVeryUnstable = runInterpretation(resultFairWithVeryUnstable, mockProfileFixed);
+    expect(interpretedFairWithVeryUnstable.primary).toBe('fair');
+    expect(interpretedFairWithVeryUnstable.flags.veryUnstable).toBe(true); // jitter 90 > 80 OR packetLoss 6 > 5
+
+    expect(interpretedFairWithVeryUnstable.copyKeys.headlineKey).toBe('quality.fair');
+    expect(interpretedFairWithVeryUnstable.copyKeys.shortPhraseKey).toBe('shortPhrase.fair_fixed_broadband');
+    expect(interpretedFairWithVeryUnstable.copyKeys.diagnosisKeys).toEqual(expect.arrayContaining(['diag.highLatency', 'diag.lowUpload', 'diag.unstable', 'diag.packetLoss', 'diag.veryUnstable']));
+  });
+
+  test('should return slow quality for slow fixed broadband conditions and trigger relevant flags', () => {
+    const result: SpeedTestResult = {
+      dl: 5, ul: 1, latency: 150, jitter: 70, packetLoss: 3, timestamp: Date.now(),
+    };
+    const interpreted = runInterpretation(result, mockProfileFixed);
+    expect(interpreted.primary).toBe('slow');
+    // Fixed thresholds: latencyFair=80, jitterFair=30, packetLossFair=2
+    // Flags: latency>80(highLatency), ul<5(lowUpload), jitter>50(unstable), packetLoss>2(packetLoss/unstable), packetLoss>5||jitter>80(veryUnstable)
+    expect(interpreted.flags.highLatency).toBe(true); // latency 150 > 80
+    expect(interpreted.flags.lowUpload).toBe(true); // ul 1 < 3
+    expect(interpreted.flags.unstable).toBe(true); // jitter 70 > 50
+    expect(interpreted.flags.packetLoss).toBe(true); // packetLoss 3 > 2
+    expect(interpreted.flags.veryUnstable).toBe(false); // packetLoss 3 is NOT > 5 AND jitter 70 is NOT > 80.
+
+    const resultVeryUnstable: SpeedTestResult = {
+      dl: 5, ul: 1, latency: 150, jitter: 90, packetLoss: 6, timestamp: Date.now(),
+    };
+    const interpretedVeryUnstable = runInterpretation(resultVeryUnstable, mockProfileFixed);
+    expect(interpretedVeryUnstable.primary).toBe('slow');
+    expect(interpretedVeryUnstable.flags.veryUnstable).toBe(true); // jitter 90 > 80 OR packetLoss 6 > 5
+
+    expect(interpretedVeryUnstable.copyKeys.headlineKey).toBe('quality.slow');
+    expect(interpretedVeryUnstable.copyKeys.shortPhraseKey).toBe('shortPhrase.slow_fixed_broadband');
+    expect(interpretedVeryUnstable.copyKeys.diagnosisKeys).toEqual(expect.arrayContaining(['diag.highLatency', 'diag.lowUpload', 'diag.unstable', 'diag.packetLoss', 'diag.veryUnstable']));
+  });
+
+  test('should return unavailable quality when dl and ul are zero', () => {
+    const result: SpeedTestResult = {
+      dl: 0, ul: 0, latency: 0, jitter: 0, packetLoss: 0, timestamp: Date.now(),
+    };
+    const interpreted = runInterpretation(result, mockProfileFixed);
+    expect(interpreted.primary).toBe('unavailable');
+    expect(interpreted.flags).toEqual({
+      highLatency: false, lowUpload: false, unstable: false, packetLoss: false, veryUnstable: false,
+    });
+    expect(interpreted.copyKeys.headlineKey).toBe('quality.unavailable');
+  });
+
+  test('should return excellent quality for ideal mobile broadband conditions', () => {
+    const result: SpeedTestResult = {
+      dl: 120, ul: 25, latency: 25, jitter: 8, packetLoss: 0.8, timestamp: Date.now(),
+    };
+    const interpreted = runInterpretation(result, mockProfileMobile);
+    expect(interpreted.primary).toBe('excellent');
+    expect(interpreted.flags).toEqual({
+      highLatency: false, lowUpload: false, unstable: false, packetLoss: false, veryUnstable: false,
+    });
+    expect(interpreted.copyKeys.headlineKey).toBe('quality.excellent');
+    expect(interpreted.copyKeys.shortPhraseKey).toBe('shortPhrase.excellent_mobile_broadband');
+  });
+
+  test('should return slow quality for slow mobile broadband conditions and trigger relevant flags', () => {
+    const result: SpeedTestResult = {
+      dl: 4, ul: 0.5, latency: 160, jitter: 70, packetLoss: 4, timestamp: Date.now(),
+    };
+    const interpreted = runInterpretation(result, mockProfileMobile);
+    expect(interpreted.primary).toBe('slow');
+    // Mobile thresholds: download=5, upload=1, latency=150, jitter=60, packetLoss=3, packetLossHigh=7
+    expect(interpreted.flags.highLatency).toBe(true); // latency 160 > 150
+    expect(interpreted.flags.lowUpload).toBe(true); // ul 0.5 < 1
+    expect(interpreted.flags.unstable).toBe(true); // jitter 70 > 60
+    expect(interpreted.flags.packetLoss).toBe(true); // packetLoss 4 > 3
+    expect(interpreted.flags.veryUnstable).toBe(false); // packetLoss 4 is NOT > 7 AND jitter 70 is NOT > 80.
+
+    const resultMobileSlowAndVeryUnstable: SpeedTestResult = {
+      dl: 4, ul: 0.5, latency: 160, jitter: 90, packetLoss: 6, timestamp: Date.now(),
+    };
+    const interpretedMobileSlowAndVeryUnstable = runInterpretation(resultMobileSlowAndVeryUnstable, mockProfileMobile);
+    expect(interpretedMobileSlowAndVeryUnstable.primary).toBe('slow');
+    expect(interpretedMobileSlowAndVeryUnstable.flags.veryUnstable).toBe(true); // jitter 90 > 80 OR packetLoss 6 > 5
+
+    expect(interpretedMobileSlowAndVeryUnstable.copyKeys.headlineKey).toBe('quality.slow');
+    expect(interpretedMobileSlowAndVeryUnstable.copyKeys.shortPhraseKey).toBe('shortPhrase.slow_mobile_broadband');
+    expect(interpretedMobileSlowAndVeryUnstable.copyKeys.diagnosisKeys).toEqual(expect.arrayContaining(['diag.highLatency', 'diag.lowUpload', 'diag.unstable', 'diag.packetLoss', 'diag.veryUnstable']));
+  });
+
+  // --- Testes para Casos de Uso ---
+  describe('use case statuses and blockingFactors', () => {
+    const fixedProfile = mockProfileFixed;
+    const mobileProfile = mockProfileMobile;
+
+    test('should correctly determine use case statuses for excellent connection', () => {
+      const resultGood: SpeedTestResult = { dl: 550, ul: 120, latency: 15, jitter: 3, packetLoss: 0.2, timestamp: Date.now() };
+      const interpretedGood = runInterpretation(resultGood, fixedProfile);
+      expect(interpretedGood.useCases).toEqual([
+        { id: 'gaming', status: 'good', blockingFactors: [] },
+        { id: 'streaming_4k', status: 'good', blockingFactors: [] },
+        { id: 'home_office', status: 'good', blockingFactors: [] },
+        { id: 'video_call', status: 'good', blockingFactors: [] },
+      ]);
+    });
+
+    test('should identify limitations for gaming use case due to high latency and jitter', () => {
+      const resultGamingLimited: SpeedTestResult = { dl: 100, ul: 50, latency: 90, jitter: 40, packetLoss: 1.0, timestamp: Date.now() };
+      const interpretedGamingLimited = runInterpretation(resultGamingLimited, fixedProfile);
+      
+      expect(interpretedGamingLimited.useCases).toContainEqual({ id: 'gaming', status: 'limited', blockingFactors: ['latency', 'jitter'] });
+    });
+
+    test('should identify limitations for streaming_4k use case due to low download', () => {
+      const resultStreamingLimited: SpeedTestResult = { // dl=40 < 150 (good.dl)
+        dl: 40, ul: 10, latency: 50, jitter: 10, packetLoss: 1.0, timestamp: Date.now(),
+      };
+      const interpretedStreamingLimited = runInterpretation(resultStreamingLimited, fixedProfile);
+      expect(interpretedStreamingLimited.useCases).toContainEqual({ id: 'streaming_4k', status: 'limited', blockingFactors: ['dl'] });
+    });
+
+    test('should identify limitations for home_office use case due to low download', () => {
+      const resultHomeOfficeLimited: SpeedTestResult = { // dl=40 < 50 (good.dl)
+        dl: 40, ul: 10, latency: 50, jitter: 10, packetLoss: 1.0, timestamp: Date.now(),
+      };
+      const interpretedHomeOfficeLimited = runInterpretation(resultHomeOfficeLimited, fixedProfile);
+      expect(interpretedHomeOfficeLimited.useCases).toContainEqual({ id: 'home_office', status: 'limited', blockingFactors: ['dl'] });
+    });
+    
+    test('should identify limitations for video_call use case due to low download', () => {
+      const resultVideoCallLimited: SpeedTestResult = { // dl=40 < 50 (good.dl), but latency=100 fair, jitter=30 fair, ul=10 good
+        dl: 40, ul: 10, latency: 100, jitter: 30, packetLoss: 1.0, timestamp: Date.now(),
+      };
+      const interpretedVideoCallLimited = runInterpretation(resultVideoCallLimited, fixedProfile);
+      expect(interpretedVideoCallLimited.useCases).toContainEqual({ id: 'video_call', status: 'limited', blockingFactors: ['dl'] });
+    });
+
+    // Test for mobile profile use cases
+    test('should correctly determine use case statuses for mobile broadband', () => {
+      const resultMobileGood: SpeedTestResult = { // Mobile good: dl=50, ul=15, lat=50, jitter=20, loss=1.0
+        dl: 50, ul: 15, latency: 50, jitter: 20, packetLoss: 1.0, timestamp: Date.now(),
+      };
+      const interpretedMobileGood = runInterpretation(resultMobileGood, mockProfileMobile);
+      expect(interpretedMobileGood.useCases).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 'gaming', status: 'good', blockingFactors: [] }),
+        expect.objectContaining({ id: 'streaming_4k', status: 'good', blockingFactors: [] }),
+        expect.objectContaining({ id: 'home_office', status: 'good', blockingFactors: [] }),
+        expect.objectContaining({ id: 'video_call', status: 'good', blockingFactors: [] }),
+      ]));
+
+      const resultMobileLimited: SpeedTestResult = { // Mobile limited by latency and packet loss
+        dl: 20, ul: 5, latency: 160, jitter: 70, packetLoss: 4, timestamp: Date.now(),
+      };
+      const interpretedMobileLimited = runInterpretation(resultMobileLimited, mockProfileMobile);
+      // Mobile thresholds: fair(10,2,120,50,3). good(40,10,60,25,2)
+      expect(interpretedMobileLimited.useCases).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 'gaming', status: 'limited', blockingFactors: ['latency', 'jitter', 'packetLoss'] }),
+        expect.objectContaining({ id: 'streaming_4k', status: 'limited', blockingFactors: ['latency', 'jitter', 'packetLoss'] }),
+        expect.objectContaining({ id: 'home_office', status: 'limited', blockingFactors: ['latency', 'jitter', 'packetLoss'] }),
+        expect.objectContaining({ id: 'video_call', status: 'limited', blockingFactors: ['latency', 'jitter', 'packetLoss'] }),
+      ]));
+    });
+  });
+
+  // --- Testes para Recomendações ---
+  describe('recommendations generation', () => {
+    const mockHistory: TestRecord[] = []; // Mock history for tests
+
+    test('should generate high latency recommendation for fixed broadband', () => {
+      const result = metrics({ latency: 100 }); // Latency > 80
+      const interpreted = runInterpretation(result, mockProfileFixed);
+      expect(interpreted.recommendations).toContainEqual(expect.objectContaining({
+        id: 'high_latency_general',
+        title: 'Latência alta detectada',
+        priority: 'medium',
+        triggeredBy: ['highLatency'],
+      }));
+    });
+
+    test('should generate check mobile signal recommendation for mobile broadband with high latency', () => {
+      const result = metrics({ latency: 160 }); // Latency > 150 for mobile
+      const interpreted = runInterpretation(result, mockProfileMobile);
+      expect(interpreted.recommendations).toContainEqual(expect.objectContaining({
+        id: 'check_mobile_signal',
+        title: 'Verifique o sinal móvel',
+        priority: 'medium',
+        triggeredBy: ['highLatency', 'mobile_broadband'],
+      }));
+    });
+
+    test('should generate low upload recommendation', () => {
+      const result = metrics({ ul: 2 }); // ul < 3 for fixed, < 1 for mobile
+      const interpreted = runInterpretation(result, mockProfileFixed); // using fixed profile thresholds for ul < 3
+      expect(interpreted.recommendations).toContainEqual(expect.objectContaining({
+        id: 'low_upload_general',
+        title: 'Upload baixo detectado',
+        priority: 'high',
+        triggeredBy: ['lowUpload'],
+      }));
+    });
+
+    test('should generate router restart recommendation for moderate bufferbloat', () => {
+      const result = { ...metrics({}), bufferbloatSeverity: 'moderate' } as SpeedTestResult;
+      const interpreted = runInterpretation(result, mockProfileFixed);
+      expect(interpreted.recommendations).toContainEqual(expect.objectContaining({
+        id: 'restart_router',
+        title: 'Reinicie seu roteador',
+        priority: 'high',
+        actionType: 'restart_router',
+        triggeredBy: ['bufferbloatSeverity'],
+      }));
+    });
+
+    test('should generate connection stability check for unstable connection', () => {
+      const result = { ...metrics({}), bufferbloatSeverity: 'low' } as SpeedTestResult; // Assuming bufferbloat is not high/moderate
+      const interpreted = runInterpretation(result, mockProfileFixed);
+      // Flag 'unstable' is true if jitter > 50 or packetLoss > 2
+      // Let's trigger unstable via jitter
+      const resultUnstable = { ...result, jitter: 60 };
+      const interpretedUnstable = runInterpretation(resultUnstable, mockProfileFixed);
+      expect(interpretedUnstable.recommendations).toContainEqual(expect.objectContaining({
+        id: 'check_connection_stability',
+        title: 'Verifique a estabilidade da conexão',
+        priority: 'high',
+        triggeredBy: ['unstable'],
+      }));
+    });
+
+    // TODO: Integrar com histórico e use cases para recomendações mais precisas
+    // Testes para recomendações baseadas em histórico e use cases precisam ser adicionados.
+  });
+
+  // --- Teste para Estabilidade ---
+  describe('stability calculation', () => {
+    test('should return stable level for ideal conditions', () => {
+      const result = metrics({ jitter: 5, packetLoss: 0.5 });
+      const stability = getStabilityInfo(result);
+      expect(stability.level).toBe('stable');
+      expect(stability.score).toBe(0); // Placeholder score
+    });
+
+    test('should return oscillating level for moderate instability', () => {
+      const result = { ...metrics({}), jitter: 60, packetLoss: 3, timestamp: Date.now() }; // Jitter > 50, packetLoss > 2
+      const stability = getStabilityInfo(result);
+      expect(stability.level).toBe('oscillating');
+    });
+
+    test('should return unstable level for high instability', () => {
+      const result = { ...metrics({}), jitter: 90, packetLoss: 6, timestamp: Date.now() }; // Jitter > 80 OR packetLoss > 5
+      const stability = getStabilityInfo(result);
+      expect(stability.level).toBe('very_unstable');
+    });
+
+    test('should return correct score based on level', () => {
+      // Tests for score calculation based on level, assuming level determines score.
+      // This is a basic check. More granular score tests might be needed.
+      const resultStable = { ...metrics({}), jitter: 10, packetLoss: 0.5, timestamp: Date.now() };
+      expect(getStabilityInfo(resultStable)).toHaveProperty('score', 80); // Assuming score is 80 for stable
+
+      const resultUnstable = { ...metrics({}), jitter: 60, packetLoss: 3, timestamp: Date.now() };
+      expect(getStabilityInfo(resultUnstable)).toHaveProperty('score', 50); // Assuming score is 50 for oscillating
+    });
+  });
+
+  // --- Teste para Copy Keys ---
+  describe('copyKeys generation', () => {
+    test('should generate correct copyKeys for excellent quality', () => {
+      const result = metrics({ dl: 550, ul: 120, latency: 15, jitter: 3, packetLoss: 0.2 });
+      const interpreted = runInterpretation(result, mockProfileFixed);
+      // Expecting keys that can be resolved by resolveCopy
+      expect(interpreted.copyKeys.headlineKey).toBe('quality.excellent');
+      expect(interpreted.copyKeys.shortPhraseKey).toBe('shortPhrase.excellent_fixed_broadband');
+      expect(interpreted.copyKeys.diagnosisKeys).toEqual([]); // No flags triggered for excellent
+    });
+
+    test('should generate correct copyKeys for fair quality with flags', () => {
+      const result = { dl: 70, ul: 4, latency: 95, jitter: 45, packetLoss: 1.8, timestamp: Date.now() };
+      const interpreted = runInterpretation(result, mockProfileFixed);
+      // Based on current logic: primary='fair', flags: highLatency=true, lowUpload=false, unstable=false, packetLoss=false, veryUnstable=false
+      expect(interpreted.copyKeys.headlineKey).toBe('quality.fair');
+      expect(interpreted.copyKeys.shortPhraseKey).toBe('shortPhrase.fair_fixed_broadband');
+      // diagnosisKeys should reflect triggered flags.
+      expect(interpreted.copyKeys.diagnosisKeys).toEqual(['diag.highLatency']); // Only highLatency flag is true
+    });
+
+    test('should generate correct copyKeys for slow quality with multiple flags', () => {
+      const result = { dl: 5, ul: 1, latency: 150, jitter: 70, packetLoss: 3, timestamp: Date.now() };
+      const interpreted = runInterpretation(result, mockProfileFixed);
+      expect(interpreted.primary).toBe('slow');
+      expect(interpreted.flags).toEqual({ // Based on thresholds and current logic
+        highLatency: true, lowUpload: true, unstable: true, packetLoss: true, veryUnstable: false,
+      });
+      expect(interpreted.copyKeys.headlineKey).toBe('quality.slow');
+      expect(interpreted.copyKeys.shortPhraseKey).toBe('shortPhrase.slow_fixed_broadband');
+      expect(interpreted.copyKeys.diagnosisKeys).toEqual(expect.arrayContaining(['diag.highLatency', 'diag.lowUpload', 'diag.unstable', 'diag.packetLoss']));
+    });
+
+    test('should generate correct copyKeys for unavailable quality', () => {
+      const result = { dl: 0, ul: 0, latency: 0, jitter: 0, packetLoss: 0, timestamp: Date.now() };
+      const interpreted = runInterpretation(result, mockProfileFixed);
+      expect(interpreted.primary).toBe('unavailable');
+      expect(interpreted.copyKeys.headlineKey).toBe('quality.unavailable');
+      expect(interpreted.copyKeys.shortPhraseKey).toBe('shortPhrase.unavailable_fixed_broadband');
+      expect(interpreted.copyKeys.diagnosisKeys).toEqual([]); // No flags triggered for unavailable
+    });
+  });
+
+  // TODO: Add tests for legacy fallback if USE_NEW_INTERPRETATION_ENGINE is false.
+  // This requires a way to control the feature flag during testing.
+});
+
+// Helper function to mock the result and pass to interpretSpeedTestResult
+function run(result: SpeedTestResult, profile: ConnectionProfile = mockProfileFixed, history: TestRecord[] = []): InterpretedResult {
+  // Assuming USE_NEW_INTERPRETATION_ENGINE is true for these tests.
+  // In a real test setup, the feature flag could be mocked.
+  return interpretSpeedTestResult(result, profile, history);
+}

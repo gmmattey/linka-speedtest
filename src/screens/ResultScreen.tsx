@@ -10,6 +10,7 @@ import { generateShareCard } from '../utils/shareCard';
 import { buildShareText, shareResultText } from '../utils/share';
 import type { Quality, ServerInfo, SpeedTestResult, TestRecord } from '../types';
 import { interpretSpeedTestResult, resolveCopy, useCaseGrade, type UseCaseGrade } from '../core';
+import { useDiagnosisItems } from '../features/diagnosis';
 
 import type { UseCaseId } from '../core';
 import { loadHistory } from '../utils/history';
@@ -22,7 +23,7 @@ import { combineDiagnostics } from '../utils/combinedDiagnosis';
 import { toConnectionProfile } from '../utils/connectionProfile';
 import { anatelGrade, anatelGradeColorVar, anatelGradeGlowVar } from '../utils/anatelColor';
 import { classifyDnsLatency } from '../utils/dnsTiming';
-import { aggregateDiagnosisSeverity, buildDiagnosisItems, type DiagnosisAggregate, type DiagnosisItem } from '../utils/diagnosisItems';
+import { aggregateDiagnosisSeverity, type DiagnosisAggregate, type DiagnosisItem } from '../utils/diagnosisItems';
 import { WifiSignalSection } from '../features/local-wifi/WifiSignalSection';
 import { InfoTooltip } from '../components/InfoTooltip';
 
@@ -129,14 +130,7 @@ function gradeStyle(g: UseCaseGrade): { background: string; color: string } {
 // =============================================================================
 
 function verdictLabel(q: Quality): string {
-  const map: Record<Quality, string> = {
-    excellent:   'Excelente',
-    good:        'Boa',
-    fair:        'Aceitável',
-    slow:        'Lenta',
-    unavailable: 'Sem conexão',
-  };
-  return map[q];
+  return resolveCopy(`quality.${q}.headline`);
 }
 
 // =============================================================================
@@ -285,11 +279,11 @@ export function ResultScreen({
     [connectionType],
   );
   const interpreted = useMemo(
-    () => interpretSpeedTestResult({
-      metrics: result,
+    () => interpretSpeedTestResult(
+      result,
       profile,
       history,
-    }),
+    ),
     [result, profile, history],
   );
 
@@ -303,6 +297,8 @@ export function ResultScreen({
       }),
     [result, connectionType],
   );
+
+  const diagnosisItems = useDiagnosisItems(result, connectionType);
 
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
 
@@ -333,7 +329,7 @@ export function ResultScreen({
   const shareCardIsp = server?.isp ?? null;
 
   const handleShare = async () => {
-    const text = buildShareText(result, interpreted.quality, unit);
+    const text = buildShareText(result, interpreted.primary, unit);
     const outcome = await shareResultText(text);
     if (outcome === 'copied') {
       setShareStatus('copied');
@@ -349,7 +345,7 @@ export function ResultScreen({
     if (waGenerating) return;
     setWaGenerating(true);
     try {
-      const blob = await generateShareCard(result, interpreted.quality, unit, {
+      const blob = await generateShareCard(result, interpreted.primary, unit, {
         headline: shareCardHeadline,
         isp: shareCardIsp,
       });
@@ -357,7 +353,7 @@ export function ResultScreen({
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], title: 'linka SpeedTest' });
       } else {
-        const text = buildShareText(result, interpreted.quality, unit);
+        const text = buildShareText(result, interpreted.primary, unit);
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
       }
     } catch { /* cancelado */ }
@@ -371,7 +367,7 @@ export function ResultScreen({
     if (imgGenerating) return;
     setImgGenerating(true);
     try {
-      const blob = await generateShareCard(result, interpreted.quality, unit, {
+      const blob = await generateShareCard(result, interpreted.primary, unit, {
         headline: shareCardHeadline,
         isp: shareCardIsp,
       });
@@ -390,7 +386,7 @@ export function ResultScreen({
       }
     } catch { /* cancelado */ }
     finally { setImgGenerating(false); }
-  }, [result, interpreted.quality, unit, shareCardHeadline, shareCardIsp, imgGenerating]);
+  }, [result, interpreted.primary, unit, shareCardHeadline, shareCardIsp, imgGenerating]);
 
   // Mantido para o HamburgerMenu (mesmo fluxo do botão de imagem).
   const handleNativeShare = useCallback(async () => {
@@ -538,15 +534,15 @@ export function ResultScreen({
             flutuante que pairava acima deles. Agora tudo está dentro de
             UM `.lk-result__test-card`, separado por hairlines internos,
             com um ribbon colorido de 3px no topo (cor derivada de
-            `interpreted.quality`) substituindo o chip flutuante. O
+            `interpreted.primary`) substituindo o chip flutuante. O
             verdict continua acessível via `aria-label` + texto
             `sr-only`. */}
         <section
           className="lk-result__test-card"
-          style={{ ['--ribbon-color' as never]: qualityRibbonColor(interpreted.quality) } as CSSProperties}
-          aria-label={`Resultado: ${verdictLabel(interpreted.quality)}`}
+          style={{ ['--ribbon-color' as never]: qualityRibbonColor(interpreted.primary) } as CSSProperties}
+          aria-label={`Resultado: ${verdictLabel(interpreted.primary)}`}
         >
-          <span className="sr-only">Verdict: {verdictLabel(interpreted.quality)}</span>
+          <span className="sr-only">Verdict: {verdictLabel(interpreted.primary)}</span>
 
         {/* ── Bloco PRIMARY — Download e Upload em fonte enorme ───────────
             Hierarquia visual nova (refactor 2026-05): as duas métricas
@@ -808,16 +804,15 @@ export function ResultScreen({
             (com card adicional opcional para DNS lento). Agora é um card
             com DOIS estados:
 
-            (a) HEALTHY — quando `combined.cause === 'healthy'` e nenhum
-                item por métrica disparou warn/fail. Layout centralizado:
-                ícone check verde com drop-shadow + título grande "Tudo
-                certo com sua rede". Sem subcards.
+            (a) HEALTHY — quando não há items de diagnóstico. Layout centralizado:
+                ícone check verde + título grande "Tudo certo com sua rede".
+                Sem subcards.
 
             (b) COM AÇÃO — lista compacta `[problema] → [ação]` derivada
-                de `buildDiagnosisItems()` (porto da DiagnosticScreen
-                morta). Limita a 3 visíveis; "ver mais N" expande inline.
-                Priorizado por severidade (fail > warn). Mantém a
-                recomendação extra de DNS lento como item adicional.
+                do Rules Engine v1 (Phase 2b). Limita a 3 visíveis;
+                "ver mais N" expande inline. Priorizado por severidade
+                (fail > warn). Mantém a recomendação extra de DNS lento
+                como item adicional.
 
             Glow por severidade (refator 2026-05): a cor do box-shadow do
             card reflete a severidade agregada — healthy → verde, warn →
@@ -827,12 +822,12 @@ export function ResultScreen({
             `--diag-glow-color` lida pela animação CSS
             `lk-result-diag-glow`. */}
         {(() => {
-          const items = buildDiagnosisItems(result, connectionType ?? null);
+          const items = diagnosisItems.items;
           const dnsGrade = classifyDnsLatency(result.dnsLatencyMs ?? null);
           const isSlowDns = dnsGrade === 'slow' || dnsGrade === 'poor';
           const isIspDns = result.dnsProvider === 'DNS do provedor';
           const hasDnsHint = isSlowDns && isIspDns;
-          const isHealthy = combined.cause === 'healthy' && items.length === 0;
+          const isHealthy = items.length === 0;
 
           // Severidade agregada → cor do glow do card. A animação CSS
           // `lk-result-diag-glow` lê `--diag-glow-color` e pulsa em todos

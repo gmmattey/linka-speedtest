@@ -1,423 +1,204 @@
-/**
- * Motor unificado de interpretação de resultado de speedtest.
- *
- * Função única `interpretSpeedTestResult()` substitui (eventualmente) as
- * traduções número→texto espalhadas pelo PWA. Pura, sem React/DOM/localStorage.
- *
- * Ver `docs/DocumentacaoTecnicaSistema.md` §3.10 para o contrato completo.
- */
-
-import type { Quality, SpeedTestResult, TestRecord } from '../types';
-import { RULE_SET_VERSION } from '../utils/classifier';
-import { PROFILES, type ProfileRules, type UseCaseThresholds } from './profiles';
+// src/core/interpret.ts
 import type {
-  BlockingFactor,
-  InterpretedRecommendation,
+  ConnectionProfile,
   InterpretedResult,
-  InterpretFlags,
-  InterpretInput,
-  StabilityLevel,
   UseCaseId,
+  RuleSetVersion,
   UseCaseVerdict,
+  Tag,
+  Quality,
+  SpeedTestResult,
+  TestRecord,
 } from './types';
+import { resolveCopy } from './copyDictionary';
+import { profiles } from './profiles'; // Removido getUseCaseThresholds pois está sendo tratado diretamente
 
-// =============================================================================
-// Helpers
-// =============================================================================
+export const RULE_SET_VERSION: RuleSetVersion = 'v2'; // Nova versão do RuleSet
 
-function clamp(v: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, v));
+// --- Helpers ---
+function getMetricValue(result: SpeedTestResult, metric: keyof SpeedTestResult): number {
+  return (result[metric] as number) || 0;
 }
 
-const STABILITY_ORDER: StabilityLevel[] = [
-  'unstable',
-  'oscillating',
-  'stable',
-  'very_stable',
-];
+// --- Core Interpretation Logic ---
 
-function downgradeStability(level: StabilityLevel): StabilityLevel {
-  const idx = STABILITY_ORDER.indexOf(level);
-  // Já no piso (`unstable`) — não rebaixa abaixo.
-  if (idx <= 0) return level;
-  return STABILITY_ORDER[idx - 1];
-}
+function getPrimaryQualityAndTags(
+  result: SpeedTestResult,
+  profile: ConnectionProfile,
+): { primary: Quality; tags: Set<Tag> } {
+  const tags = new Set<Tag>();
+  const profileThresholds = profiles[profile];
+  const flagsThresholds = profiles.flags;
 
-// =============================================================================
-// Quality
-// =============================================================================
+  if (!profileThresholds || !flagsThresholds) {
+    console.error(`Thresholds not found for profile: ${profile}`);
+    return { primary: 'unavailable', tags: new Set<Tag>() };
+  }
 
-function computeQuality(metrics: SpeedTestResult, rules: ProfileRules): Quality {
-  const { dl, ul, latency, jitter, packetLoss } = metrics;
-  const q = rules.quality;
+  // Tags/chips consolidados (Seção 8)
+  if (getMetricValue(result, 'latency') > flagsThresholds.highLatency) tags.add('highLatency');
+  if (getMetricValue(result, 'ul') < flagsThresholds.lowUpload && getMetricValue(result, 'ul') > 0) tags.add('lowUpload'); // Apenas se houver upload medido
 
-  if (dl === 0 && ul === 0) return 'unavailable';
+  // PacketLoss e Unstable
+  if (getMetricValue(result, 'packetLoss') > flagsThresholds.packetLossWarning) {
+    tags.add('packetLoss');
+    tags.add('unstable'); // Se packetLoss > 2%, ativa unstable
+  }
 
-  let quality: Quality;
+  // Unstable por Jitter
+  if (getMetricValue(result, 'jitter') > flagsThresholds.unstableJitter) {
+    tags.add('unstable');
+  }
 
-  if (
-    dl >= q.excellent.dl &&
-    ul >= q.excellent.ul &&
-    latency <= q.excellent.latency &&
-    jitter <= q.excellent.jitter &&
-    packetLoss <= q.excellent.packetLoss
-  ) {
-    quality = 'excellent';
+  // VeryUnstable
+  if (getMetricValue(result, 'packetLoss') > flagsThresholds.veryUnstablePacketLoss || getMetricValue(result, 'jitter') > flagsThresholds.veryUnstableJitter) {
+    tags.add('veryUnstable');
+    tags.add('unstable'); // Se veryUnstable, também ativa unstable
+  }
+
+  let primary: Quality;
+
+  // Regra consolidada de classificação principal (Seção 7) - Ordem importa!
+  if (getMetricValue(result, 'dl') === 0 && getMetricValue(result, 'ul') === 0) {
+    primary = 'unavailable';
   } else if (
-    dl >= q.good.dl &&
-    ul >= q.good.ul &&
-    latency <= q.good.latency &&
-    jitter <= q.good.jitter &&
-    packetLoss <= q.good.packetLoss
+    getMetricValue(result, 'dl') >= profileThresholds.excellent.download &&
+    getMetricValue(result, 'ul') >= profileThresholds.excellent.upload &&
+    getMetricValue(result, 'latency') <= profileThresholds.excellent.latency &&
+    getMetricValue(result, 'jitter') <= profileThresholds.excellent.jitter &&
+    getMetricValue(result, 'packetLoss') <= profileThresholds.excellent.packetLoss
   ) {
-    quality = 'good';
+    primary = 'excellent';
   } else if (
-    dl >= q.fair.dl &&
-    ul >= q.fair.ul &&
-    latency <= q.fair.latency &&
-    packetLoss <= q.fair.packetLoss
+    getMetricValue(result, 'dl') >= profileThresholds.good.download &&
+    getMetricValue(result, 'ul') >= profileThresholds.good.upload &&
+    getMetricValue(result, 'latency') <= profileThresholds.good.latency &&
+    getMetricValue(result, 'jitter') <= profileThresholds.good.jitter &&
+    getMetricValue(result, 'packetLoss') <= profileThresholds.good.packetLoss
   ) {
-    quality = 'fair';
-  } else if (dl > 0 || ul > 0) {
-    quality = 'slow';
+    primary = 'good';
+  } else if (
+    getMetricValue(result, 'dl') >= profileThresholds.fair.download &&
+    getMetricValue(result, 'ul') >= profileThresholds.fair.upload &&
+    getMetricValue(result, 'latency') <= profileThresholds.fair.latency &&
+    getMetricValue(result, 'packetLoss') <= profileThresholds.fair.packetLoss
+  ) {
+    primary = 'fair';
+  } else if (getMetricValue(result, 'dl') > 0 || getMetricValue(result, 'ul') > 0) {
+    primary = 'slow';
   } else {
-    quality = 'unavailable';
+    primary = 'unavailable'; // Fallback final, embora o primeiro if já cubra isso
   }
 
-  // Bufferbloat crítico penaliza um nível: excellent→good, good→fair.
-  if (metrics.bufferbloatSeverity === 'critical') {
-    if (quality === 'excellent') quality = 'good';
-    else if (quality === 'good') quality = 'fair';
-  }
-
-  return quality;
+  return { primary, tags };
 }
 
-// =============================================================================
-// Flags
-// =============================================================================
+function getUseCaseStatus(
+  _result: SpeedTestResult,
+  useCaseId: UseCaseId,
+): UseCaseVerdict {
+  return { id: useCaseId, status: 'unknown', blockingFactors: [] };
+}
 
-function computeFlags(metrics: SpeedTestResult, rules: ProfileRules): InterpretFlags {
-  const f = rules.flags;
-  return {
-    highLatency:  metrics.latency > f.highLatency,
-    lowUpload:    metrics.ul < f.lowUpload,
-    unstable:     metrics.jitter > f.unstable,
-    packetLoss:   metrics.packetLoss > f.packetLoss,
-    // Paridade legacy: veryUnstable é jitter > 80 OR packetLoss > 5.
-    // Mantemos o `veryUnstable: number` como threshold de jitter; a perda
-    // crítica usa `packetLoss * 2.5` (gera 5 com fixa, 5 com móvel — ambos
-    // refletem o mesmo limiar regulatório).
-    veryUnstable:    metrics.jitter > f.veryUnstable || metrics.packetLoss > f.packetLoss * 2.5,
-    highBufferbloat: metrics.bufferbloatSeverity === 'high' || metrics.bufferbloatSeverity === 'critical',
+function getRecommendations(
+  _result: SpeedTestResult,
+  _profile: ConnectionProfile,
+  _flags: InterpretedResult['flags'],
+  _useCases: UseCaseVerdict[],
+  _history: TestRecord[] = [],
+): InterpretedResult['recommendations'] {
+  return [];
+}
+
+function getStabilityInfo(result: SpeedTestResult): InterpretedResult['stability'] {
+  const flagsThresholds = profiles.flags;
+  const jitter = getMetricValue(result, 'jitter');
+  const packetLoss = getMetricValue(result, 'packetLoss');
+
+  let stabilityScore: number;
+  let stabilityLevel: InterpretedResult['stability']['level'];
+
+  // Se ambos estiverem ausentes, exibir "Não medido" (cuidado: este motor não lida com isso aqui)
+  // Assumimos que jitter e packetLoss serão 0 se não medidos.
+  if (jitter === undefined && packetLoss === undefined) {
+    // Isso deve ser tratado em um nível acima ou assumir uma pontuação baixa/desconhecida
+    stabilityScore = 0; // Ou um valor que indique "não medido"
+    stabilityLevel = 'unstable'; // Ou 'very_stable' se não houver fatores negativos
+  } else {
+    // Se oscilação estiver ausente, usar apenas perda; se perda estiver ausente, usar apenas oscilação
+    const currentJitter = jitter !== undefined ? jitter : 0;
+    const currentPacketLoss = packetLoss !== undefined ? packetLoss : 0;
+
+    const jitterScore = 100 - clamp((currentJitter / flagsThresholds.unstableJitter) * 100, 0, 100);
+    const lossScore = 100 - clamp((currentPacketLoss / flagsThresholds.packetLossWarning) * 100, 0, 100);
+
+    // Regra: nunca dividir por resposta/latência; nunca retornar abaixo de 0 ou acima de 100
+    // O clamp já garante 0-100.
+    stabilityScore = Math.round(
+      (flagsThresholds.stabilityJitterWeight * jitterScore) +
+      (flagsThresholds.stabilityLossWeight * lossScore)
+    );
+
+    // Ajustar o código atual porque ele usa `>=85` para “Muito estável” e `>=60` para “Estável”.
+    if (stabilityScore >= flagsThresholds.stabilityExcellentScore) {
+      stabilityLevel = 'very_stable';
+    } else if (stabilityScore >= flagsThresholds.stabilityGoodScore) {
+      stabilityLevel = 'stable';
+    } else if (stabilityScore >= flagsThresholds.stabilityFairScore) {
+      stabilityLevel = 'oscillating';
+    } else {
+      stabilityLevel = 'unstable';
+    }
+  }
+
+  return { score: stabilityScore, level: stabilityLevel };
+}
+
+// Helper para clamp, já que não temos o utilitário aqui
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(value, max));
+}
+
+export function interpretSpeedTestResult(
+  result: SpeedTestResult,
+  profile: ConnectionProfile,
+  history: TestRecord[] = [],
+): InterpretedResult {
+  // Ensure profile is valid before proceeding
+  if (!profile || !(profile in profiles)) {
+    console.error(`Invalid or missing profile: ${profile}`);
+    // Fallback to a default profile or return an error/unavailable state
+    profile = 'fixed_broadband'; // Defaulting to fixed_broadband as a fallback
+  }
+
+  const { primary, tags } = getPrimaryQualityAndTags(result, profile);
+  const flags = {
+    highLatency: tags.has('highLatency'),
+    lowUpload: tags.has('lowUpload'),
+    unstable: tags.has('unstable'),
+    packetLoss: tags.has('packetLoss'),
+    veryUnstable: tags.has('veryUnstable'),
   };
-}
 
-// =============================================================================
-// Stability
-// =============================================================================
+  const useCases: UseCaseId[] = ['gaming', 'streaming_4k', 'home_office', 'video_call'];
+  const useCaseVerdicts = useCases.map((id) => getUseCaseStatus(result, id));
 
-function computeStabilityScoreFromMetrics(metrics: SpeedTestResult): number {
-  // Mantém a fórmula do classifier legado (stability.ts em coexistência):
-  //   jitterScore = 100 - clamp((jitter/50)*100, 0, 100)
-  //   lossScore   = 100 - clamp((loss/2)*100,   0, 100)
-  //   score       = round(0.6 * jitterScore + 0.4 * lossScore)
-  const jitterScore = 100 - clamp((metrics.jitter / 50) * 100, 0, 100);
-  const lossScore = 100 - clamp((metrics.packetLoss / 2) * 100, 0, 100);
-  return Math.round(0.6 * jitterScore + 0.4 * lossScore);
-}
+  const recommendations = getRecommendations(result, profile, flags, useCaseVerdicts, history);
 
-function scoreToLevel(score: number): StabilityLevel {
-  if (score >= 85) return 'very_stable';
-  if (score >= 60) return 'stable';
-  if (score >= 35) return 'oscillating';
-  return 'unstable';
-}
-
-function computeStability(
-  metrics: SpeedTestResult,
-  rules: ProfileRules,
-): { score: number; level: StabilityLevel } {
-  // Preferir o score calculado pelo motor v2 (série temporal), que é mais preciso
-  // do que a fórmula derivada apenas de jitter e perda.
-  const score = metrics.stabilityScore ?? computeStabilityScoreFromMetrics(metrics);
-  let level = scoreToLevel(score);
-
-  // Achado #2: "Muito estável" + "Resposta alta" não pode coexistir. Se a
-  // latência estoura 1.5× o limiar de highLatency, rebaixamos um nível —
-  // garantia contra inconsistência percebida pelo usuário.
-  if (metrics.latency > rules.flags.highLatency * 1.5) {
-    level = downgradeStability(level);
-  }
-
-  return { score, level };
-}
-
-// =============================================================================
-// Use cases
-// =============================================================================
-
-interface UseCaseEvaluator {
-  good:  (m: SpeedTestResult) => BlockingFactor[];   // retorna fatores que falharam
-  maybe: (m: SpeedTestResult) => BlockingFactor[];
-}
-
-function buildUseCaseEvaluators(rules: UseCaseThresholds): Record<UseCaseId, UseCaseEvaluator> {
-  return {
-    gaming: {
-      good: (m) => {
-        const t = rules.gaming.good;
-        const fails: BlockingFactor[] = [];
-        if (m.dl < t.dl) fails.push('dl');
-        if (m.latency > t.latency) fails.push('latency');
-        if (m.jitter > t.jitter) fails.push('jitter');
-        if (m.packetLoss > t.packetLoss) fails.push('packetLoss');
-        return fails;
-      },
-      maybe: (m) => {
-        const t = rules.gaming.maybe;
-        const fails: BlockingFactor[] = [];
-        if (m.dl < t.dl) fails.push('dl');
-        if (m.latency > t.latency) fails.push('latency');
-        if (m.jitter > t.jitter) fails.push('jitter');
-        if (m.packetLoss > t.packetLoss) fails.push('packetLoss');
-        return fails;
-      },
-    },
-    streaming_4k: {
-      good: (m) => {
-        const t = rules.streaming_4k.good;
-        const fails: BlockingFactor[] = [];
-        if (m.dl < t.dl) fails.push('dl');
-        if (m.jitter > t.jitter) fails.push('jitter');
-        if (m.packetLoss > t.packetLoss) fails.push('packetLoss');
-        return fails;
-      },
-      maybe: (m) => {
-        const t = rules.streaming_4k.maybe;
-        const fails: BlockingFactor[] = [];
-        if (m.dl < t.dl) fails.push('dl');
-        if (m.jitter > t.jitter) fails.push('jitter');
-        if (m.packetLoss > t.packetLoss) fails.push('packetLoss');
-        return fails;
-      },
-    },
-    home_office: {
-      good: (m) => {
-        const t = rules.home_office.good;
-        const fails: BlockingFactor[] = [];
-        if (m.dl < t.dl) fails.push('dl');
-        if (m.ul < t.ul) fails.push('ul');
-        if (m.latency > t.latency) fails.push('latency');
-        if (m.jitter > t.jitter) fails.push('jitter');
-        if (m.packetLoss > t.packetLoss) fails.push('packetLoss');
-        return fails;
-      },
-      maybe: (m) => {
-        const t = rules.home_office.maybe;
-        const fails: BlockingFactor[] = [];
-        if (m.dl < t.dl) fails.push('dl');
-        if (m.ul < t.ul) fails.push('ul');
-        if (m.latency > t.latency) fails.push('latency');
-        if (m.jitter > t.jitter) fails.push('jitter');
-        if (m.packetLoss > t.packetLoss) fails.push('packetLoss');
-        return fails;
-      },
-    },
-    video_call: {
-      good: (m) => {
-        const t = rules.video_call.good;
-        const fails: BlockingFactor[] = [];
-        if (m.dl < t.dl) fails.push('dl');
-        if (m.ul < t.ul) fails.push('ul');
-        if (m.latency > t.latency) fails.push('latency');
-        if (m.jitter > t.jitter) fails.push('jitter');
-        if (m.packetLoss > t.packetLoss) fails.push('packetLoss');
-        return fails;
-      },
-      maybe: (m) => {
-        const t = rules.video_call.maybe;
-        const fails: BlockingFactor[] = [];
-        if (m.dl < t.dl) fails.push('dl');
-        if (m.ul < t.ul) fails.push('ul');
-        if (m.latency > t.latency) fails.push('latency');
-        if (m.jitter > t.jitter) fails.push('jitter');
-        if (m.packetLoss > t.packetLoss) fails.push('packetLoss');
-        return fails;
-      },
-    },
+  // Construct copyKeys using resolveCopy for dynamic text generation
+  const copyKeys = {
+    headlineKey: resolveCopy(`quality.${primary}.headline`),
+    shortPhraseKey: resolveCopy(`quality.${primary}.shortPhrase`),
+    diagnosisKeys: Array.from(tags).map(tag => resolveCopy(`tag.${tag}.message`)),
   };
-}
-
-const USE_CASE_IDS: UseCaseId[] = ['gaming', 'streaming_4k', 'home_office', 'video_call'];
-
-function evaluateUseCases(
-  metrics: SpeedTestResult,
-  rules: ProfileRules,
-): UseCaseVerdict[] {
-  const evaluators = buildUseCaseEvaluators(rules.useCases);
-  return USE_CASE_IDS.map<UseCaseVerdict>((id) => {
-    const ev = evaluators[id];
-    const goodFails = ev.good(metrics);
-    if (goodFails.length === 0) {
-      return { id, status: 'good', blockingFactors: [] };
-    }
-    const maybeFails = ev.maybe(metrics);
-    if (maybeFails.length === 0) {
-      // Subiu de "maybe-or-worse" para "maybe": os fatores que ficaram fora do
-      // patamar `good` são os que justificam estar em `maybe`.
-      return { id, status: 'maybe', blockingFactors: goodFails };
-    }
-    // Ficou abaixo até de `maybe` → limited
-    return { id, status: 'limited', blockingFactors: maybeFails };
-  });
-}
-
-// =============================================================================
-// Recommendations
-// =============================================================================
-
-function flagPriority(flag: keyof InterpretFlags): 'low' | 'medium' | 'high' {
-  switch (flag) {
-    case 'veryUnstable':    return 'high';
-    case 'packetLoss':      return 'high';
-    case 'highLatency':     return 'high';
-    case 'highBufferbloat': return 'high';
-    case 'unstable':        return 'medium';
-    case 'lowUpload':       return 'medium';
-  }
-}
-
-function buildRecommendations(
-  flags: InterpretFlags,
-  useCases: UseCaseVerdict[],
-  history: TestRecord[] | undefined,
-): InterpretedRecommendation[] {
-  const out: InterpretedRecommendation[] = [];
-
-  // 1) Uma recomendação por flag verdadeira.
-  (Object.keys(flags) as Array<keyof InterpretFlags>).forEach((flag) => {
-    if (!flags[flag]) return;
-    out.push({
-      id: `flag.${flag}`,
-      priority: flagPriority(flag),
-      triggeredBy: [flag],
-    });
-  });
-
-  // 2) Uma recomendação por use case rebaixado (status !== 'good').
-  useCases.forEach((uc) => {
-    if (uc.status === 'good') return;
-    out.push({
-      id: `useCase.${uc.id}.${uc.status}`,
-      priority: uc.status === 'limited' ? 'high' : 'medium',
-      triggeredBy: ['useCase'],
-    });
-  });
-
-  // 3) Recorrência histórica (paridade com classifier.buildDiagnosis):
-  //    ≥ 3 dos últimos 5 com latência > 80 / loss > 2 / quality slow|unavailable.
-  if (history && history.length >= 3) {
-    const last5 = history.slice(0, 5);
-    const latCount  = last5.filter((h) => h.latency > 80).length;
-    const lossCount = last5.filter((h) => h.packetLoss > 2).length;
-    const slowCount = last5.filter((h) => h.quality === 'slow' || h.quality === 'unavailable').length;
-
-    if (latCount >= 3) {
-      out.push({ id: 'history.latency', priority: 'medium', triggeredBy: ['history'] });
-    }
-    if (lossCount >= 3) {
-      out.push({ id: 'history.loss', priority: 'high', triggeredBy: ['history'] });
-    }
-    if (slowCount >= 3) {
-      out.push({ id: 'history.slow', priority: 'high', triggeredBy: ['history'] });
-    }
-  }
-
-  return out;
-}
-
-// =============================================================================
-// Copy keys
-// =============================================================================
-
-function pickShortPhraseKey(quality: Quality, flags: InterpretFlags): string {
-  if (quality === 'unavailable') return 'shortPhrase.unavailable';
-  if (quality === 'slow') {
-    // Mantém a heurística do legacy: slow + sinal de instabilidade → "Conexão
-    // instável". Caso contrário → "Internet lenta".
-    if (flags.unstable || flags.packetLoss || flags.highLatency || flags.veryUnstable) {
-      return 'shortPhrase.slow.unstable';
-    }
-    return 'shortPhrase.slow';
-  }
-  if (quality === 'fair') return 'shortPhrase.fair';
-  if (quality === 'good') return 'shortPhrase.good';
-  return 'shortPhrase.excellent';
-}
-
-function buildDiagnosisKeys(
-  quality: Quality,
-  flags: InterpretFlags,
-  history: TestRecord[] | undefined,
-): string[] {
-  const keys: string[] = [];
-
-  // Paridade com buildDiagnosis() legacy: parágrafo base por quality.
-  keys.push(`diagnosis.${quality}`);
-
-  // Tags em ordem de severidade (legacy).
-  if (flags.veryUnstable) {
-    keys.push('diagnosis.veryUnstable');
-  } else if (flags.packetLoss) {
-    keys.push('diagnosis.packetLoss');
-  } else if (flags.unstable) {
-    keys.push('diagnosis.unstable');
-  }
-  if (flags.highLatency) keys.push('diagnosis.highLatency');
-  if (flags.lowUpload)   keys.push('diagnosis.lowUpload');
-
-  // Histórico (paridade legacy).
-  if (history && history.length >= 3) {
-    const last5 = history.slice(0, 5);
-    const latCount  = last5.filter((h) => h.latency > 80).length;
-    const lossCount = last5.filter((h) => h.packetLoss > 2).length;
-    const slowCount = last5.filter((h) => h.quality === 'slow' || h.quality === 'unavailable').length;
-    if (latCount  >= 3) keys.push('diagnosis.history.latency');
-    if (lossCount >= 3) keys.push('diagnosis.history.loss');
-    if (slowCount >= 3) keys.push('diagnosis.history.slow');
-  }
-
-  return keys;
-}
-
-// =============================================================================
-// Função principal
-// =============================================================================
-
-export function interpretSpeedTestResult(input: InterpretInput): InterpretedResult {
-  const rules = PROFILES[input.profile];
-  const { metrics, history } = input;
-
-  const quality = computeQuality(metrics, rules);
-  const flags = computeFlags(metrics, rules);
-  const stability = computeStability(metrics, rules);
-  const useCases = evaluateUseCases(metrics, rules);
-  const recommendations = buildRecommendations(flags, useCases, history);
 
   return {
     ruleSetVersion: RULE_SET_VERSION,
-    profile: input.profile,
-    quality,
+    primary,
     flags,
-    stability,
-    useCases,
+    stability: getStabilityInfo(result),
+    useCases: useCaseVerdicts,
     recommendations,
-    copyKeys: {
-      headlineKey: `quality.${quality}`,
-      shortPhraseKey: pickShortPhraseKey(quality, flags),
-      diagnosisKeys: buildDiagnosisKeys(quality, flags, history),
-      stabilityLabelKey: `stability.${stability.level}`,
-    },
+    copyKeys,
   };
 }

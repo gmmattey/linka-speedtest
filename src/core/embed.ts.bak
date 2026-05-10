@@ -1,0 +1,60 @@
+// src/core/embed.ts
+import type { ConnectionProfile, SpeedTestResult, TestRecord } from './types';
+import { interpretSpeedTestResult } from './interpret';
+import { appendRecord, loadHistory } from '../utils/history'; // Assumindo que o history ainda é gerenciado localmente para embed
+import { runSpeedTestV2 } from '../utils/speedtest'; // Assumindo que existe uma função de teste headless
+import type { SpeedTestProgress } from '../types';
+
+export interface EmbedConfig {
+  profile: ConnectionProfile;
+  // Outras configurações relevantes para o embed, como modo de teste, etc.
+  testMode?: SpeedTestMode;
+  onProgress?: (progress: SpeedTestProgress) => void;
+  // ... outros parâmetros
+}
+
+/**
+ * Executa um teste de velocidade de forma headless, sem interface gráfica.
+ * Retorna o resultado interpretado e o registro completo.
+ *
+ * @param config Configurações para o teste.
+ * @returns Uma Promise que resolve com o resultado interpretado e o registro.
+ */
+export async function runHeadlessTest(
+  config: EmbedConfig,
+): Promise<{ interpretedResult: InterpretedResult; record: TestRecord }> {
+  const { profile, testMode, onProgress } = config;
+
+  // 1. Executar o teste de velocidade usando uma função headless (runSpeedTestV2)
+  //    Esta função deve retornar um SpeedTestResult e reportar progresso via onProgress.
+  const testResult = await runSpeedTestV2({
+    profile,
+    mode: testMode ?? 'normal',
+    onProgress: (progress) => {
+      if (onProgress) onProgress(progress);
+    },
+  });
+
+  // 2. Interpretar o resultado usando o novo motor
+  //    Carregar histórico pode ser necessário para comparações ou contexto, mas para um teste isolado, pode ser opcional.
+  const history = loadHistory(); // Carrega histórico local se necessário para o motor (ex: para contexto)
+  const interpretedResult = interpretSpeedTestResult(testResult, profile, history);
+
+  // 3. Salvar o resultado no histórico (opcional, dependendo do uso headless)
+  //    Esta parte pode precisar de adaptação dependendo de como o histórico é gerenciado
+  //    fora do PWA (ex: o host do embed gerencia seu próprio armazenamento).
+  const record = appendRecord(testResult, {
+    serverName: 'Headless Server', // TODO: Obter nome do servidor real
+    isp: undefined, // TODO: Obter ISP real
+    deviceType: 'unknown', // TODO: Obter DeviceType real
+    connectionType: config.profile === 'mobile_broadband' ? 'mobile' : 'wifi', // Inferir ou obter
+    testMode: testMode ?? 'normal',
+    connectionProfile: profile,
+    ruleSetVersion: interpretedResult.ruleSetVersion, // Salva a versão do motor usada
+  });
+
+  return { interpretedResult, record };
+}
+
+// Exemplo de exportação de tipos e funções auxiliares se necessário.
+// export * from './types';

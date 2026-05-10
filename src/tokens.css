@@ -31,26 +31,17 @@
 }
 
 [data-theme='dark'] {
-  --bg:                   #0A0A0F;
+  --bg:                   #000000;
   /* Bloco 3 — Polimento (2026-05): radial sutil para dar profundidade sem
      virar gradiente espalhafatoso. Centro mais claro que a borda; ~120vmax
      de raio garante que mesmo telas grandes só vejam a cor da borda
      (escolhida próxima a --bg para casar com áreas opacas).
-     Recalibração 2026-05 (terceira passada): edges achatadas para reduzir
-     contraste com o `--surface-deep` dos cards. Antes: edge `#06060A` (RGB
-     6,6,10) — ~10 pontos por canal abaixo do centro `#11121A` (17,18,26),
-     criando uma "barra" perceptível onde o card termina e o body fica
-     visível na zona escura do radial. Agora: edge `#0E0F18` (RGB 14,15,24)
-     — ~3 pontos abaixo do centro, mantém o efeito de profundidade mas
-     elimina o step visual contra os cards. */
-  --bg-radial:            radial-gradient(120vmax 120vmax at 50% 30%, #11121A 0%, #0E0F18 100%);
-  --bg-elev:              #0F0F14;
-  --surface:              #1A1A22;
-  /* Bloco visual (2026-05): --surface-deep replica visualmente o centro
-     do --bg-radial (#11121A). Usado em cards principais para que pareçam
-     "vazar" na cor do body, alinhando-se ao bloco Resposta/Oscilação/
-     Falhas (que é transparent e revela o radial). */
-  --surface-deep:         #11121A;
+     Ajustado para Fundo Preto (Fase 2, 2026-05). */
+  --bg-radial:            radial-gradient(120vmax 120vmax at 50% 30%, #08080C 0%, #000000 100%);
+  --bg-elev:              #08080C;
+  --surface:              #12121A;
+  /* Bloco visual (2026-05): --surface-deep ajustado para preto profundo. */
+  --surface-deep:         #050508;
   --surface-2:            #22222B;
   --surface-3:            #2D2D38;
   --surface-translucent:  rgba(26, 26, 34, 0.72);

@@ -1,52 +1,52 @@
-# LINKA SpeedTest
+﻿# LINKA SpeedTest
 
-PWA standalone para medir velocidade e qualidade de conexão de internet com diagnóstico simples para usuário final.
+PWA standalone para medir velocidade e qualidade de conexÃ£o de internet com diagnÃ³stico simples para usuÃ¡rio final.
 
-O objetivo do LINKA SpeedTest não é apenas mostrar Mbps. A proposta é responder, em linguagem clara, se a conexão atual serve para usos reais como jogos online, streaming em 4K, videochamadas e trabalho remoto.
+O objetivo do LINKA SpeedTest nÃ£o Ã© apenas mostrar Mbps. A proposta Ã© responder, em linguagem clara, se a conexÃ£o atual serve para usos reais como jogos online, streaming em 4K, videochamadas e trabalho remoto.
 
-Aplicação pública:
+AplicaÃ§Ã£o pÃºblica:
 
 ```txt
-https://linka-speedtest.pages.dev/
+https://linkaSpeedtestPwa.pages.dev/
 ```
 
 ---
 
-## Visão geral
+## VisÃ£o geral
 
-O LINKA SpeedTest é uma versão isolada da feature de medição de velocidade do ecossistema LINKA.
+O LINKA SpeedTest Ã© uma versÃ£o isolada da feature de mediÃ§Ã£o de velocidade do ecossistema LINKA.
 
 Ele roda como PWA, pode ser instalado no celular ou desktop e utiliza endpoints da Cloudflare para medir:
 
 - download;
 - upload;
 - tempo de resposta;
-- oscilação da conexão;
-- falhas/perda durante a medição;
-- histórico local dos testes;
-- diagnóstico por tipo de uso.
+- oscilaÃ§Ã£o da conexÃ£o;
+- falhas/perda durante a mediÃ§Ã£o;
+- histÃ³rico local dos testes;
+- diagnÃ³stico por tipo de uso.
 
-O app foi pensado para ser leve, direto e útil sem exigir login, backend ou cadastro.
+O app foi pensado para ser leve, direto e Ãºtil sem exigir login, backend ou cadastro.
 
 ---
 
-## Principais funções
+## Principais funÃ§Ãµes
 
 - Teste de velocidade via Cloudflare.
 - Resultado com download e upload em Mbps/Gbps.
-- Diagnóstico de qualidade da conexão.
-- Indicadores de resposta, oscilação e estabilidade.
+- DiagnÃ³stico de qualidade da conexÃ£o.
+- Indicadores de resposta, oscilaÃ§Ã£o e estabilidade.
 - Grid de uso: jogos online, streaming 4K, home office e videochamada.
-- Histórico local de testes.
-- Comparação com teste anterior.
-- Exportação de resultado em PDF.
-- Compartilhamento de resultado via Web Share API, quando disponível.
+- HistÃ³rico local de testes.
+- ComparaÃ§Ã£o com teste anterior.
+- ExportaÃ§Ã£o de resultado em PDF.
+- Compartilhamento de resultado via Web Share API, quando disponÃ­vel.
 - Tema claro/escuro.
-- Instalação como PWA.
+- InstalaÃ§Ã£o como PWA.
 
 ---
 
-## Stack técnica
+## Stack tÃ©cnica
 
 - Vite
 - React
@@ -64,38 +64,38 @@ O app foi pensado para ser leve, direto e útil sem exigir login, backend ou cad
 
 ```txt
 src/
-  components/       Componentes reutilizáveis
-  hooks/            Hooks de medição, configurações e detecção de dispositivo
+  components/       Componentes reutilizÃ¡veis
+  hooks/            Hooks de mediÃ§Ã£o, configuraÃ§Ãµes e detecÃ§Ã£o de dispositivo
   screens/          Telas principais do app
   types/            Tipagens globais
-  utils/            Regras, histórico, formatação, PDF e speedtest
+  utils/            Regras, histÃ³rico, formataÃ§Ã£o, PDF e speedtest
 ```
 
 Telas principais:
 
 ```txt
-StartScreen      Tela inicial e início do teste
-RunningScreen    Tela de medição em andamento
-ResultScreen     Resultado e diagnóstico
-HistoryScreen    Histórico de testes
+StartScreen      Tela inicial e inÃ­cio do teste
+RunningScreen    Tela de mediÃ§Ã£o em andamento
+ResultScreen     Resultado e diagnÃ³stico
+HistoryScreen    HistÃ³rico de testes
 ```
 
 Arquivos importantes:
 
 ```txt
-src/utils/speedtest.ts        Motor de medição
-src/utils/classifier.ts       Regras de diagnóstico
-src/utils/history.ts          Persistência local do histórico
-src/utils/pdfExport.ts        Exportação em PDF
-src/hooks/useDeviceInfo.ts    Detecção de dispositivo, rede e servidor
-vite.config.ts                Configuração Vite/PWA
+src/utils/speedtest.ts        Motor de mediÃ§Ã£o
+src/utils/classifier.ts       Regras de diagnÃ³stico
+src/utils/history.ts          PersistÃªncia local do histÃ³rico
+src/utils/pdfExport.ts        ExportaÃ§Ã£o em PDF
+src/hooks/useDeviceInfo.ts    DetecÃ§Ã£o de dispositivo, rede e servidor
+vite.config.ts                ConfiguraÃ§Ã£o Vite/PWA
 ```
 
 ---
 
 ## Como rodar localmente
 
-### 1. Instalar dependências
+### 1. Instalar dependÃªncias
 
 ```bash
 npm install
@@ -107,13 +107,13 @@ npm install
 npm run dev
 ```
 
-Por padrão, o Vite abrirá em uma URL local como:
+Por padrÃ£o, o Vite abrirÃ¡ em uma URL local como:
 
 ```txt
 http://localhost:5173
 ```
 
-### 3. Rodar acessível pela rede local
+### 3. Rodar acessÃ­vel pela rede local
 
 Para testar no celular conectado ao mesmo Wi-Fi do computador:
 
@@ -133,34 +133,34 @@ Exemplo:
 http://192.168.1.50:5173
 ```
 
-Se não abrir no celular, verificar:
+Se nÃ£o abrir no celular, verificar:
 
-- se o celular e o computador estão no mesmo Wi-Fi;
+- se o celular e o computador estÃ£o no mesmo Wi-Fi;
 - se o firewall do Windows liberou a porta;
-- se há VPN ativa;
-- se o roteador bloqueia comunicação entre dispositivos da rede.
+- se hÃ¡ VPN ativa;
+- se o roteador bloqueia comunicaÃ§Ã£o entre dispositivos da rede.
 
 ---
 
-## Scripts disponíveis
+## Scripts disponÃ­veis
 
 ```bash
 npm run dev       # ambiente de desenvolvimento
-npm run build     # build de produção
+npm run build     # build de produÃ§Ã£o
 npm run preview   # preview local do build
 npm run lint      # lint do projeto
-npm run test      # testes unitários
+npm run test      # testes unitÃ¡rios
 ```
 
 ---
 
-## Build de produção
+## Build de produÃ§Ã£o
 
 ```bash
 npm run build
 ```
 
-O resultado será gerado em:
+O resultado serÃ¡ gerado em:
 
 ```txt
 dist/
@@ -176,9 +176,9 @@ npm run preview
 
 ## Deploy
 
-O projeto está preparado para deploy em Cloudflare Pages.
+O projeto estÃ¡ preparado para deploy em Cloudflare Pages.
 
-Configuração recomendada:
+ConfiguraÃ§Ã£o recomendada:
 
 ```txt
 Framework preset: Vite
@@ -190,52 +190,52 @@ Build output directory: dist
 
 ## Como o teste funciona
 
-O teste usa endpoints da Cloudflare para executar medições no navegador.
+O teste usa endpoints da Cloudflare para executar mediÃ§Ãµes no navegador.
 
 Fluxo simplificado:
 
-1. mede tempo de resposta com múltiplas amostras;
+1. mede tempo de resposta com mÃºltiplas amostras;
 2. executa aquecimento de download;
 3. executa rodadas de download;
 4. executa aquecimento de upload;
 5. executa rodadas de upload;
 6. calcula resultado final;
-7. gera diagnóstico;
-8. salva histórico local.
+7. gera diagnÃ³stico;
+8. salva histÃ³rico local.
 
-Importante: o teste mede a conexão **do aparelho/navegador atual até a internet**.
+Importante: o teste mede a conexÃ£o **do aparelho/navegador atual atÃ© a internet**.
 
-Ele não mede diretamente:
+Ele nÃ£o mede diretamente:
 
 - velocidade contratada no plano;
 - velocidade real saindo do modem;
-- qualidade óptica da fibra;
+- qualidade Ã³ptica da fibra;
 - sinal GPON;
-- Wi-Fi de outros cômodos;
-- tráfego de todos os dispositivos da casa.
+- Wi-Fi de outros cÃ´modos;
+- trÃ¡fego de todos os dispositivos da casa.
 
 Por isso, resultados podem variar conforme:
 
-- distância do roteador;
+- distÃ¢ncia do roteador;
 - qualidade do Wi-Fi;
 - uso da rede por outros dispositivos;
-- horário;
+- horÃ¡rio;
 - navegador;
 - capacidade do aparelho;
 - economia de energia do sistema;
-- limitações de rede móvel.
+- limitaÃ§Ãµes de rede mÃ³vel.
 
 ---
 
-## Regras de diagnóstico
+## Regras de diagnÃ³stico
 
-As regras de diagnóstico ficam concentradas em:
+As regras de diagnÃ³stico ficam concentradas em:
 
 ```txt
 src/utils/classifier.ts
 ```
 
-A classificação principal usa categorias como:
+A classificaÃ§Ã£o principal usa categorias como:
 
 ```txt
 excellent
@@ -245,7 +245,7 @@ slow
 unavailable
 ```
 
-Além da classificação principal, o app pode aplicar tags independentes, como:
+AlÃ©m da classificaÃ§Ã£o principal, o app pode aplicar tags independentes, como:
 
 ```txt
 highLatency
@@ -255,21 +255,21 @@ packetLoss
 veryUnstable
 ```
 
-A linguagem exibida ao usuário deve evitar termos excessivamente técnicos.
+A linguagem exibida ao usuÃ¡rio deve evitar termos excessivamente tÃ©cnicos.
 
 Preferir:
 
 ```txt
 resposta
-oscilação
+oscilaÃ§Ã£o
 perda de sinal
-falhas na conexão
+falhas na conexÃ£o
 ```
 
 Evitar na interface principal:
 
 ```txt
-latência
+latÃªncia
 jitter
 packet loss
 perda de pacotes
@@ -279,23 +279,23 @@ threshold
 
 ---
 
-## Pendências técnicas
+## PendÃªncias tÃ©cnicas
 
-As regras de diagnóstico estão documentadas em:
+As regras de diagnÃ³stico estÃ£o documentadas em:
 
 ```txt
 docs/PendenciasTecnicas.md
 ```
 
-Esse documento contém:
+Esse documento contÃ©m:
 
 - auditoria das regras atuais;
-- correções necessárias;
+- correÃ§Ãµes necessÃ¡rias;
 - regras consolidadas;
 - textos recomendados para cliente final;
-- critérios de aceite;
-- testes obrigatórios;
-- sugestão de IA/modelo para implementar os ajustes.
+- critÃ©rios de aceite;
+- testes obrigatÃ³rios;
+- sugestÃ£o de IA/modelo para implementar os ajustes.
 
 Antes de evoluir o produto, consultar esse arquivo.
 
@@ -303,19 +303,19 @@ Antes de evoluir o produto, consultar esse arquivo.
 
 ## Privacidade
 
-O LINKA SpeedTest não exige login.
+O LINKA SpeedTest nÃ£o exige login.
 
-O histórico de testes é salvo localmente no navegador, usando armazenamento local.
+O histÃ³rico de testes Ã© salvo localmente no navegador, usando armazenamento local.
 
 Atualmente o app pode exibir dados como:
 
-- IP público;
+- IP pÃºblico;
 - nome aproximado da operadora;
 - servidor utilizado;
 - data e hora do teste;
-- tipo de dispositivo/conexão detectado ou informado.
+- tipo de dispositivo/conexÃ£o detectado ou informado.
 
-Ao implementar compartilhamento público ou exportação de relatório, evitar expor IP por padrão.
+Ao implementar compartilhamento pÃºblico ou exportaÃ§Ã£o de relatÃ³rio, evitar expor IP por padrÃ£o.
 
 ---
 
@@ -326,60 +326,60 @@ O projeto usa `vite-plugin-pwa`.
 Recursos esperados:
 
 - manifesto PWA;
-- ícones instaláveis;
+- Ã­cones instalÃ¡veis;
 - modo standalone;
-- orientação portrait;
-- cache de arquivos estáticos;
-- atualização automática do service worker.
+- orientaÃ§Ã£o portrait;
+- cache de arquivos estÃ¡ticos;
+- atualizaÃ§Ã£o automÃ¡tica do service worker.
 
-O app deve abrir de forma limpa mesmo sem conexão, exibindo mensagem amigável. Speedtest offline não é possível, mas a experiência não deve cair em tela branca ou erro técnico.
+O app deve abrir de forma limpa mesmo sem conexÃ£o, exibindo mensagem amigÃ¡vel. Speedtest offline nÃ£o Ã© possÃ­vel, mas a experiÃªncia nÃ£o deve cair em tela branca ou erro tÃ©cnico.
 
 Mensagem recomendada para estado offline:
 
 ```txt
-Sem conexão no momento.
-Conecte-se à internet para medir sua velocidade.
+Sem conexÃ£o no momento.
+Conecte-se Ã  internet para medir sua velocidade.
 ```
 
 ---
 
-## Limitações conhecidas
+## LimitaÃ§Ãµes conhecidas
 
-### Detecção de conexão no iOS
+### DetecÃ§Ã£o de conexÃ£o no iOS
 
-Navegadores no iOS podem não expor o tipo real de conexão. Quando isso ocorrer, o app não deve afirmar que o usuário está em rede móvel ou Wi-Fi sem certeza.
+Navegadores no iOS podem nÃ£o expor o tipo real de conexÃ£o. Quando isso ocorrer, o app nÃ£o deve afirmar que o usuÃ¡rio estÃ¡ em rede mÃ³vel ou Wi-Fi sem certeza.
 
 Preferir exibir:
 
 ```txt
-Conexão: Auto
+ConexÃ£o: Auto
 ```
 
 ou:
 
 ```txt
-Conexão: Não identificada
+ConexÃ£o: NÃ£o identificada
 ```
 
 ### Perda de sinal
 
-A medição de falhas/perda é baseada em requisições do navegador durante o teste. Isso é útil para diagnóstico de experiência, mas não deve ser vendido como medição técnica profunda de rede, como ICMP/UDP ou equipamento de operadora.
+A mediÃ§Ã£o de falhas/perda Ã© baseada em requisiÃ§Ãµes do navegador durante o teste. Isso Ã© Ãºtil para diagnÃ³stico de experiÃªncia, mas nÃ£o deve ser vendido como mediÃ§Ã£o tÃ©cnica profunda de rede, como ICMP/UDP ou equipamento de operadora.
 
-### Diagnóstico regulatório
+### DiagnÃ³stico regulatÃ³rio
 
-O app não deve afirmar que uma única medição prova descumprimento da operadora.
+O app nÃ£o deve afirmar que uma Ãºnica mediÃ§Ã£o prova descumprimento da operadora.
 
 Usar linguagem cautelosa:
 
 ```txt
-Repita o teste em horários diferentes para confirmar se o problema continua.
+Repita o teste em horÃ¡rios diferentes para confirmar se o problema continua.
 ```
 
 ---
 
-## Validação antes de publicar
+## ValidaÃ§Ã£o antes de publicar
 
-Antes de publicar uma nova versão:
+Antes de publicar uma nova versÃ£o:
 
 ```bash
 npm run lint
@@ -387,18 +387,18 @@ npm run test
 npm run build
 ```
 
-Também validar manualmente:
+TambÃ©m validar manualmente:
 
 - abertura no celular;
-- instalação como PWA;
+- instalaÃ§Ã£o como PWA;
 - tema claro/escuro;
 - teste em Wi-Fi;
-- teste em rede móvel;
-- histórico;
-- exportação PDF;
+- teste em rede mÃ³vel;
+- histÃ³rico;
+- exportaÃ§Ã£o PDF;
 - compartilhamento;
 - tela offline;
-- diagnóstico para games, streaming, home office e videochamada.
+- diagnÃ³stico para games, streaming, home office e videochamada.
 
 ---
 
@@ -406,32 +406,33 @@ Também validar manualmente:
 
 ### Prioridade 0
 
-- Corrigir regras de diagnóstico.
+- Corrigir regras de diagnÃ³stico.
 - Corrigir grid de uso.
-- Corrigir histórico com classificação antiga.
-- Ajustar linguagem técnica para cliente final.
-- Corrigir detecção de conexão no iOS.
+- Corrigir histÃ³rico com classificaÃ§Ã£o antiga.
+- Ajustar linguagem tÃ©cnica para cliente final.
+- Corrigir detecÃ§Ã£o de conexÃ£o no iOS.
 
 ### Prioridade 1
 
-- Criar teste rápido e teste completo.
-- Melhorar exportação mobile.
-- Ocultar IP por padrão no compartilhamento.
-- Melhorar gráfico de histórico.
-- Criar tela offline amigável.
+- Criar teste rÃ¡pido e teste completo.
+- Melhorar exportaÃ§Ã£o mobile.
+- Ocultar IP por padrÃ£o no compartilhamento.
+- Melhorar grÃ¡fico de histÃ³rico.
+- Criar tela offline amigÃ¡vel.
 
 ### Prioridade 2
 
 - Nomear local do teste.
 - Comparar testes por ambiente.
-- Exportar histórico em CSV.
-- Criar relatório compartilhável em imagem.
-- Adicionar recomendações práticas por tipo de problema.
+- Exportar histÃ³rico em CSV.
+- Criar relatÃ³rio compartilhÃ¡vel em imagem.
+- Adicionar recomendaÃ§Ãµes prÃ¡ticas por tipo de problema.
 
 ---
 
-## Licença
+## LicenÃ§a
 
-Licença ainda não definida.
+LicenÃ§a ainda nÃ£o definida.
 
-Antes de distribuir como produto público, definir explicitamente a licença do repositório.
+Antes de distribuir como produto pÃºblico, definir explicitamente a licenÃ§a do repositÃ³rio.
+

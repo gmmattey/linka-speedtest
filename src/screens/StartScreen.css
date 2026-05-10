@@ -148,8 +148,8 @@
 }
 
 .lk-start__mode-btn {
-  padding: 6px 18px;
-  font-size: 12px;
+  padding: 8px 20px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text-2);
   border-radius: var(--radius-pill);
@@ -172,7 +172,7 @@
   flex-direction: column;
   gap: 6px;
   color: var(--text-2);
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: -0.005em;
   line-height: 1.45;
 }
@@ -203,14 +203,14 @@
 }
 
 .lk-start__last-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-3);
 }
 
 .lk-start__last-values {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* ── Explorar ferramentas ─────────────────────────── */
@@ -225,9 +225,9 @@
   gap: 8px;
   width: 100%;
   justify-content: flex-start;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-2);
-  padding: 8px 2px;
+  padding: 10px 2px;
 }
 
 .lk-start__explore-btn span {
@@ -258,12 +258,15 @@
 }
 
 .lk-start__theme-btn {
-  padding: 5px 14px;
-  font-size: 11px;
+  padding: 8px 16px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-2);
   border-radius: var(--radius-pill);
   transition: all var(--t-fast);
+  min-height: 36px;
+  display: flex;
+  align-items: center;
 }
 
 .lk-start__theme-btn--active {

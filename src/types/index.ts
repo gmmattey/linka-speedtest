@@ -118,8 +118,6 @@ export interface TestRecord {
   latency: number;
   jitter: number;
   packetLoss: number;
-  quality: Quality;
-  tags: Tag[];
   serverName: string;
   isp?: string;
   deviceType: DeviceType;

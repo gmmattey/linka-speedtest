@@ -74,11 +74,11 @@ function detectDevice(): DeviceInfo {
   // Log para diagnóstico — caso real precise de override manual.
   if (typeof console !== 'undefined' && deviceType === 'mobile') {
     console.warn(
-      '[linka] navigator.connection indisponível — assumindo Wi-Fi como default em mobile. ' +
+      '[linka] navigator.connection indisponível — assumindo conexão "unknown" como default em mobile. ' +
       'Capacitor bridge resolverá no APK.',
     );
   }
-  const fallback: ConnectionType = deviceType === 'desktop' ? 'cable' : 'wifi';
+  const fallback: ConnectionType = 'unknown';
   return { deviceType, connectionType: fallback };
 }
 

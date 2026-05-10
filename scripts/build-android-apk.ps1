@@ -1,4 +1,4 @@
-param(
+﻿param(
   [ValidateSet("debug", "release")]
   [string]$BuildType = "debug",
 
@@ -17,15 +17,15 @@ $apkDir = Join-Path $root "builds\apk"
 $packageJsonPath = Join-Path $root "package.json"
 $appBuildGradlePath = Join-Path $androidDir "app\build.gradle"
 
-if (-not (Test-Path $sdkDir)) { throw "Android SDK local não encontrado em: $sdkDir" }
-if (-not (Test-Path (Join-Path $javaDir "bin\java.exe"))) { throw "JDK 21 local não encontrado em: $javaDir" }
-if (-not (Test-Path $androidDir)) { throw "Projeto Android não encontrado em: $androidDir" }
+if (-not (Test-Path $sdkDir)) { throw "Android SDK local nÃ£o encontrado em: $sdkDir" }
+if (-not (Test-Path (Join-Path $javaDir "bin\java.exe"))) { throw "JDK 21 local nÃ£o encontrado em: $javaDir" }
+if (-not (Test-Path $androidDir)) { throw "Projeto Android nÃ£o encontrado em: $androidDir" }
 
 $packageJson = Get-Content -Raw $packageJsonPath | ConvertFrom-Json
 $versionName = [string]$packageJson.version
 
 if ($versionName -notmatch '^(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.-]+)?$') {
-  throw "Versão inválida em package.json: '$versionName'. Use SemVer, ex.: 1.2.3."
+  throw "VersÃ£o invÃ¡lida em package.json: '$versionName'. Use SemVer, ex.: 1.2.3."
 }
 
 $major = [int]$Matches[1]
@@ -33,11 +33,11 @@ $minor = [int]$Matches[2]
 $patch = [int]$Matches[3]
 
 if ($BuildType -eq "release" -and $BuildNumber -le 0) {
-  throw "Build release exige -BuildNumber maior que zero para versionCode monotônico de mercado."
+  throw "Build release exige -BuildNumber maior que zero para versionCode monotÃ´nico de mercado."
 }
 
 if ($BuildNumber -lt 0 -or $BuildNumber -gt 99) {
-  throw "BuildNumber deve ficar entre 0 e 99. O versionCode reserva 2 dígitos para o número de build."
+  throw "BuildNumber deve ficar entre 0 e 99. O versionCode reserva 2 dÃ­gitos para o nÃºmero de build."
 }
 
 $versionCode = ($major * 1000000) + ($minor * 10000) + ($patch * 100) + $BuildNumber
@@ -78,7 +78,7 @@ $sourceApk = if ($BuildType -eq "release") {
 }
 
 if (-not (Test-Path $sourceApk)) {
-  throw "APK esperado não foi gerado: $sourceApk"
+  throw "APK esperado nÃ£o foi gerado: $sourceApk"
 }
 
 New-Item -ItemType Directory -Force -Path $apkDir | Out-Null
@@ -90,11 +90,11 @@ try {
   if ($LASTEXITCODE -eq 0 -and $gitShaRaw) { $gitSha = $gitShaRaw.Trim() }
 } catch {}
 
-$targetName = "linka-speedtest-v$versionName-code$versionCode-$BuildType-$timestamp-$gitSha.apk"
+$targetName = "linkaSpeedtestPwa-v$versionName-code$versionCode-$BuildType-$timestamp-$gitSha.apk"
 $targetApk = Join-Path $apkDir $targetName
 
 if (Test-Path $targetApk) {
-  throw "APK de destino já existe. Regra do projeto: nunca sobrescrever APK. Arquivo: $targetApk"
+  throw "APK de destino jÃ¡ existe. Regra do projeto: nunca sobrescrever APK. Arquivo: $targetApk"
 }
 
 Copy-Item -LiteralPath $sourceApk -Destination $targetApk -ErrorAction Stop
@@ -109,3 +109,4 @@ Write-Host "APK gerado sem sobrescrever artefatos anteriores:"
 Write-Host $targetApk
 Write-Host "versionName=$versionName"
 Write-Host "versionCode=$versionCode"
+

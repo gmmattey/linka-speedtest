@@ -50,16 +50,16 @@ export default defineConfig({
         'touch-icon/ios/AppIcon-83.5@2x~ipad.png',
       ],
       manifest: {
-        name: 'linka SpeedTest',
-        short_name: 'linka Speed',
+        name: 'Linka Speedtest',
+        short_name: 'Linka',
         description: 'Meça a qualidade real da sua internet com clareza.',
         // theme_color / background_color alinhados com o `--bg` do tema dark
-        // (#0A0A0F) e com as `<meta name="theme-color">` em `index.html`.
+        // (#000000) e com as `<meta name="theme-color">` em `index.html`.
         // Antes: '#6C2BFF' (accent roxo) — causava flash roxo no splash do
         // PWA iOS/Android antes do app pintar a tela. Mantido o roxo apenas
         // como cor da marca em UI (`--accent`), não como cor de chrome/splash.
-        theme_color: '#0A0A0F',
-        background_color: '#0A0A0F',
+        theme_color: '#000000',
+        background_color: '#000000',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',

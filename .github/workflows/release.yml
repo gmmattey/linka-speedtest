@@ -1,26 +1,26 @@
-# Release — linka SpeedTest PWA + APK Capacitor
+﻿# Release â€” linka SpeedTest PWA + APK Capacitor
 #
 # Dispara em push de tag `v*` (ex.: `v1.2.0`). Dois jobs paralelos:
-#   - `pwa`: build do PWA + deploy em Cloudflare Pages (projeto `linka-speedtest`).
+#   - `pwa`: build do PWA + deploy em Cloudflare Pages (projeto `linkaSpeedtestPwa`).
 #   - `apk`: build do APK Android assinado (Capacitor) + upload no GitHub Release.
 #
-# Pré-requisitos do repositório (configurar UMA vez em Settings → Secrets and
-# variables → Actions). Detalhes em `docs/CI-CD.md`:
+# PrÃ©-requisitos do repositÃ³rio (configurar UMA vez em Settings â†’ Secrets and
+# variables â†’ Actions). Detalhes em `docs/CI-CD.md`:
 #
 #   Cloudflare Pages
-#     - CLOUDFLARE_API_TOKEN     ← token "Account → Cloudflare Pages: Edit"
-#     - CLOUDFLARE_ACCOUNT_ID    ← copiar do dashboard
-#     - CLOUDFLARE_PAGES_PROJECT ← nome do projeto Pages (default: linka-speedtest)
+#     - CLOUDFLARE_API_TOKEN     â† token "Account â†’ Cloudflare Pages: Edit"
+#     - CLOUDFLARE_ACCOUNT_ID    â† copiar do dashboard
+#     - CLOUDFLARE_PAGES_PROJECT â† nome do projeto Pages (default: linkaSpeedtestPwa)
 #
 #   Android signing (release keystore)
-#     - KEYSTORE_BASE64          ← `base64 -w0 release.jks > out.txt`
+#     - KEYSTORE_BASE64          â† `base64 -w0 release.jks > out.txt`
 #     - KEYSTORE_PASSWORD
 #     - KEY_ALIAS
 #     - KEY_PASSWORD
 #
 # Versionamento: SemVer via tag (`vMAJOR.MINOR.PATCH`). O `package.json` deve
-# bater — quem cria a tag se responsabiliza por manter os dois sincronizados.
-# Para versões pre-release (`v1.2.0-rc.1`), o GitHub Release é marcado como
+# bater â€” quem cria a tag se responsabiliza por manter os dois sincronizados.
+# Para versÃµes pre-release (`v1.2.0-rc.1`), o GitHub Release Ã© marcado como
 # "prerelease" automaticamente.
 
 name: Release
@@ -34,9 +34,9 @@ permissions:
   contents: write   # criar GitHub Release e anexar APK
 
 jobs:
-  # ───────────────────────────────────────────────────────────────────────
-  # Job 1: PWA — build + deploy em Cloudflare Pages
-  # ───────────────────────────────────────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # Job 1: PWA â€” build + deploy em Cloudflare Pages
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   pwa:
     name: PWA build + Cloudflare Pages
     runs-on: ubuntu-latest
@@ -58,21 +58,21 @@ jobs:
       - name: Build PWA
         run: npm run build
 
-      # ── Deploy em Cloudflare Pages ─────────────────────────────────────
-      # Action oficial wrangler-action@v3 — usa `npx wrangler pages deploy`.
+      # â”€â”€ Deploy em Cloudflare Pages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      # Action oficial wrangler-action@v3 â€” usa `npx wrangler pages deploy`.
       # O projeto Pages precisa existir antes (criado manualmente uma vez).
-      # Se o usuário usar OUTRO target (Vercel, Netlify, S3), substitua
-      # esta etapa — o `dist/` está pronto após `npm run build`.
+      # Se o usuÃ¡rio usar OUTRO target (Vercel, Netlify, S3), substitua
+      # esta etapa â€” o `dist/` estÃ¡ pronto apÃ³s `npm run build`.
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=${{ secrets.CLOUDFLARE_PAGES_PROJECT || 'linka-speedtest' }} --branch=main
+          command: pages deploy dist --project-name=${{ secrets.CLOUDFLARE_PAGES_PROJECT || 'linkaSpeedtestPwa' }} --branch=main
 
-  # ───────────────────────────────────────────────────────────────────────
-  # Job 2: APK Android — build assinado + upload no Release
-  # ───────────────────────────────────────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # Job 2: APK Android â€” build assinado + upload no Release
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   apk:
     name: Android APK
     runs-on: ubuntu-latest
@@ -103,7 +103,7 @@ jobs:
       - name: Capacitor sync (android)
         run: npx cap sync android
 
-      # ── Decode keystore do secret ─────────────────────────────────────
+      # â”€â”€ Decode keystore do secret â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       # `KEYSTORE_BASE64` foi gerado localmente com:
       #   base64 -w0 release.jks > out.txt
       # Aqui decodificamos para um arquivo `.jks` no runner. Em seguida o
@@ -115,7 +115,7 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
           echo "RELEASE_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
-      # ── Configurar gradle.properties ──────────────────────────────────
+      # â”€â”€ Configurar gradle.properties â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       # O `android/app/build.gradle` deve ler `RELEASE_KEYSTORE_PATH`,
       # `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`
       # do `gradle.properties` para o signingConfig de release. Ver
@@ -140,19 +140,19 @@ jobs:
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
 
-      # ── Localizar APK gerado ─────────────────────────────────────────
+      # â”€â”€ Localizar APK gerado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       # O nome varia entre `app-release.apk` e `app-release-unsigned.apk`
-      # se signingConfig falhar. O comando abaixo busca o `release` legítimo.
+      # se signingConfig falhar. O comando abaixo busca o `release` legÃ­timo.
       - name: Locate APK
         id: locate
         run: |
           APK_PATH=$(find android/app/build/outputs/apk/release -name 'app-release*.apk' | head -n1)
           if [ -z "$APK_PATH" ]; then
-            echo "APK não encontrado — verifique signing config" >&2
+            echo "APK nÃ£o encontrado â€” verifique signing config" >&2
             exit 1
           fi
           VERSION="${GITHUB_REF_NAME#v}"
-          DEST="builds/apk/linka-speedtest-${VERSION}-release.apk"
+          DEST="builds/apk/linkaSpeedtestPwa-${VERSION}-release.apk"
           mkdir -p builds/apk
           cp "$APK_PATH" "$DEST"
           echo "apk_path=$DEST" >> "$GITHUB_OUTPUT"
@@ -165,10 +165,10 @@ jobs:
           path: ${{ steps.locate.outputs.apk_path }}
           retention-days: 30
 
-      # ── Anexar APK ao GitHub Release ─────────────────────────────────
-      # `softprops/action-gh-release` cria o release se não existir e
-      # anexa o APK ao mesmo. `prerelease` é detectado automaticamente
-      # se a tag contém um hífen (ex.: `v1.2.0-rc.1`).
+      # â”€â”€ Anexar APK ao GitHub Release â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      # `softprops/action-gh-release` cria o release se nÃ£o existir e
+      # anexa o APK ao mesmo. `prerelease` Ã© detectado automaticamente
+      # se a tag contÃ©m um hÃ­fen (ex.: `v1.2.0-rc.1`).
       - name: Create or update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -178,3 +178,4 @@ jobs:
           files: ${{ steps.locate.outputs.apk_path }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
