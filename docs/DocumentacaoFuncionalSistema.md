@@ -1850,9 +1850,10 @@ No PWA comum, o item **Diagnóstico Wi-Fi** não é exibido no `ExploreScreen`. 
 
 ### Integração atual
 
-- `ExploreScreen` exibe o item **Diagnóstico Wi-Fi** apenas quando `getCapabilities().localWifiDiagnostics === true`
+- `ExploreScreen` exibe o item **Diagnóstico Wi-Fi** apenas quando `getCapabilities().localWifiDiagnostics === true` ✅ **Implementado Fase 3b (2026-05-09)**
 - `App.tsx` roteia para `screen === 'localwifi'`
-- No PWA comum, a própria tela mostra indisponibilidade segura (sem bridge nativa)
+- No PWA comum, a própria tela mostra indisponibilidade segura (sem bridge nativa) — graceful degradation testado em E2E suite
+- **Status:** Capability gatekeeper operacional, PWA degrada sem erros, navegação não quebra
 
 ---
 
@@ -1883,9 +1884,10 @@ No PWA comum, o recurso é indisponível. Browser não expõe ARP, MAC, UDP 137,
 
 ### Integração atual
 
-- `ExploreScreen` exibe o item **Dispositivos na rede** apenas quando `getCapabilities().localNetworkDiscovery === true`
+- `ExploreScreen` exibe o item **Dispositivos na rede** apenas quando `getCapabilities().localNetworkDiscovery === true` ✅ **Implementado Fase 3b (2026-05-09)**
 - `App.tsx` roteia para `screen === 'localnetwork'`
-- A UI usa `TopBar`, `PageHeader`, card neutro e `IOSList`, sem layout paralelo.
+- A UI usa `TopBar`, `PageHeader`, card neutro e `IOSList`, sem layout paralelo
+- **Status:** Capability gatekeeper operacional, navegação para LocalNetwork não quebra em PWA, fallback exibe mensagem apropriada
 
 ---
 
