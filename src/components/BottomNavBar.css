@@ -1,0 +1,80 @@
+.lk-navbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  /* safe-area: respeita home indicator do iPhone */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* iOS glass effect */
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+}
+
+.lk-navbar__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 10px 4px 8px;
+  color: var(--text-3);
+  transition: color 180ms ease-out;
+  min-height: 56px;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lk-navbar__item--active {
+  color: var(--accent);
+}
+
+.lk-navbar__item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 0 0 2px 2px;
+  opacity: 0;
+  transition: opacity 180ms ease-out;
+}
+
+.lk-navbar__item--active::before {
+  opacity: 1;
+}
+
+.lk-navbar__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 28px;
+  border-radius: var(--radius-button);
+  transition: background 180ms ease-out, transform 120ms ease-out;
+}
+
+.lk-navbar__item--active .lk-navbar__icon {
+  background: var(--accent-tint);
+}
+
+.lk-navbar__item:active .lk-navbar__icon {
+  transform: scale(0.88);
+}
+
+.lk-navbar__label {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  line-height: 1;
+}

@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import './InfoTooltip.css';
 
 interface Props {
-  /** Texto explicativo. Mantenha 1-2 frases pt-BR. */
-  label: string;
-  /** Texto alternativo para screen readers. Default usa o `label`. */
+  /**
+   * Conteúdo explicativo. Aceita string simples (1-2 frases pt-BR) ou
+   * ReactNode para conteúdo multiparágrafo. Quando ReactNode, `ariaLabel`
+   * é obrigatório — o fallback `Informação: ${label}` não funciona com nós.
+   */
+  label: string | ReactNode;
+  /** Texto alternativo para screen readers. Obrigatório quando `label` é ReactNode. */
   ariaLabel?: string;
 }
 
@@ -22,7 +27,7 @@ interface Props {
  *   - Balão recebe `role="tooltip"` e `id` linkado por `aria-describedby`.
  *   - Sem dependência de hover (toque não ativa hover).
  */
-export function InfoTooltip({ label, ariaLabel }: Props) {
+export function InfoTooltip({ label, ariaLabel = typeof label === 'string' ? `Informação: ${label}` : 'Informação' }: Props) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<'below' | 'above'>('below');
   const containerRef = useRef<HTMLSpanElement>(null);
@@ -68,7 +73,7 @@ export function InfoTooltip({ label, ariaLabel }: Props) {
         type="button"
         className="lk-info-tooltip__trigger"
         onClick={() => setOpen((o) => !o)}
-        aria-label={ariaLabel ?? `Informação: ${label}`}
+        aria-label={ariaLabel}
         aria-expanded={open}
         aria-describedby={open ? id : undefined}
       >

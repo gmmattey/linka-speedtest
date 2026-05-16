@@ -99,6 +99,17 @@
   }
 }
 
+/* Suporte a conteúdo multiparágrafo (ReactNode).
+   Quando label é JSX com múltiplos <span>, cada um vira bloco separado.
+   O primeiro span não tem margin-top; os seguintes ganham espaçamento. */
+.lk-info-tooltip__bubble span {
+  display: block;
+}
+
+.lk-info-tooltip__bubble span + span {
+  margin-top: 8px;
+}
+
 /* Mobile narrow: o balão pode tocar a borda da tela. Limitamos via
    `max-width: 80vw` acima; quando o `?` fica perto da borda, o
    `transform: translateX(-50%)` continua centralizando — em telas muito

@@ -1,0 +1,32 @@
+.diagnosis-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  padding: 0 24px;
+}
+
+.diagnosis-chip {
+  padding: 8px 16px;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--accent-border, rgba(124, 95, 255, 0.28));
+  background: var(--accent-tint, rgba(124, 95, 255, 0.12));
+  color: var(--text-1, #F3F4F6);
+  font-size: 13px;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+  animation: lkChipEnter 0.3s ease-out both;
+}
+
+.diagnosis-chip:hover {
+  background: var(--accent-tint-strong, rgba(124, 95, 255, 0.28));
+  transform: translateY(-1px);
+}
+
+.diagnosis-chip:active { transform: scale(0.97); }
+
+@keyframes lkChipEnter {
+  from { opacity: 0; transform: translateY(8px) scale(0.95); }
+  to   { opacity: 1; transform: none; }
+}

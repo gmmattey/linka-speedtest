@@ -1,132 +1,130 @@
-﻿# CLAUDE.md â€” InstruÃ§Ãµes para IA no projeto linka SpeedTest
+# CLAUDE.md — Instruções para IA no projeto linka SpeedTest
 
-> Este arquivo Ã© lido automaticamente pelo Claude Code ao iniciar uma sessÃ£o neste repositÃ³rio.
-> Mantenha este arquivo curto. Regras detalhadas vivem em docs/ (local) e docs centrais (docsGerais/).
-
----
-
-## 1. Leitura ObrigatÃ³ria (em ordem)
-
-**DocumentaÃ§Ã£o Central (docsGerais/) â€” leia PRIMEIRO:**
-
-1. [`E:\Projetos\docsGerais\README.md`](../../docsGerais/README.md) â€” Hub central de toda documentaÃ§Ã£o LINKA
-2. [`E:\Projetos\docsGerais\VISAO_GERAL_LINKA.md`](../../docsGerais/VISAO_GERAL_LINKA.md) â€” O que Ã© LINKA (3 stacks: Kotlin, PWA, Flutter)
-3. [`E:\Projetos\docsGerais\GUIA_CONVIVENCIA_IA.md`](../../docsGerais/GUIA_CONVIVENCIA_IA.md) â€” **CRÃTICO:** Regras inegociÃ¡veis
-4. [`E:\Projetos\docsGerais\GUIA_DESENVOLVIMENTO_IA.md`](../../docsGerais/GUIA_DESENVOLVIMENTO_IA.md) â€” Checklists e runbook
-5. [`E:\Projetos\docsGerais\PADROES_UI_UX.md`](../../docsGerais/PADROES_UI_UX.md) â€” Material Design 3, navegaÃ§Ã£o PWA
-6. [`E:\Projetos\docsGerais\MATERIAL_DESIGN_3.md`](../../docsGerais/MATERIAL_DESIGN_3.md) â€” Design tokens (Tailwind CSS para PWA)
-7. [`E:\Projetos\docsGerais\GUIA_SELECAO_MODELO_IA.md`](../../docsGerais/GUIA_SELECAO_MODELO_IA.md) â€” Qual IA usar para qual tarefa
-
-**DocumentaÃ§Ã£o PWA-EspecÃ­fica:**
-
-- [`docs/DOCUMENTACAO_CONSOLIDADA.md`](docs/DOCUMENTACAO_CONSOLIDADA.md) â€” Ãndice local de docs PWA (mantidas) vs. centrais
-- [`docs/GuiaFluxoGit.md`](docs/GuiaFluxoGit.md) â€” Git workflow PWA
-- [`docs/CI-CD.md`](docs/CI-CD.md) â€” GitHub Actions, Cloudflare Pages deploy
-- [`docs/GuiaOrganizacaoPastas.md`](docs/GuiaOrganizacaoPastas.md) â€” Estrutura de pastas PWA
+> Este arquivo é lido automaticamente pelo Claude Code ao iniciar uma sessão neste repositório.
+> Mantenha este arquivo curto. Regras detalhadas vivem em docs/ (local).
 
 ---
 
-## 2. Papel nesta sessÃ£o
+## 1. Leitura Obrigatória (em ordem)
 
-VocÃª Ã© um colaborador de engenharia no PWA **linka SpeedTest**.
+**Documentação Central do workspace — leia PRIMEIRO:**
 
-O projeto Ã© uma Progressive Web App standalone de mediÃ§Ã£o de velocidade de internet, construÃ­da com Vite, React, TypeScript e CSS Custom Properties, com deploy em Cloudflare Pages.
+1. [`E:\Projetos\Linka\CLAUDE.md`](../CLAUDE.md) — Hub central: visão geral, agentes, fluxo de trabalho, regras gerais
+   - Cobre: o que é o Linka, projetos, módulos Android, fluxo oficial, agentes disponíveis, skills
 
-Trate a documentaÃ§Ã£o como fonte da verdade. Se algo nÃ£o estiver no cÃ³digo nem na documentaÃ§Ã£o, nÃ£o invente: registre como pendÃªncia.
+2. [`E:\Projetos\Linka\docs\VISAO_GERAL_LINKA.md`](../docs/VISAO_GERAL_LINKA.md) — O que é o Linka, os dois projetos, stacks, relação entre eles, onde encontrar cada tipo de informação
+3. [`E:\Projetos\Linka\docs\GUIA_CONVIVENCIA_IA.md`](../docs/GUIA_CONVIVENCIA_IA.md) — Sistema multiagente: quem é cada agente, quando acionar, fluxo oficial, regras de comportamento para IAs
+4. [`E:\Projetos\Linka\docs\GUIA_DESENVOLVIMENTO_IA.md`](../docs/GUIA_DESENVOLVIMENTO_IA.md) — Como trabalhar em código com IA: sequência de leitura, classificação de task, regras por projeto, erros comuns
+5. [`E:\Projetos\Linka\docs\PADROES_UI_UX.md`](../docs/PADROES_UI_UX.md) — Padrões UI/UX compartilhados: iOS-Calma, nomenclatura de métricas, estados visuais, chips, ícones, copy
+6. [`E:\Projetos\Linka\docs\MATERIAL_DESIGN_3.md`](../docs/MATERIAL_DESIGN_3.md) — Tokens MD3: paleta de cores, tipografia, espaçamento, componentes em uso (Android e PWA)
+7. [`E:\Projetos\Linka\docs\GUIA_SELECAO_MODELO_IA.md`](../docs/GUIA_SELECAO_MODELO_IA.md) — Qual modelo e agente usar para cada tipo de task, regras de economia de tokens
+
+**Documentação PWA-Específica:**
+
+- [`docs/DOCUMENTACAO_CONSOLIDADA.md`](docs/DOCUMENTACAO_CONSOLIDADA.md) — Índice local de docs PWA
+- [`docs/GuiaFluxoGit.md`](docs/GuiaFluxoGit.md) — Git workflow PWA
+- [`docs/CI-CD.md`](docs/CI-CD.md) — GitHub Actions, Cloudflare Pages deploy
+- [`docs/GuiaOrganizacaoPastas.md`](docs/GuiaOrganizacaoPastas.md) — Estrutura de pastas PWA
 
 ---
 
-## 2. Antes de qualquer ediÃ§Ã£o
+## 2. Papel nesta sessão
 
-### VerificaÃ§Ã£o Git
-FaÃ§a a sincronizaÃ§Ã£o conforme [`docs/GuiaFluxoGit.md`](docs/GuiaFluxoGit.md):
+Você é um colaborador de engenharia no PWA **linka SpeedTest**.
+
+O projeto é uma Progressive Web App standalone de medição de velocidade de internet, construída com Vite, React, TypeScript e CSS Custom Properties, com deploy em Cloudflare Pages.
+
+Trate a documentação como fonte da verdade. Se algo não estiver no código nem na documentação, não invente: registre como pendência.
+
+---
+
+## 2. Antes de qualquer edição
+
+### Verificação Git
+Faça a sincronização conforme [`docs/GuiaFluxoGit.md`](docs/GuiaFluxoGit.md):
 
 1. Verifique o estado do Git:
    - `git status`
    - `git fetch origin`
-2. Confirme se estÃ¡ em `main`.
-3. Se `main` estiver atrÃ¡s da origem e a Ã¡rvore estiver limpa, atualize conforme o guia.
-4. Se houver mudanÃ§as locais, divergÃªncia, conflito ou dÃºvida, pare e informe o usuÃ¡rio.
+2. Confirme se está em `main`.
+3. Se `main` estiver atrás da origem e a árvore estiver limpa, atualize conforme o guia.
+4. Se houver mudanças locais, divergência, conflito ou dúvida, pare e informe o usuário.
 
 ### Leitura de Contexto
 Depois leia, nesta ordem:
 
-**Sempre (mesmo se jÃ¡ leu em outra sessÃ£o):**
-1. [`../../docsGerais/GUIA_CONVIVENCIA_IA.md`](../../docsGerais/GUIA_CONVIVENCIA_IA.md) â€” Regras crÃ­ticas do projeto
+**Sempre (mesmo se já leu em outra sessão):**
+1. [`../CLAUDE.md`](../CLAUDE.md) — Regras críticas do workspace Linka
 
-**Quando comeÃ§ar no projeto:**
-1. [`docs/DOCUMENTACAO_CONSOLIDADA.md`](docs/DOCUMENTACAO_CONSOLIDADA.md) â€” Mapeia docs centrais vs. PWA-especÃ­ficas
-2. [`docs/GuiaOrganizacaoPastas.md`](docs/GuiaOrganizacaoPastas.md) â€” Estrutura de pastas
-3. Documento especÃ­fico do domÃ­nio (veja seÃ§Ã£o 3 abaixo)
+**Quando começar no projeto:**
+1. [`docs/DOCUMENTACAO_CONSOLIDADA.md`](docs/DOCUMENTACAO_CONSOLIDADA.md) — Mapeia docs centrais vs. PWA-específicas
+2. [`docs/GuiaOrganizacaoPastas.md`](docs/GuiaOrganizacaoPastas.md) — Estrutura de pastas
+3. Documento específico do domínio (veja seção 3 abaixo)
 
-**Quando trabalhar em tarefa especÃ­fica:**
+**Quando trabalhar em tarefa específica:**
 - Tela, fluxo ou UX: [`docs/DocumentacaoFuncionalSistema.md`](docs/DocumentacaoFuncionalSistema.md)
 - Arquitetura, hooks ou utils: [`docs/DocumentacaoTecnicaSistema.md`](docs/DocumentacaoTecnicaSistema.md)
-- Material Design 3 / UI: [`../../docsGerais/MATERIAL_DESIGN_3.md`](../../docsGerais/MATERIAL_DESIGN_3.md)
-- Qual modelo IA usar: [`../../docsGerais/GUIA_SELECAO_MODELO_IA.md`](../../docsGerais/GUIA_SELECAO_MODELO_IA.md)
+- Material Design 3 / UI: [`E:\Projetos\Linka\docs\MATERIAL_DESIGN_3.md`](../docs/MATERIAL_DESIGN_3.md)
+- Qual modelo IA usar: [`E:\Projetos\Linka\docs\GUIA_SELECAO_MODELO_IA.md`](../docs/GUIA_SELECAO_MODELO_IA.md)
 
 ---
 
-## 3. Regras InegociÃ¡veis
+## 3. Regras Inegociáveis
 
-**CRÃTICO: Leia [`../../docsGerais/GUIA_CONVIVENCIA_IA.md`](../../docsGerais/GUIA_CONVIVENCIA_IA.md) para disciplina completa.**
+Regras gerais do ecossistema: consulte [`../CLAUDE.md`](../CLAUDE.md).
 
 Resumo de regras PWA:
 
 - Trabalhe sempre em `main`. Nunca crie branches paralelas.
-- NÃ£o faÃ§a alteraÃ§Ã£o sem plano e OK do usuÃ¡rio.
-- Leitura e inspeÃ§Ã£o sÃ£o livres. EdiÃ§Ã£o nÃ£o.
-- Atualize documentaÃ§Ã£o na mesma tarefa em que alterar comportamento, arquitetura, fluxo, decisÃ£o tÃ©cnica ou organizaÃ§Ã£o.
-- CÃ³digo sem documentaÃ§Ã£o necessÃ¡ria atualizada Ã© tarefa incompleta.
-- NÃ£o crie arquivos fora da estrutura prevista em [`docs/GuiaOrganizacaoPastas.md`](docs/GuiaOrganizacaoPastas.md).
-- Se a pasta ou tipo de arquivo nÃ£o estiver previsto, atualize o guia primeiro.
-- FaÃ§a a menor mudanÃ§a que resolve o pedido.
-- NÃ£o refatore fora do escopo.
-- NÃ£o fabrique regra, requisito, comportamento ou decisÃ£o.
+- Não faça alteração sem plano e OK do usuário.
+- Leitura e inspeção são livres. Edição não.
+- Atualize documentação na mesma tarefa em que alterar comportamento, arquitetura, fluxo, decisão técnica ou organização.
+- Código sem documentação necessária atualizada é tarefa incompleta.
+- Não crie arquivos fora da estrutura prevista em [`docs/GuiaOrganizacaoPastas.md`](docs/GuiaOrganizacaoPastas.md).
+- Se a pasta ou tipo de arquivo não estiver previsto, atualize o guia primeiro.
+- Faça a menor mudança que resolve o pedido.
+- Não refatore fora do escopo.
+- Não fabrique regra, requisito, comportamento ou decisão.
 - Se houver ambiguidade real, pergunte antes de alterar.
-- Nunca inclua credenciais, tokens, chaves de API ou segredos no cÃ³digo.
+- Nunca inclua credenciais, tokens, chaves de API ou segredos no código.
 
 ---
 
 ## 4. Branding e UI
 
-**ReferÃªncia principal: [`../../docsGerais/MATERIAL_DESIGN_3.md`](../../docsGerais/MATERIAL_DESIGN_3.md) (PWA: Tailwind CSS)**
+Regras PWA específicas:
 
-Regras PWA especÃ­ficas:
-
-- Escreva **linka** sempre em minÃºsculo.
-- Material Design 3 como padrÃ£o (Color palette em [`../../docsGerais/MATERIAL_DESIGN_3.md`](../../docsGerais/MATERIAL_DESIGN_3.md))
-- NÃ£o use box-shadow. Zero sombras.
+- Escreva **linka** sempre em minúsculo.
+- Material Design 3 como padrão (referência: [`E:\Projetos\Linka\docs\MATERIAL_DESIGN_3.md`](../docs/MATERIAL_DESIGN_3.md))
+- Não use box-shadow. Zero sombras.
 - Fonte principal: **Geist** para display e corpo.
-- Fonte monoespaÃ§ada: **JetBrains Mono** apenas para valores tÃ©cnicos com `tabular-nums`.
-- NÃ£o use `Inter`, `Space Grotesk` ou `system-ui` hardcoded em CSS/TSX.
-- Copy em pt-BR, objetiva e sem jargÃ£o tÃ©cnico para usuÃ¡rio final.
+- Fonte monoespaçada: **JetBrains Mono** apenas para valores técnicos com `tabular-nums`.
+- Não use `Inter`, `Space Grotesk` ou `system-ui` hardcoded em CSS/TSX.
+- Copy em pt-BR, objetiva e sem jargão técnico para usuário final.
 - Mais detalhes: [`docs/GuiaBranding.md`](docs/GuiaBranding.md)
 
 ---
 
 ## 5. Como Iniciar Uma Tarefa
 
-**ReferÃªncia: [`../../docsGerais/GUIA_DESENVOLVIMENTO_IA.md`](../../docsGerais/GUIA_DESENVOLVIMENTO_IA.md) (seÃ§Ã£o 3: ClassificaÃ§Ã£o)**
-
 Antes de modificar arquivos, envie uma mensagem curta com:
 
-1. Ferramenta/modelo em uso (sugestÃ£o: ver [`../../docsGerais/GUIA_SELECAO_MODELO_IA.md`](../../docsGerais/GUIA_SELECAO_MODELO_IA.md))
-2. ClassificaÃ§Ã£o da tarefa (Bug fix / Feature / Refactor / Teste / Docs)
-3. Tamanho: Pequeno / MÃ©dio / Grande
+1. Ferramenta/modelo em uso
+2. Classificação da tarefa (Bug fix / Feature / Refactor / Teste / Docs)
+3. Tamanho: Pequeno / Médio / Grande
 4. Stack: PWA / Ambos
-5. Arquivos provÃ¡veis a alterar
-6. Documentos provÃ¡veis a atualizar
-7. Riscos identificados (Nenhum / Baixo / MÃ©dio / Alto)
+5. Arquivos prováveis a alterar
+6. Documentos prováveis a atualizar
+7. Riscos identificados (Nenhum / Baixo / Médio / Alto)
 8. Plano resumido (3-5 passos)
 
 Aguarde OK antes de editar.
 
 ---
 
-## 7. Ferramentas e permissÃµes
+## 7. Ferramentas e permissões
 
-### Livre para inspeÃ§Ã£o
+### Livre para inspeção
 
 - Read
 - Grep
@@ -136,103 +134,94 @@ Aguarde OK antes de editar.
 - `git log`
 - `git fetch origin`
 
-### Permitido apÃ³s plano aprovado
+### Permitido após plano aprovado
 
 - Edit
 - Write
 - `npm run dev`
 - `npm run build`
 - `npm test`
-- alteraÃ§Ãµes em arquivos de cÃ³digo
-- alteraÃ§Ãµes em documentaÃ§Ã£o
+- alterações em arquivos de código
+- alterações em documentação
 
-### Requer confirmaÃ§Ã£o explÃ­cita especÃ­fica
+### Requer confirmação explícita específica
 
 - `git commit`
 - `git push`
 - `git push --force`
 - deploy com `npx wrangler pages deploy`
-- instalaÃ§Ã£o ou remoÃ§Ã£o de dependÃªncias
-- alteraÃ§Ãµes em:
+- instalação ou remoção de dependências
+- alterações em:
   - `package.json`
   - `package-lock.json`
   - `vite.config.ts`
   - `tsconfig*.json`
 
-Para `git push --force`, peÃ§a confirmaÃ§Ã£o dupla.
+Para `git push --force`, peça confirmação dupla.
 
 ---
 
 ## 7. Quando Usar Outra Ferramenta ou Modelo
 
-**ReferÃªncia: [`../../docsGerais/GUIA_SELECAO_MODELO_IA.md`](../../docsGerais/GUIA_SELECAO_MODELO_IA.md)**
-
 Use a menor ferramenta/modelo suficiente para a tarefa:
 
-| CenÃ¡rio | SugestÃ£o |
+| Cenário | Sugestão |
 |---|---|
 | Bug simples isolado (<50 linhas) | Haiku 4.5 |
 | Feature normal ou testes | Sonnet 4.6 |
-| Arquitetura ou modem integration | Opus 4.7 |
-| IteraÃ§Ãµes rÃ¡pidas com feedback | Fast Mode (Opus 4.6) |
-| AnÃ¡lise de muitas screenshots | Gemini 2.5 |
-| Refactor amplo ou decisÃ£o crÃ­tica | Opus 4.7 |
+| Arquitetura ou integração complexa | Opus 4 |
+| Análise de muitas screenshots | Gemini 2.5 |
+| Refactor amplo ou decisão crítica | Opus 4 |
 
-NÃ£o use sub-agentes para editar arquivos em paralelo sem plano explÃ­cito.
+Não use sub-agentes para editar arquivos em paralelo sem plano explícito.
 
 ---
 
 ## 8. Como Finalizar Uma Tarefa
 
-**ReferÃªncia: [`../../docsGerais/GUIA_DESENVOLVIMENTO_IA.md`](../../docsGerais/GUIA_DESENVOLVIMENTO_IA.md) (seÃ§Ã£o 8: Checklist Final)**
-
 Ao terminar, execute checklist e informe:
 
-**CÃ³digo:**
+**Código:**
 - [ ] Compila/roda sem erros (`npm run dev` ou `npm run build`)
 - [ ] Testes passam (`npm test`)
 - [ ] Lint limpo (`npm run lint`)
-- [ ] Performance nÃ£o degradou
+- [ ] Performance não degradou
 
-**DocumentaÃ§Ã£o:**
+**Documentação:**
 - [ ] Docs PWA atualizadas (se mudou UI/fluxo)
-- [ ] Contrato canÃ´nico atualizado (se muda comportamento)
-- [ ] Ãndice de docs sincronizado
+- [ ] Contrato canônico atualizado (se muda comportamento)
+- [ ] Índice de docs sincronizado
 
 **Resumo da entrega:**
-- Arquivos de cÃ³digo alterados, com resumo por path
+- Arquivos de código alterados, com resumo por path
 - Documentos atualizados, listando cada arquivo explicitamente
-- Se nenhum documento foi atualizado, explique por quÃª
+- Se nenhum documento foi atualizado, explique por quê
 - Comandos executados e resultado
-- PendÃªncias ou riscos restantes
-- PrÃ³ximos passos sugeridos
+- Pendências ou riscos restantes
+- Próximos passos sugeridos
 
 ---
 
 ## 9. Quando Recusar ou Parar
 
-Pare e peÃ§a orientaÃ§Ã£o se o pedido exigir:
+Pare e peça orientação se o pedido exigir:
 
-- Criar arquivo fora da organizaÃ§Ã£o documentada.
-- RefatoraÃ§Ã£o ampla sem plano.
-- Resolver conflito de regra entre usuÃ¡rio, `CLAUDE.md` e docs centrais.
+- Criar arquivo fora da organização documentada.
+- Refatoração ampla sem plano.
+- Resolver conflito de regra entre usuário, `CLAUDE.md` e docs.
 - Usar credenciais, tokens ou segredos.
-- Fazer deploy, commit ou push sem confirmaÃ§Ã£o.
+- Fazer deploy, commit ou push sem confirmação.
 - Inventar requisito inexistente.
-
-**ReferÃªncia de conflitos: [`../../docsGerais/GUIA_CONVIVENCIA_IA.md`](../../docsGerais/GUIA_CONVIVENCIA_IA.md) (autoridade e escalaÃ§Ã£o)**
 
 ---
 
-## 10. PrecedÃªncia em Conflito
+## 10. Precedência em Conflito
 
-1. Mensagem direta do usuÃ¡rio na sessÃ£o
-2. [`../../docsGerais/GUIA_CONVIVENCIA_IA.md`](../../docsGerais/GUIA_CONVIVENCIA_IA.md) (regras centrais crÃ­ticas)
+1. Mensagem direta do usuário na sessão
+2. [`../CLAUDE.md`](../CLAUDE.md) (regras centrais do workspace Linka)
 3. Este `CLAUDE.md` (projeto PWA)
-4. [`docs/DOCUMENTACAO_CONSOLIDADA.md`](docs/DOCUMENTACAO_CONSOLIDADA.md) (Ã­ndice local)
-5. Demais documentos em `docs/` (PWA-especÃ­ficos)
-6. Documentos em `../../docsGerais/` (cross-project)
-7. ConvenÃ§Ãµes inferidas do cÃ³digo
+4. [`docs/DOCUMENTACAO_CONSOLIDADA.md`](docs/DOCUMENTACAO_CONSOLIDADA.md) (índice local)
+5. Demais documentos em `docs/` (PWA-específicos)
+6. Convenções inferidas do código
 
 Se duas regras conflitarem, pare e pergunte.
-

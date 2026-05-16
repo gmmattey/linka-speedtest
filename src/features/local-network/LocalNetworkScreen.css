@@ -38,6 +38,17 @@
   line-height: 1.5;
 }
 
+.lk-local-network__text--primary {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.lk-local-network__unavailable {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
 .lk-local-network__error {
   margin: 0;
   color: var(--error);
@@ -86,4 +97,190 @@
 
 .lk-local-network__confidence--inferred {
   color: var(--text-3);
+}
+
+/* ── Nickname tag ─────────────────────────────────── */
+
+.lk-local-network__nickname-tag {
+  margin-left: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-tint);
+  border: 1px solid var(--accent-border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  vertical-align: middle;
+}
+
+/* ── NicknameSheet ────────────────────────────────── */
+
+.lk-nickname-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  animation: lkNicknameIn 200ms ease;
+}
+
+@keyframes lkNicknameIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.lk-nickname-sheet {
+  width: 100%;
+  background: var(--surface);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  max-height: 80dvh;
+  overflow-y: auto;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.2);
+}
+
+.lk-nickname-sheet__handle-row {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 6px;
+}
+
+.lk-nickname-sheet__handle {
+  width: 36px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.lk-nickname-sheet__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 20px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.lk-nickname-sheet__header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.lk-nickname-sheet__close {
+  background: var(--surface-2);
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.lk-nickname-sheet__body {
+  padding: 20px 20px calc(32px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lk-nickname-sheet__desc {
+  font-size: 14px;
+  color: var(--text-2);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.lk-nickname-sheet__device-info {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lk-nickname-sheet__device-ip {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-2);
+  background: var(--surface-2);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.lk-nickname-sheet__device-mac {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-3);
+  background: var(--surface-2);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.lk-nickname-sheet__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lk-nickname-sheet__field span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.lk-nickname-sheet__field input {
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-size: 15px;
+  font-family: var(--font-body);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.lk-nickname-sheet__field input:focus {
+  border-color: var(--accent);
+}
+
+.lk-nickname-sheet__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lk-nickname-sheet__btn-save {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.lk-nickname-sheet__btn-save:active { opacity: 0.8; }
+
+.lk-nickname-sheet__btn-clear {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  color: var(--error);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.lk-nickname-sheet__btn-clear:active {
+  background: rgba(255, 77, 79, 0.08);
 }

@@ -11,7 +11,7 @@ import { buildShareText, shareResultText } from '../utils/share';
 import type { Quality, ServerInfo, SpeedTestResult, TestRecord } from '../types';
 import { interpretSpeedTestResult, resolveCopy, useCaseGrade, type UseCaseGrade } from '../core';
 import { useDiagnosisItems } from '../features/diagnosis';
-
+import { InfoTooltip } from '../components/InfoTooltip';
 import type { UseCaseId } from '../core';
 import { loadHistory } from '../utils/history';
 import { formatMbps, formatMs } from '../utils/format';
@@ -25,7 +25,6 @@ import { anatelGrade, anatelGradeColorVar, anatelGradeGlowVar } from '../utils/a
 import { classifyDnsLatency } from '../utils/dnsTiming';
 import { aggregateDiagnosisSeverity, type DiagnosisAggregate, type DiagnosisItem } from '../utils/diagnosisItems';
 import { WifiSignalSection } from '../features/local-wifi/WifiSignalSection';
-import { InfoTooltip } from '../components/InfoTooltip';
 
 // Code splitting (2026-05): as 3 sheets de "Mais detalhes" são pesadas e
 // só são vistas quando o usuário toca em uma das rows. Lazy + montagem
@@ -134,6 +133,94 @@ function verdictLabel(q: Quality): string {
 }
 
 // =============================================================================
+// W5-A — RQUAL Anatel: estados aprovado/parcial/reprovado (Wave 5, 2026-05).
+// =============================================================================
+// Baseado no Ato 7869/2022 (fixa) / Resolução 717/2019:
+//   aprovado  → >= 80% da velocidade contratada
+//   parcial   → >= 40% mas < 80%
+//   reprovado → < 40%
+// "Hora de pico" NÃO existe normativamente — não é usado aqui.
+// =============================================================================
+
+type RqualStatus = 'aprovado' | 'parcial' | 'reprovado' | null;
+
+/** Avalia uma única métrica contra seu contratado. Retorna null se dados ausentes. */
+function rqualSingleStatus(deliveredMbps: number, contractedMbps: number | null | undefined): RqualStatus {
+  if (contractedMbps == null || contractedMbps <= 0) return null;
+  if (!isFinite(deliveredMbps) || deliveredMbps <= 0) return null;
+  const pct = (deliveredMbps / contractedMbps) * 100;
+  if (pct >= 80) return 'aprovado';
+  if (pct >= 40) return 'parcial';
+  return 'reprovado';
+}
+
+/**
+ * Retorna o pior status entre download e upload, conforme Ato 7869/2022.
+ * Se contractedUp não estiver disponível, avalia só download (não inventa valor).
+ * Upload com `ulFailed=true` é ignorado no cálculo para não punir falha de medição.
+ */
+function rqualStatus(
+  dlMbps: number,
+  contractedDown: number | null | undefined,
+  ulMbps: number | null,
+  contractedUp: number | null | undefined,
+  ulFailed?: boolean,
+): RqualStatus {
+  const dlStatus = rqualSingleStatus(dlMbps, contractedDown);
+  if (dlStatus === null) return null; // sem contratado, sem card
+
+  // Upload só entra no cálculo se: contratado informado E medição válida
+  const ulStatus =
+    !ulFailed && ulMbps != null
+      ? rqualSingleStatus(ulMbps, contractedUp)
+      : null;
+
+  // Pior dos dois (null = não avaliado, não contribui)
+  const order: Record<NonNullable<RqualStatus>, number> = {
+    aprovado: 0,
+    parcial: 1,
+    reprovado: 2,
+  };
+  if (ulStatus === null) return dlStatus;
+  return order[dlStatus] >= order[ulStatus] ? dlStatus : ulStatus;
+}
+
+function rqualConclusion(status: RqualStatus): string {
+  if (status === 'aprovado') return 'Sua internet está dentro do esperado pelo contrato.';
+  if (status === 'parcial')  return 'Velocidade acima do mínimo, mas abaixo do normal. Pode ser variação pontual — faça mais testes para confirmar.';
+  if (status === 'reprovado') return 'Se isso se repetir, você tem direito de reclamar com sua operadora.';
+  return '';
+}
+
+function rqualColor(status: RqualStatus): string {
+  if (status === 'aprovado') return 'var(--success)';
+  if (status === 'parcial')  return 'var(--warn)';
+  return 'var(--error)';
+}
+
+function rqualBgColor(status: RqualStatus): string {
+  if (status === 'aprovado') return 'var(--color-good-bg)';
+  if (status === 'parcial')  return 'var(--color-warn-bg)';
+  return 'var(--color-bad-bg)';
+}
+
+function rqualLabel(status: RqualStatus): string {
+  if (status === 'aprovado') return 'Dentro do contrato';
+  if (status === 'parcial')  return 'Abaixo do normal';
+  return 'Abaixo do mínimo';
+}
+
+// Tooltip RQUAL com 3 parágrafos educativos (paridade Android — Wave 5).
+// InfoTooltip aceita ReactNode desde a extensão de Risco 2 (2026-05).
+const RQUAL_TOOLTIP = (
+  <>
+    <span>A ANATEL define dois limites de velocidade que sua operadora é obrigada a cumprir.</span>
+    <span>O mínimo garantido é 40% da velocidade que você contratou — em qualquer momento do dia. Este teste mede exatamente isso.</span>
+    <span>O limite de velocidade normal é 80% da velocidade contratada. Esse cálculo usa uma média de vários testes ao longo do tempo — não é possível confirmar esse critério com uma única medição.</span>
+  </>
+);
+
+// =============================================================================
 // Ribbon do card unificado de teste (refactor 2026-05).
 // =============================================================================
 // Substitui o chip flutuante "Aceitável/Boa/Lenta" por uma faixa colorida de
@@ -146,6 +233,22 @@ function qualityRibbonColor(q: Quality): string {
   if (q === 'fair')                       return 'var(--warn)';
   // slow / unavailable
   return 'var(--error)';
+}
+
+function qualityToGradeLetter(q: Quality): string {
+  if (q === 'excellent') return 'A';
+  if (q === 'good') return 'B';
+  if (q === 'fair') return 'C';
+  if (q === 'slow') return 'D';
+  return '?';
+}
+
+function qualityToGradeCircleStyle(q: Quality): { background: string; color: string } {
+  if (q === 'excellent') return { background: 'var(--color-good-bg)', color: 'var(--grade-a)' };
+  if (q === 'good')      return { background: 'var(--color-good-bg)', color: 'var(--grade-b)' };
+  if (q === 'fair')      return { background: 'var(--color-warn-bg)', color: 'var(--grade-c)' };
+  if (q === 'slow')      return { background: 'var(--color-bad-bg)',  color: 'var(--grade-d)' };
+  return { background: 'var(--surface-2)', color: 'var(--text-3)' };
 }
 
 // =============================================================================
@@ -544,6 +647,21 @@ export function ResultScreen({
         >
           <span className="sr-only">Verdict: {verdictLabel(interpreted.primary)}</span>
 
+        {/* ── Grade circle (alinhamento Kotlin: ResultadoVelocidadeScreen) ── */}
+        {(() => {
+          const circleStyle = qualityToGradeCircleStyle(interpreted.primary);
+          return (
+            <div className="lk-result__grade-row">
+              <div className="lk-result__grade-circle" style={{ background: circleStyle.background }}>
+                <span className="lk-result__grade-letter" style={{ color: circleStyle.color }}>
+                  {qualityToGradeLetter(interpreted.primary)}
+                </span>
+              </div>
+              <p className="lk-result__grade-verdict">{verdictLabel(interpreted.primary)}</p>
+            </div>
+          );
+        })()}
+
         {/* ── Bloco PRIMARY — Download e Upload em fonte enorme ───────────
             Hierarquia visual nova (refactor 2026-05): as duas métricas
             "principais" (banda) ganham peso máximo. Sem badge de grade
@@ -591,13 +709,13 @@ export function ResultScreen({
                 color: anatelGradeColorVar(dlAnatel),
                 ['--cell-glow' as never]: anatelGradeGlowVar(dlAnatel),
               } as CSSProperties)
-            : { color: 'var(--dl)' };
+            : { color: 'var(--phase-dl)' };
           const ulStyle: CSSProperties = ulAnatel
             ? ({
                 color: anatelGradeColorVar(ulAnatel),
                 ['--cell-glow' as never]: anatelGradeGlowVar(ulAnatel),
               } as CSSProperties)
-            : { color: 'var(--ul)' };
+            : { color: 'var(--phase-ul)' };
 
           const dlPctStyle: CSSProperties | undefined = dlAnatel
             ? { color: anatelGradeColorVar(dlAnatel) }
@@ -757,30 +875,115 @@ export function ResultScreen({
           );
         })()}
 
+        {/* ── W5-A — Card RQUAL Anatel ─────────────────────────────────
+            Aparece apenas quando o usuário cadastrou velocidade contratada
+            e não está em rede móvel. Exibe status aprovado/parcial/reprovado
+            baseado nos critérios do Ato 7869/2022 (ANATEL): 80% = normal,
+            40% = mínimo garantido. Sem "hora de pico" — não existe
+            normativamente. Tooltip educativo com 3 parágrafos. */}
+        {(() => {
+          const isMobile = profile === 'mobile_broadband';
+          if (isMobile) return null;
+
+          // Avalia download e upload individualmente para exibir breakdown.
+          const dlOnlyStatus = rqualSingleStatus(result.dl, contractedDown);
+          if (!dlOnlyStatus) return null; // sem contratado, sem card
+
+          const ulOnlyStatus =
+            !result.ulFailed && result.ul != null
+              ? rqualSingleStatus(result.ul, contractedUp)
+              : null;
+
+          // Status geral = pior dos dois (não-null garantido: dlOnlyStatus passou).
+          const overallStatus: NonNullable<RqualStatus> = rqualStatus(
+            result.dl, contractedDown,
+            result.ulFailed ? null : result.ul,
+            contractedUp,
+            result.ulFailed,
+          ) ?? dlOnlyStatus;
+
+          const statusColor = rqualColor(overallStatus);
+          const statusBg = rqualBgColor(overallStatus);
+
+          return (
+            <div className="lk-result__rqual" style={{ borderColor: statusColor, background: statusBg }}>
+              <div className="lk-result__rqual-header">
+                <div className="lk-result__rqual-header-left">
+                  <span className="lk-result__rqual-kicker">ANATEL — Entrega de velocidade</span>
+                  <div className="lk-result__rqual-status-row">
+                    {overallStatus === 'aprovado' && (
+                      <Icon name="check-circle" size={16} color={statusColor} />
+                    )}
+                    {overallStatus !== 'aprovado' && (
+                      <Icon name="info" size={16} color={statusColor} />
+                    )}
+                    <span className="lk-result__rqual-status-label" style={{ color: statusColor }}>
+                      {rqualLabel(overallStatus)}
+                    </span>
+                  </div>
+                  {/* Breakdown DL/UL quando upload também foi avaliado */}
+                  {ulOnlyStatus !== null && (
+                    <div className="lk-result__rqual-breakdown" aria-label="Detalhe por direção">
+                      <span style={{ color: rqualColor(dlOnlyStatus) }}>
+                        DL: {rqualLabel(dlOnlyStatus)}
+                      </span>
+                      <span className="lk-result__rqual-breakdown-sep" aria-hidden="true">·</span>
+                      <span style={{ color: rqualColor(ulOnlyStatus) }}>
+                        UL: {rqualLabel(ulOnlyStatus)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <InfoTooltip
+                  label={RQUAL_TOOLTIP}
+                  ariaLabel="Entenda os critérios ANATEL de velocidade contratada"
+                />
+              </div>
+              <p className="lk-result__rqual-conclusion">{rqualConclusion(overallStatus)}</p>
+            </div>
+          );
+        })()}
+
         {/* ── Use cases row — agora com grade A-F por cenário ──────────
             A grade vem de `useCaseGrade()` (src/core/useCaseGrade.ts):
             pior das métricas relevantes para cada use case avaliada
-            contra os thresholds de qualidade do profile ativo. */}
+            contra os thresholds de qualidade do profile ativo.
+            W5-B: estado aprovado (A/B) mostra check verde + "Velocidade
+            adequada para este uso"; reprovado mantém badge de grade. */}
         {interpreted.useCases.length > 0 && (
-          <div className="lk-result__use-row">
+          <div className="lk-result__use-list">
+            <p className="lk-result__use-header">EXPERIÊNCIA DE USO</p>
+            <div className="lk-result__use-divider" />
             {interpreted.useCases.map(({ id, status, blockingFactors }) => {
               const grade = useCaseGrade({ id, status, blockingFactors }, result, profile);
+              const isPositive = grade === 'A' || grade === 'B';
               const gStyle = gradeStyle(grade);
               return (
-                <div key={id} className="lk-result__use-item">
-                  <div
-                    className="lk-result__use-icon"
-                    style={gStyle}
-                  >
-                    <Icon name={ucIcon(id)} size={18} />
+                <div key={id}>
+                  <div className="lk-result__use-item">
+                    <div className="lk-result__use-icon-wrap">
+                      <Icon name={ucIcon(id)} size={20} color="var(--accent)" />
+                    </div>
+                    <span className="lk-result__use-lbl">{ucLabel(id)}</span>
+                    {isPositive ? (
+                      <span className="lk-result__use-ok">
+                        <Icon name="check-circle" size={14} color="var(--success)" />
+                        <span style={{ color: 'var(--success)', fontSize: 12, marginLeft: 4 }}>Adequada</span>
+                      </span>
+                    ) : (
+                      <span className="lk-result__use-badge" style={gStyle}>
+                        {gradeLabel(grade)}
+                      </span>
+                    )}
                   </div>
-                  <span className="lk-result__use-lbl">{ucLabel(id)}</span>
-                  <span className="lk-result__use-row__chip" style={gStyle}>
-                    {grade} · {gradeLabel(grade)}
-                  </span>
+                  <div className="lk-result__use-divider" />
                 </div>
               );
             })}
+            {/* W5-B — Nota sobre jitter ao final da seção de uso */}
+            <p className="lk-result__use-jitter-note">
+              Oscilação é a variação da latência — valores altos causam lag em jogos e travamentos em videochamadas.
+            </p>
           </div>
         )}
 

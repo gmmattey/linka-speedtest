@@ -1,0 +1,513 @@
+.lk-home {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: transparent;
+  overflow: hidden;
+}
+
+.lk-home__sentinel {
+  position: absolute;
+  top: calc(var(--safe-top) + 56px);
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.lk-home__logo {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+}
+
+/* ── Alert ────────────────────────────────────────────────────────── */
+
+.lk-home__alert {
+  margin: 0 16px 4px;
+  padding: 10px 14px;
+  background: var(--color-bad-bg);
+  border-left: 3px solid var(--error);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Scroll container ─────────────────────────────────────────────── */
+
+.lk-home__scroll {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding: calc(var(--safe-top) + 64px) 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  /* extra bottom pad because BottomNavBar covers ~60px + safe area */
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ── Network Path ─────────────────────────────────────────────────── */
+
+.lk-home__path {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+
+.lk-home__node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 4px;
+  flex: 1;
+  min-width: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity var(--t-fast);
+}
+
+.lk-home__node:active {
+  opacity: 0.7;
+}
+
+.lk-home__node-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lk-home__node-icon--device   { background: var(--accent); }
+.lk-home__node-icon--gateway  { background: var(--accent-blue); }
+.lk-home__node-icon--internet { background: var(--success); }
+
+.lk-home__node-label {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.lk-home__node-sub {
+  font-size: 11px;
+  color: var(--text-3);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.lk-home__path-line {
+  flex: 0 0 28px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-blue) 50%, var(--success) 100%);
+  opacity: 0.4;
+  margin-bottom: 28px;
+}
+
+/* ── Último Teste ─────────────────────────────────────────────────── */
+
+.lk-home__last-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.lk-home__last-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+.lk-home__last-grade {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.lk-home__last-metrics {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.lk-home__metric {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.lk-home__metric-value {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.lk-home__metric-label {
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.lk-home__metric-divider {
+  width: 1px;
+  height: 36px;
+  background: var(--border);
+}
+
+/* ── Experiência de Uso ───────────────────────────────────────────── */
+
+.lk-home__experience {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border);
+}
+
+.lk-home__experience-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  margin: 0 0 8px;
+}
+
+.lk-home__experience-divider {
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+.lk-home__exp-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 10px 0;
+}
+
+.lk-home__exp-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lk-home__exp-label {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+}
+
+.lk-home__exp-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* ── Empty state ─────────────────────────────────────────────────── */
+
+.lk-home__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xxl) var(--space-lg);
+}
+
+.lk-home__empty-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.lk-home__empty-sub {
+  font-size: 13px;
+  color: var(--text-3);
+  text-align: center;
+}
+
+/* ── CTA / Iniciar Teste ─────────────────────────────────────────── */
+
+.lk-home__cta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.lk-home__mode-toggle {
+  display: flex;
+  padding: 2px;
+  background: var(--surface-2);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  align-self: center;
+}
+
+.lk-home__mode-btn {
+  padding: 8px 24px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  transition: all var(--t-fast);
+}
+
+.lk-home__mode-btn--active {
+  background: var(--accent-tint);
+  border-color: var(--accent-border);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.lk-home__start-btn {
+  width: 100%;
+  height: 56px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.lk-home__start-btn:not(:disabled) {
+  /* Pulse animation no botão de iniciar — igual ao orb original */
+  position: relative;
+  overflow: visible;
+}
+
+.lk-home__start-btn:not(:disabled)::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: var(--radius-button);
+  border: 2px solid var(--accent);
+  animation: lkStartPulse 2.4s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes lkStartPulse {
+  0%   { transform: scale(1); opacity: 0.5; }
+  70%  { transform: scale(1.04); opacity: 0; }
+  100% { transform: scale(1.04); opacity: 0; }
+}
+
+/* ── Atalhos ─────────────────────────────────────────────────────── */
+
+.lk-home__shortcuts {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.lk-home__shortcut {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-md) var(--space-sm);
+  background: var(--surface-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  cursor: pointer;
+  transition: background var(--t-fast), transform var(--t-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lk-home__shortcut:active {
+  background: var(--surface-2);
+  transform: scale(0.96);
+}
+
+.lk-home__shortcut-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-button);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lk-home__shortcut-icon--orbit        { background: var(--accent); }
+.lk-home__shortcut-icon--sinal        { background: var(--accent-blue); }
+.lk-home__shortcut-icon--dispositivos { background: var(--accent); }
+
+.lk-home__shortcut-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lk-home__shortcut-sub {
+  font-size: 10px;
+  color: var(--text-3);
+}
+
+.lk-home__bottom-pad {
+  height: 8px;
+  flex-shrink: 0;
+}
+
+/* ── Bottom Sheets ───────────────────────────────────────────────── */
+
+.lk-home-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  animation: lkFadeIn 200ms ease;
+}
+
+@keyframes lkFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.lk-home-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 201;
+  background: var(--surface);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  border: 1px solid var(--border);
+  padding: 0 16px calc(var(--space-xl) + env(safe-area-inset-bottom, 0px));
+  transform: translateY(100%);
+  transition: transform var(--t-med);
+  max-height: 70dvh;
+  overflow-y: auto;
+}
+
+.lk-home-sheet--open {
+  transform: translateY(0);
+}
+
+.lk-home-sheet__handle-row {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 8px;
+}
+
+.lk-home-sheet__handle {
+  width: 36px;
+  height: 4px;
+  background: var(--border-strong);
+  border-radius: var(--radius-pill);
+}
+
+.lk-home-sheet__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) 0 var(--space-lg);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-md);
+}
+
+.lk-home-sheet__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-button);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lk-home-sheet__icon--device   { background: var(--accent); }
+.lk-home-sheet__icon--gateway  { background: var(--accent-blue); }
+.lk-home-sheet__icon--internet { background: var(--success); }
+
+.lk-home-sheet__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.lk-home-sheet__sub {
+  font-size: 13px;
+  color: var(--text-3);
+  margin: 2px 0 0;
+}
+
+.lk-home-sheet__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.lk-home-sheet__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  gap: var(--space-lg);
+}
+
+.lk-home-sheet__row:last-child {
+  border-bottom: none;
+}
+
+.lk-home-sheet__row-label {
+  font-size: 14px;
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+
+.lk-home-sheet__row-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  text-align: right;
+  word-break: break-all;
+}
+
+.lk-home-sheet__note {
+  margin-top: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--surface-2);
+  border-radius: var(--radius-button);
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.5;
+}
+
+.lk-home-sheet__close {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-lg);
+  color: var(--text-2);
+  font-size: 15px;
+}

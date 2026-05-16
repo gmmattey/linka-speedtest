@@ -27,6 +27,7 @@ interface Props {
   onShowLastResult: () => void;
   onShowHistory: () => void;
   onExplore?: () => void;
+  onOpenPulse?: () => void;
   /**
    * Callback do pull-to-refresh. Recebe `performAppRefresh` já
    * pré-amarrado com `deviceInfo.reload` em App.tsx. Quando ausente, o
@@ -51,9 +52,18 @@ export function StartScreen({
   onShowLastResult,
   onShowHistory,
   onExplore,
+  onOpenPulse,
   onRefresh,
 }: Props) {
   const [selectedMode, setSelectedMode] = useState<'fast' | 'complete'>(settings.defaultMode ?? 'complete');
+  const [showMobileWarning, setShowMobileWarning] = useState(false);
+  const [pendingMode, setPendingMode] = useState<'fast' | 'complete' | null>(null);
+
+  // Sentinela de sessão: após confirmar o aviso uma vez, não exibe de novo.
+  const mobileWarningDismissedRef = useRef(
+    typeof sessionStorage !== 'undefined' &&
+      sessionStorage.getItem('linka.mobileWarningDismissed') === '1',
+  );
 
   // Bloco 6 — UX uniforme (2026-05): sentinel sintético para o
   // useScrollHeader. A StartScreen não tem `<PageHeader>`, então o
@@ -79,6 +89,48 @@ export function StartScreen({
   const handleModeChange = (mode: 'fast' | 'complete') => {
     setSelectedMode(mode);
     onUpdateSettings({ defaultMode: mode });
+  };
+
+  // W1-04: intercepta início do teste quando em dados móveis.
+  // Detecção em camadas:
+  //   1. device.connectionType === 'mobile'  (fonte primária — useDeviceInfo)
+  //   2. navigator.connection diretamente    (fallback quando device ainda é null ou unknown)
+  //   3. device.connectionType === 'unknown' em mobile UA — iOS Safari não expõe
+  //      navigator.connection, então por segurança exibimos o aviso.
+  const isConnectionMobile = (): boolean => {
+    const nav = navigator as Navigator & { connection?: { effectiveType?: string; type?: string } };
+    const conn = nav.connection;
+    if (!conn) return false;
+    return conn.type === 'cellular' ||
+      ['slow-2g', '2g', '3g'].includes(conn.effectiveType ?? '');
+  };
+
+  const handleStartWithCheck = (mode: 'fast' | 'complete') => {
+    const knownMobile = device?.connectionType === 'mobile';
+    // Fallback: API indisponível (iOS Safari) + UA mobile → exibe por segurança
+    const unknownMobile =
+      device?.connectionType === 'unknown' &&
+      /Mobi|Android/i.test(navigator.userAgent);
+    const isMobile = knownMobile || isConnectionMobile() || unknownMobile;
+    if (isMobile && !mobileWarningDismissedRef.current) {
+      setPendingMode(mode);
+      setShowMobileWarning(true);
+      return;
+    }
+    onStart(mode);
+  };
+
+  const handleMobileWarningConfirm = () => {
+    mobileWarningDismissedRef.current = true;
+    sessionStorage.setItem('linka.mobileWarningDismissed', '1');
+    setShowMobileWarning(false);
+    if (pendingMode) onStart(pendingMode);
+    setPendingMode(null);
+  };
+
+  const handleMobileWarningCancel = () => {
+    setShowMobileWarning(false);
+    setPendingMode(null);
   };
 
   const canStart = isOnline && !loading && !!server?.available && !!device;
@@ -159,7 +211,7 @@ export function StartScreen({
         {/* Orb pulsante */}
         <button
           className={`lk-start__orb${!canStart ? ' lk-start__orb--disabled' : ''}`}
-          onClick={() => onStart(selectedMode)}
+          onClick={() => handleStartWithCheck(selectedMode)}
           disabled={!canStart}
           aria-label="Iniciar teste"
         >
@@ -211,6 +263,17 @@ export function StartScreen({
               {' '}
               <span style={{ color: 'var(--text-2)' }}>{unitLabel}</span>
             </span>
+          </button>
+        </div>
+      )}
+
+      {/* LINKA PULSE — diagnóstico guiado */}
+      {onOpenPulse && (
+        <div className="lk-start__explore">
+          <button className="lk-start__explore-btn btn-text" onClick={onOpenPulse}>
+            <Icon name="network" size={14} color="var(--accent)" />
+            <span>LINKA PULSE — Diagnóstico IA</span>
+            <Icon name="chevron" size={12} color="var(--text-3)" />
           </button>
         </div>
       )}
@@ -268,6 +331,36 @@ export function StartScreen({
 
       {/* Dica de rodapé */}
       <div className="lk-start__hint">Toque no círculo</div>
+
+      {/* W1-04: Dialog de aviso de consumo em dados móveis */}
+      {showMobileWarning && (
+        <div className="lk-start__dialog-overlay" onClick={handleMobileWarningCancel}>
+          <div className="lk-start__dialog" onClick={(e) => e.stopPropagation()}>
+            <h3 className="lk-start__dialog-title">
+              {resolveCopy('dataWarning.mobile.title')}
+            </h3>
+            <p className="lk-start__dialog-message">
+              {pendingMode === 'fast'
+                ? resolveCopy('dataWarning.mobile.fast')
+                : resolveCopy('dataWarning.mobile.complete')}
+            </p>
+            <div className="lk-start__dialog-actions">
+              <button
+                className="lk-start__dialog-btn lk-start__dialog-btn--cancel"
+                onClick={handleMobileWarningCancel}
+              >
+                {resolveCopy('dataWarning.mobile.cancel')}
+              </button>
+              <button
+                className="lk-start__dialog-btn lk-start__dialog-btn--confirm"
+                onClick={handleMobileWarningConfirm}
+              >
+                {resolveCopy('dataWarning.mobile.confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

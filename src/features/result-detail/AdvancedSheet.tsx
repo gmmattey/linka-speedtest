@@ -3,7 +3,7 @@ import { IOSList, type IOSListItem } from '../../components/IOSList';
 import { DraggableSheet } from '../../components/DraggableSheet';
 import { InfoTooltip } from '../../components/InfoTooltip';
 import { resolveCopy } from '../../core';
-import type { ServerInfo, SpeedTestResult, SpeedTestSample, TestRecord } from '../../types';
+import type { BufferbloatSeverity, ServerInfo, SpeedTestResult, SpeedTestSample, TestRecord } from '../../types';
 import { formatMbps, formatMs } from '../../utils/format';
 import './AdvancedSheet.css';
 
@@ -47,7 +47,54 @@ export function AdvancedSheet({ open, onClose, result, server, unit, history }: 
   // ── Bloco "Métricas avançadas" ─────────────────────────────────────────
   const metricItems: IOSListItem[] = [];
 
-  if (result.bufferbloatGrade) {
+  // W5-E — Bufferbloat: estado positivo explícito quando severity === 'low'
+  // (deltaMs < 30ms). Quando há problema (moderate/high/critical), mostra
+  // grade com cor semântica. Usa bufferbloatSeverity (campo real do
+  // orchestrator) em vez de bufferbloatGrade (legado, não preenchido).
+  if (result.bufferbloatSeverity === 'low') {
+    metricItems.push({
+      icon: <Icon name="check-circle" size={14} color="var(--success)" />,
+      iconBg: 'var(--color-good-bg)',
+      title: 'Bufferbloat',
+      titleAfter: (
+        <InfoTooltip
+          label="Bufferbloat é o aumento da latência quando a conexão está sobrecarregada. Quando não detectado, o roteador gerencia bem o tráfego pesado — ótimo para jogos e videochamadas simultâneas."
+          ariaLabel="O que é Bufferbloat"
+        />
+      ),
+      trailing: (
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ color: 'var(--success)', fontWeight: 700, fontSize: 13 }}>
+            Sem bufferbloat detectado
+          </div>
+        </div>
+      ),
+    });
+  } else if (result.bufferbloatSeverity) {
+    const grade = bufferbloatSeverityToGrade(result.bufferbloatSeverity);
+    metricItems.push({
+      icon: <Icon name="bolt" size={14} color={bufferbloatColor(grade)} />,
+      iconBg: 'var(--surface-3)',
+      title: 'Bufferbloat',
+      titleAfter: (
+        <InfoTooltip
+          label="Avalia o aumento da latência quando a conexão está saturada (bufferbloat). A é ótimo; D/F indica fila congestionada no roteador."
+          ariaLabel="O que é Bufferbloat"
+        />
+      ),
+      trailing: (
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ color: bufferbloatColor(grade), fontWeight: 700, fontSize: 15 }}>
+            {grade}
+          </div>
+          <div style={{ fontSize: 11, color: bufferbloatColor(grade) }}>
+            {bufferbloatLabel(grade)}
+          </div>
+        </div>
+      ),
+    });
+  } else if (result.bufferbloatGrade) {
+    // Fallback compat: bufferbloatGrade legado (modo avançado antigo)
     metricItems.push({
       icon: <Icon name="bolt" size={14} color={bufferbloatColor(result.bufferbloatGrade)} />,
       iconBg: 'var(--surface-3)',
@@ -334,6 +381,14 @@ export function AdvancedSheet({ open, onClose, result, server, unit, history }: 
 }
 
 // ── Helpers (portados do ResultScreen.tsx) ────────────────────────────────
+
+/** Converte BufferbloatSeverity para grade de exibição (A/C/D/F). */
+function bufferbloatSeverityToGrade(severity: BufferbloatSeverity): string {
+  if (severity === 'low')      return 'A';
+  if (severity === 'moderate') return 'C';
+  if (severity === 'high')     return 'D';
+  return 'F';
+}
 
 function bufferbloatColor(grade: string): string {
   if (grade === 'A' || grade === 'B') return 'var(--ul)';

@@ -1,0 +1,49 @@
+.pulse-result-card {
+  background: var(--surface, #12121A);
+  border: 1px solid var(--border, #2A2A35);
+  border-radius: var(--radius, 14px);
+  padding: 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.pulse-result-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.pulse-result-card__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent, #7C5FFF);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pulse-result-card__fallback {
+  font-size: 10px;
+  color: var(--text-3, #6B7280);
+  font-weight: 400;
+}
+
+.pulse-result-card__toggle {
+  font-size: 10px;
+  color: var(--text-3, #6B7280);
+}
+
+.pulse-result-card__text {
+  font-size: 14px;
+  color: var(--text-1, #F3F4F6);
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-line;
+}
+
+.pulse-result-card__preview {
+  font-size: 13px;
+  color: var(--text-2, #9CA3AF);
+  margin: 0;
+}

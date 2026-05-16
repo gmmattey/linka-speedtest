@@ -92,8 +92,9 @@ function gaugeProgressFallback(phase: TestPhase): number {
 
 function gaugeColor(phase: TestPhase): string {
   switch (phase) {
-    case 'download': return 'var(--dl)';
-    case 'upload':   return 'var(--ul)';
+    case 'download': return 'var(--phase-dl)';
+    case 'upload':   return 'var(--phase-ul)';
+    case 'latency':  return 'var(--phase-latency)';
     default:         return 'var(--accent)';
   }
 }
@@ -112,6 +113,15 @@ export function RunningScreen({
 }: Props) {
   const steps = STEPS_V2;
   const currentIdx = phaseIndex(phase);
+
+  // Média de download para mostrar durante a fase de upload (como Kotlin VelocidadeScreen)
+  const avgDownloadMbps = phase === 'upload'
+    ? (() => {
+        const dlPoints = live.filter((p) => p.phase === 'download').map((p) => p.speed);
+        if (dlPoints.length === 0) return null;
+        return dlPoints.reduce((a, b) => a + b, 0) / dlPoints.length;
+      })()
+    : null;
   // Preenche o arco com o progresso contínuo do orchestrator quando ele
   // existir; cai no degrau por fase apenas como fallback. O CSS do Gauge
   // já tem `transition: stroke-dashoffset 0.5s ease`, então mesmo updates
@@ -190,6 +200,16 @@ export function RunningScreen({
             color={gaugeColor(phase)}
           />
         </div>
+        {/* Resultado de download durante upload (idêntico ao Kotlin VelocidadeScreen) */}
+        {avgDownloadMbps != null && (
+          <div className="lk-running__dl-preview">
+            <span className="lk-running__dl-value">
+              ↓ {formatMbps(avgDownloadMbps, unit)} Mbps
+            </span>
+            <span className="lk-running__dl-label">download concluído</span>
+          </div>
+        )}
+
         {/* Mini-gráfico ao vivo da velocidade instantânea (Bloco Motion) */}
         <div className="lk-running__chart">
           <LiveChart points={live} phase={phase} />

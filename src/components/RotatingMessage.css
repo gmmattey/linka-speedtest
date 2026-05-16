@@ -1,0 +1,8 @@
+.rotating-message {
+  font-size: 14px;
+  color: var(--text-2, #9CA3AF);
+  text-align: center;
+  transition: opacity 180ms ease-out, transform 180ms ease-out;
+}
+.rotating-message--in  { opacity: 1; transform: translateY(0); }
+.rotating-message--out { opacity: 0; transform: translateY(-4px); }

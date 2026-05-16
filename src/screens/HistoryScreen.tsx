@@ -66,7 +66,7 @@ export function HistoryScreen({
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
   const selected = items.find((r) => r.id === selectedId) ?? null;
   const unitLabel = unit === 'gbps' ? 'Gbps' : 'Mbps';
-  const mountTime = useState(Date.now)[0];
+  const mountTime = useState(Date.now())[0];
   const { settings } = useSettings();
   const [generatingAnatel, setGeneratingAnatel] = useState(false);
 
@@ -136,6 +136,20 @@ export function HistoryScreen({
     );
   }, [items, settings.contractedDown, settings.contractedUp]);
 
+  const handleShareSelected = useCallback(async () => {
+    if (!selected) return;
+    const text = `${formatDate(selected.timestamp)} — ↓ ${formatMbps(selected.dl, unit)} / ↑ ${formatMbps(selected.ul, unit)} ${unitLabel} · ${formatMs(selected.latency)} ms`;
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        await navigator.share({ text, title: 'linka SpeedTest' });
+        return;
+      }
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+      }
+    } catch { /* cancelado */ }
+  }, [selected, unit, unitLabel]);
+
   const handleGenerateAnatel = useCallback(async () => {
     if (!anatelData || generatingAnatel) return;
     setGeneratingAnatel(true);
@@ -191,10 +205,6 @@ export function HistoryScreen({
     onRefresh ?? noopRefresh,
     { enabled: !!onRefresh && !selected },
   );
-
-  if (selected) {
-    return <HistoryDetail record={selected} onBack={() => setSelectedId(null)} unit={unit} />;
-  }
 
   const rightActions = items.length > 0
     ? [{ icon: <IconPdf size={18} />, onClick: handlePdf, ariaLabel: 'Exportar histórico em PDF' }]
@@ -351,11 +361,9 @@ export function HistoryScreen({
                   <Icon name="shield" size={20} color="var(--warn)" />
                 </div>
                 <div className="lk-history__anatel-body">
-                  <p className="lk-history__anatel-title">Anatel — entrega abaixo do contratado</p>
+                  <p className="lk-history__anatel-title">{resolveCopy('pdf.cta.title')}</p>
                   <p className="lk-history__anatel-desc">
-                    Você recebeu {Math.round(anatelData.averageDeliveredPct)}% do plano em média
-                    nos últimos {anatelData.testRecords.length} testes
-                    ({anatelData.windowDays} dias).
+                    {resolveCopy('pdf.cta.subtitle')}
                   </p>
                   <button
                     type="button"
@@ -363,8 +371,9 @@ export function HistoryScreen({
                     onClick={handleGenerateAnatel}
                     disabled={generatingAnatel}
                   >
-                    {generatingAnatel ? 'Gerando relatório…' : 'Gerar relatório'}
+                    {generatingAnatel ? 'Gerando laudo…' : resolveCopy('pdf.cta.button')}
                   </button>
+                  <p className="lk-history__anatel-tooltip">{resolveCopy('pdf.cta.tooltip')}</p>
                 </div>
               </section>
             )}
@@ -377,11 +386,44 @@ export function HistoryScreen({
           </>
         )}
       </main>
+
+      {/* ── MedicaoDetailSheet ───────────────────────────────────────── */}
+      {selected && (
+        <div className="lk-medicao-overlay" onClick={() => setSelectedId(null)}>
+          <div className="lk-medicao-sheet fade-up" onClick={(e) => e.stopPropagation()}>
+            <div className="lk-medicao-sheet__handle-row">
+              <div className="lk-medicao-sheet__handle" />
+            </div>
+            <div className="lk-medicao-sheet__header">
+              <h3>{formatDate(selected.timestamp)}</h3>
+              <div className="lk-medicao-sheet__header-actions">
+                <button
+                  className="lk-medicao-sheet__action-btn"
+                  onClick={() => void handleShareSelected()}
+                  aria-label="Compartilhar"
+                >
+                  <IconShare size={18} />
+                </button>
+                <button
+                  className="lk-medicao-sheet__close"
+                  onClick={() => setSelectedId(null)}
+                  aria-label="Fechar"
+                >
+                  <Icon name="close" size={18} />
+                </button>
+              </div>
+            </div>
+            <div className="lk-medicao-sheet__body">
+              <MedicaoDetailContent record={selected} unit={unit} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function HistoryDetail({ record, onBack, unit }: { record: TestRecord; onBack: () => void; unit: 'mbps' | 'gbps' }) {
+function MedicaoDetailContent({ record, unit }: { record: TestRecord; unit: 'mbps' | 'gbps' }) {
   const interpreted = useMemo(() => interpretSpeedTestResult(
     {
       dl: record.dl, ul: record.ul, latency: record.latency,
@@ -398,48 +440,8 @@ function HistoryDetail({ record, onBack, unit }: { record: TestRecord; onBack: (
     record.connectionType === 'wifi' ? 'Wi-Fi' : record.connectionType === 'mobile' ? 'Celular' : 'Cabo'
   }`;
 
-  // Bloco 5 — TopBar System (2026-05): scroll listener próprio do detalhe.
-  const { scrolled, scrollContainerRef, sentinelRef } = useScrollHeader();
-
-  // Compartilhamento do detalhe — fallback simples para Web Share API
-  // ou cópia do texto. Quando indisponível, abre o PDF (mesmo comando do
-  // botão de PDF do histórico, mas filtrando para um único registro).
-  const handleShareDetail = async () => {
-    const text =
-      `${formatDate(record.timestamp)} — ↓ ${formatMbps(record.dl, unit)} / ↑ ${formatMbps(record.ul, unit)} ${unitLabel} · ${formatMs(record.latency)} ms`;
-    try {
-      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-        await navigator.share({ text, title: 'linka SpeedTest' });
-        return;
-      }
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(text);
-      }
-    } catch { /* cancelado */ }
-  };
-
   return (
-    <div className="lk-history lk-history--detail fade-in">
-      <TopBar
-        onBack={onBack}
-        scrolled={scrolled}
-        title={formatDate(record.timestamp)}
-        showTitle={scrolled}
-        rightActions={[{
-          icon: <IconShare size={18} />,
-          onClick: handleShareDetail,
-          ariaLabel: 'Compartilhar resultado',
-        }]}
-      />
-
-      <div className="lk-hist-detail__scroll" ref={scrollContainerRef}>
-        <PageHeader
-          ref={sentinelRef}
-          size="md"
-          title={formatDate(record.timestamp)}
-          subtitle="Detalhes do teste"
-        />
-
+    <>
         <div className="lk-hist-detail__hero">
           <Chip variant={qualityToChipVariant(interpreted.primary)}>
             {resolveCopy(`quality.${interpreted.primary}`)}
@@ -532,7 +534,6 @@ function HistoryDetail({ record, onBack, unit }: { record: TestRecord; onBack: (
             }] : []),
           ]}
         />
-      </div>
-    </div>
+    </>
   );
 }

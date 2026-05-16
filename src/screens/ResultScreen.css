@@ -172,10 +172,10 @@
    % de entrega. O fallback `var(--cell-glow, var(--dl-glow))` mantém o
    azul/verde de marca quando o plano não está cadastrado. */
 .lk-result__primary-cell:nth-child(1) .lk-result__primary-cell-value {
-  text-shadow: 0 0 20px var(--cell-glow, var(--dl-glow)) !important;
+  text-shadow: 0 0 20px var(--cell-glow, var(--phase-dl-glow)) !important;
 }
 .lk-result__primary-cell:nth-child(2) .lk-result__primary-cell-value {
-  text-shadow: 0 0 20px var(--cell-glow, var(--ul-glow)) !important;
+  text-shadow: 0 0 20px var(--cell-glow, var(--phase-ul-glow)) !important;
 }
 
 .lk-result__primary-cell-unit {
@@ -342,62 +342,179 @@
   }
 }
 
-/* ── Use cases row ───────────────────────────────── */
+/* ── Grade circle (alinhamento Kotlin: ResultadoVelocidadeScreen) ───── */
 
-.lk-result__use-row {
+.lk-result__grade-row {
   display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 14px 16px 16px;
-  /* Refactor 2026-05 (card unificado): bg/border/radius/margin saíram —
-     este bloco vive dentro de `.lk-result__test-card`. Hairline separa
-     da seção SECONDARY acima. */
-  border-top: 1px solid var(--border-subtle);
-}
-
-.lk-result__use-item {
-  display: flex;
-  flex: 1 1 0;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  min-width: 0;
+  padding: 24px 20px 16px;
+  gap: 10px;
 }
 
-.lk-result__use-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+.lk-result__grade-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.lk-result__use-lbl {
-  /* Auditoria de fontes 2026-05: era `var(--font-mono)`. Pela regra de
-     tipografia do projeto, mono fica reservado para VALORES tabular-nums
-     (timestamps, IPs, métricas em listas técnicas). Labels de UI são
-     body (Geist 400-600) — JetBrains aqui aparecia destoante das demais
-     labels do mesmo card. */
-  font-family: var(--font-body);
-  font-weight: 500;
-  font-size: 10px;
-  color: var(--text-3);
-  text-align: center;
+.lk-result__grade-letter {
+  font-family: var(--font-display);
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
 }
 
-/* Chip de grade por use case (refactor visual 2026-05): substitui o
-   antigo "OK / Atenção / Ruim" por "<grade> · <label>" (ex. "B · Bom").
-   Cor segue `gradeStyle()` em ResultScreen.tsx. Font aumentado para 9px. */
-.lk-result__use-row__chip {
-  font-family: var(--font-mono);
-  font-size: 9px;
+.lk-result__grade-verdict {
+  font-size: 14px;
   font-weight: 600;
-  padding: 3px 6px;
-  border-radius: 10px;
+  color: var(--text-2);
+  margin: 0;
+}
+
+/* ── Use cases list (alinhamento Kotlin) ─────────────────────────────── */
+
+.lk-result__use-list {
+  padding: 14px 16px 4px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.lk-result__use-header {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  margin: 0 0 8px;
+}
+
+.lk-result__use-divider {
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+.lk-result__use-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.lk-result__use-icon-wrap {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lk-result__use-lbl {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+}
+
+.lk-result__use-badge {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
   white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0;
+}
+
+/* W5-B — Estado positivo nos use cases (check verde + "Adequada") */
+.lk-result__use-ok {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* W5-B — Nota sobre jitter ao final da seção de uso */
+.lk-result__use-jitter-note {
+  margin: 8px 0 4px;
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.4;
+  font-style: italic;
+}
+
+/* W5-A — Card RQUAL Anatel */
+.lk-result__rqual {
+  margin: 0 16px 8px;
+  border-radius: 12px;
+  border: 1px solid;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lk-result__rqual-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.lk-result__rqual-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.lk-result__rqual-kicker {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  margin: 0;
+}
+
+.lk-result__rqual-status-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lk-result__rqual-status-label {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.lk-result__rqual-breakdown {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.lk-result__rqual-breakdown-sep {
+  color: var(--text-3);
+}
+
+.lk-result__rqual-conclusion {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.45;
+  margin: 0;
 }
 
 /* ── Secondary details ───────────────────────────── */

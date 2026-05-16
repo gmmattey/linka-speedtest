@@ -117,3 +117,20 @@
 .lk-local-wifi__channel-value--bad {
   color: var(--error);
 }
+
+.lk-local-wifi__unavailable {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.lk-local-wifi__text--primary {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.lk-local-wifi__tech {
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 400;
+}

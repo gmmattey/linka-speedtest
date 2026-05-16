@@ -1,0 +1,30 @@
+.app-border-glow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  border-radius: var(--radius-lg, 20px);
+  border: 1.5px solid transparent;
+  background: conic-gradient(
+    from 0deg,
+    var(--accent, #7C5FFF),
+    transparent 30%,
+    var(--accent, #7C5FFF) 60%,
+    transparent
+  ) border-box;
+  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.app-border-glow--active {
+  opacity: 0.55;
+  animation: lkBorderRotate 3s linear infinite;
+}
+
+@keyframes lkBorderRotate {
+  from { filter: hue-rotate(0deg); }
+  to   { filter: hue-rotate(30deg); }
+}

@@ -6,6 +6,13 @@ import { useLocalWifi } from './useLocalWifi';
 import { wifiQualityLabel } from './LocalWifiService';
 import './LocalWifiScreen.css';
 
+function rssiLabel(dbm: number): string {
+  if (dbm >= -50) return 'Ótimo';
+  if (dbm >= -65) return 'Bom';
+  if (dbm >= -75) return 'Regular';
+  return 'Fraco';
+}
+
 interface Props {
   onBack: () => void;
 }
@@ -35,12 +42,14 @@ export function LocalWifiScreen({ onBack }: Props) {
         <PageHeader ref={sentinelRef} size="md" title="Diagnóstico Wi-Fi" />
         <div className="lk-local-wifi__card">
           {!localWifiDiagnostics ? (
-            <>
-              <p className="lk-local-wifi__text">Diagnóstico Wi-Fi indisponível no PWA.</p>
-              <p className="lk-local-wifi__text">
-                Este recurso usa dados do sistema disponíveis apenas no app nativo.
+            <div className="lk-local-wifi__unavailable">
+              <p className="lk-local-wifi__text lk-local-wifi__text--primary">
+                Diagnóstico de sinal Wi-Fi requer acesso aos dados do sistema.
               </p>
-            </>
+              <p className="lk-local-wifi__text">
+                Navegadores não expõem informações de sinal por privacidade. Use o app Android para ver a qualidade do seu Wi-Fi.
+              </p>
+            </div>
           ) : (
             <>
               <p className="lk-local-wifi__text">
@@ -61,12 +70,17 @@ export function LocalWifiScreen({ onBack }: Props) {
 
                   <dl className="lk-local-wifi__list">
                     <div><dt>Qualidade</dt><dd>{wifiQualityLabel(result.quality ?? 'unknown')}</dd></div>
-                    {result.ssid && <div><dt>SSID</dt><dd>{result.ssid}</dd></div>}
-                    {result.rssiDbm != null && <div><dt>Sinal</dt><dd>{result.rssiDbm} dBm</dd></div>}
-                    {result.linkSpeedMbps != null && <div><dt>Velocidade negociada</dt><dd>{result.linkSpeedMbps} Mbps</dd></div>}
-                    {result.band && <div><dt>Banda</dt><dd>{result.band}</dd></div>}
+                    {result.ssid && <div><dt>Nome da rede</dt><dd>{result.ssid}</dd></div>}
+                    {result.rssiDbm != null && (
+                      <div>
+                        <dt>Força do sinal</dt>
+                        <dd>{rssiLabel(result.rssiDbm)} <span className="lk-local-wifi__tech">({result.rssiDbm} dBm)</span></dd>
+                      </div>
+                    )}
+                    {result.linkSpeedMbps != null && <div><dt>Velocidade Wi-Fi</dt><dd>{result.linkSpeedMbps} Mbps</dd></div>}
+                    {result.band && <div><dt>Frequência</dt><dd>{result.band}</dd></div>}
                     {result.channel != null && <div><dt>Canal</dt><dd>{result.channel}</dd></div>}
-                    {result.gateway && <div><dt>Gateway</dt><dd>{result.gateway}</dd></div>}
+                    {result.gateway && <div><dt>Roteador</dt><dd>{result.gateway}</dd></div>}
                     {result.ipAddress && <div><dt>IP local</dt><dd>{result.ipAddress}</dd></div>}
                   </dl>
 
