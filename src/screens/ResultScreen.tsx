@@ -25,6 +25,7 @@ import { anatelGrade, anatelGradeColorVar, anatelGradeGlowVar } from '../utils/a
 import { classifyDnsLatency } from '../utils/dnsTiming';
 import { aggregateDiagnosisSeverity, type DiagnosisAggregate, type DiagnosisItem } from '../utils/diagnosisItems';
 import { WifiSignalSection } from '../features/local-wifi/WifiSignalSection';
+import { WifiContextCard } from '../features/ios-wifi-context/WifiContextCard';
 
 // Code splitting (2026-05): as 3 sheets de "Mais detalhes" são pesadas e
 // só são vistas quando o usuário toca em uma das rows. Lazy + montagem
@@ -1066,6 +1067,13 @@ export function ResultScreen({
             />
           );
         })()}
+
+        {/* Contexto Wi-Fi via Atalho iOS (2026-05): exibe quando o teste
+            foi precedido pelo Atalho LINKA WiFi Context. Fica entre o
+            bloco de diagnóstico e a seção "Mais detalhes". */}
+        {result.wifiContext && (
+          <WifiContextCard ctx={result.wifiContext} />
+        )}
 
         {/* ── Mais detalhes (refator drag-to-resize 2026-05) ─────────────
             Os 3 accordions inline (Avançado, Modo Gamer, DNS) viraram 3

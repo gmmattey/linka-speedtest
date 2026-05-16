@@ -15,7 +15,14 @@ import { useSettings } from './hooks/useSettings';
 import { appendRecord, previousRecord, recordToResult } from './utils/history';
 import { performAppRefresh } from './utils/appRefresh';
 import { getCapabilities } from './platform/capabilities';
-import type { TestRecord } from './types';
+import {
+  parseWifiCallback,
+  savePendingWifiContext,
+  consumePendingWifiContext,
+  runWifiShortcut,
+  generateSessionId,
+} from './features/ios-wifi-context/wifiShortcut';
+import type { TestRecord, WifiContext } from './types';
 
 // Code splitting: telas secundárias vão em chunks separados via React.lazy.
 // HomeScreen/RunningScreen/ResultScreen/HistoryScreen permanecem eager —
@@ -79,6 +86,10 @@ function readOnboardingDone(): boolean {
 }
 
 export default function App() {
+  // Contexto Wi-Fi via Atalho iOS (2026-05): persiste entre o callback de
+  // retorno do atalho e a conclusão do próximo teste.
+  const pendingWifiContextRef = useRef<WifiContext | null>(null);
+
   const [theme, setTheme] = useState<'dark' | 'light'>(readInitialTheme);
   const [onboardingDone, setOnboardingDone] = useState<boolean>(readOnboardingDone);
   const { settings, update: updateSettings } = useSettings();
@@ -117,6 +128,28 @@ export default function App() {
       window.removeEventListener('online',  handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
+  }, []);
+
+  // Contexto Wi-Fi via Atalho iOS (2026-05): detecta retorno do atalho na URL.
+  // Roda apenas uma vez no mount — o atalho abre a returnUrl com query string.
+  // Limpa a URL para não re-processar em refreshes e guarda em sessionStorage
+  // para sobreviver a uma re-renderização (caso o iOS abra no Safari).
+  useEffect(() => {
+    const { pathname, search } = window.location;
+    const isCallback = pathname === '/wifi-callback' || search.includes('sid=');
+    if (!isCallback) {
+      // Também tenta consumir um contexto salvo de uma sessão anterior
+      const saved = consumePendingWifiContext();
+      if (saved) pendingWifiContextRef.current = saved;
+      return;
+    }
+    const ctx = parseWifiCallback(search);
+    if (ctx) {
+      pendingWifiContextRef.current = ctx;
+      savePendingWifiContext(ctx);
+    }
+    // Limpa a URL sem recarregar a página
+    window.history.replaceState({}, '', '/');
   }, []);
 
   useEffect(() => {
@@ -197,6 +230,9 @@ export default function App() {
     const proceed = () => {
       const prev = previousRecord();
       setPrevious(prev);
+      const wifiCtxNormal = pendingWifiContextRef.current;
+      pendingWifiContextRef.current = null;
+      if (wifiCtxNormal) test.result!.wifiContext = wifiCtxNormal;
       const newRecord = appendRecord(test.result!, {
         serverName: deviceInfo.server!.name,
         isp: deviceInfo.server!.isp,
@@ -261,6 +297,11 @@ export default function App() {
   }, []);
 
   const pulse = usePulseDiagnosis(deviceInfo.device?.connectionType ?? 'unknown');
+
+  const handleOpenWifiShortcut = useCallback(() => {
+    const sessionId = generateSessionId();
+    runWifiShortcut(sessionId);
+  }, []);
 
   const handleOnboardingComplete = useCallback(() => {
     try { localStorage.setItem(ONBOARDING_KEY, '1'); } catch { /* ignore */ }
@@ -428,6 +469,7 @@ export default function App() {
     previous, lastRecord, historyInitialId,
     handleStart, handleCancel, handleRetry, handleShowHistory,
     handleOpenOrbit, handleShowSinal, handleShowDispositivos, handleOpenAjustes,
+    handleOpenWifiShortcut,
     pulse,
     handleAppRefresh, handleResetOnboarding,
     goBack, goToReturnTarget,

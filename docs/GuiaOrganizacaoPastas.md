@@ -379,3 +379,29 @@ src/
 ```
 
 A pasta nasceu para abrigar as sheets que substituíram os 3 accordions inline da section "Mais detalhes" da ResultScreen. Cada row da section abre uma sheet dedicada montada sobre `DraggableSheet`. O `DNSGuideSheet` permanece em `features/dns/` (já existia).
+
+### Estrutura adicionada — Feature Contexto Wi-Fi via Atalho iOS (2026-05)
+
+```txt
+src/
+├── features/
+│   └── ios-wifi-context/
+│       ├── wifiShortcut.ts      ← isIOS, runWifiShortcut, parseWifiCallback, sessionStorage helpers, classificadores
+│       ├── WifiContextCard.tsx  ← Card de resultado exibindo dados Wi-Fi do atalho
+│       └── WifiContextCard.css  ← Estilos do card
+└── __tests__/
+    └── wifiShortcut.test.ts     ← Testes do parser, expiração, classificadores
+```
+
+Também adicionados:
+- `public/_redirects` — SPA fallback para Cloudflare Pages (`/* /index.html 200`), necessário para que a rota `/wifi-callback` carregue o app em vez de retornar 404.
+- `WifiContext` e `WifiContextSource` em `src/types/index.ts`.
+- Campo `wifiContext?` em `SpeedTestResult` e `TestRecord`.
+
+O fluxo completo:
+1. Usuário toca em "Medir com contexto Wi-Fi do iPhone" na StartScreen (só visível em iOS).
+2. App abre o Atalho `LINKA WiFi Context` via deep link `shortcuts://`.
+3. Atalho coleta dados locais e abre `https://<app>/wifi-callback?sid=...&rssi=...`.
+4. App detecta a URL no mount, parseia, salva em `sessionStorage`.
+5. No próximo resultado, o contexto é anexado ao `SpeedTestResult.wifiContext`.
+6. A `ResultScreen` exibe o `WifiContextCard` quando o campo está presente.

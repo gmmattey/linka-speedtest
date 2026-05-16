@@ -9,6 +9,7 @@ import { useScrollHeader } from '../hooks/useScrollHeader';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { resolveCopy } from '../core';
 import { formatMbps } from '../utils/format';
+import { isIOS } from '../features/ios-wifi-context/wifiShortcut';
 import './StartScreen.css';
 
 interface Props {
@@ -28,6 +29,8 @@ interface Props {
   onShowHistory: () => void;
   onExplore?: () => void;
   onOpenPulse?: () => void;
+  /** Abre o Atalho iOS "LINKA WiFi Context". Só exibido quando `isIOS()`. */
+  onOpenWifiShortcut?: () => void;
   /**
    * Callback do pull-to-refresh. Recebe `performAppRefresh` já
    * pré-amarrado com `deviceInfo.reload` em App.tsx. Quando ausente, o
@@ -53,6 +56,7 @@ export function StartScreen({
   onShowHistory,
   onExplore,
   onOpenPulse,
+  onOpenWifiShortcut,
   onRefresh,
 }: Props) {
   const [selectedMode, setSelectedMode] = useState<'fast' | 'complete'>(settings.defaultMode ?? 'complete');
@@ -134,6 +138,7 @@ export function StartScreen({
   };
 
   const canStart = isOnline && !loading && !!server?.available && !!device;
+  const showWifiShortcut = !!onOpenWifiShortcut && isIOS();
   const unitLabel = settings.unit === 'gbps' ? 'Gbps' : 'Mbps';
 
   const connectionLabel = (() => {
@@ -250,6 +255,23 @@ export function StartScreen({
           {server && <div>{serverLabel}</div>}
         </div>
       </div>
+
+      {/* Botão de contexto Wi-Fi via Atalho iOS (somente em iOS) */}
+      {showWifiShortcut && (
+        <div className="lk-start__wifi-shortcut">
+          <button
+            className="lk-start__wifi-shortcut-btn"
+            onClick={onOpenWifiShortcut}
+          >
+            <Icon name="wifi" size={15} color="var(--accent)" />
+            <span>Medir com contexto Wi-Fi do iPhone</span>
+          </button>
+          <p className="lk-start__wifi-shortcut-hint">
+            Diferencia problema de sinal Wi-Fi de problema da operadora.
+            Requer o Atalho LINKA WiFi Context instalado.
+          </p>
+        </div>
+      )}
 
       {/* Último resultado */}
       {lastRecord && (

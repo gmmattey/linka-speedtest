@@ -2074,3 +2074,40 @@ Prioridade real:
 ```
 
 Com essa ordem, o LINKA deixa de ser só um speedtest e passa a ser um produto com proposta própria.
+
+---
+
+## 32. Feature Contexto Wi-Fi via Atalho iOS — Roadmap de Fases
+
+A Fase 1 (MVP) foi implementada em 2026-05. As fases seguintes estão registradas aqui para referência.
+
+### Fase 1 — MVP (implementado)
+- Tipo `WifiContext` e `WifiContextSource` em `src/types/index.ts`.
+- Utilitários em `src/features/ios-wifi-context/wifiShortcut.ts`.
+- Botão outlined "Medir com contexto Wi-Fi do iPhone" na StartScreen (só iOS).
+- Handler de callback `/wifi-callback` na URL (on mount em App.tsx).
+- `WifiContextCard` simples na ResultScreen.
+- `wifiContext` propagado para `SpeedTestResult` e `TestRecord`.
+- SPA routing via `public/_redirects`.
+
+### Fase 2 — Diagnóstico combinado
+- Classificadores completos: `classifySnr`, `classifyLinkRate`.
+- Regras cruzadas Wi-Fi × speedtest (seção 15 da spec):
+  - Internet ruim + Wi-Fi ruim → problema de cobertura.
+  - Internet ruim + Wi-Fi bom → problema de operadora/WAN.
+  - Latência ruim + Wi-Fi ruim → instabilidade local.
+  - Velocidade boa + Wi-Fi fraco → risco de oscilação.
+  - Wi-Fi bom + latência sob carga ruim → saturação.
+- Bloco "Detalhes avançados" no `WifiContextCard` com RSSI/SNR numéricos.
+- Ajuste do `combineDiagnostics` para consumir `WifiContext` (hoje consome `WifiDiagnosticResult`).
+
+### Fase 3 — Privacidade e exportação
+- Mascaramento de BSSID (`aa:bb:••:••:ee:ff`) e IP local (`192.168.1.xxx`) por padrão.
+- PDF padrão sem BSSID/IP; opção "Incluir dados técnicos do Wi-Fi" desligada por padrão.
+- Compartilhamento: excluir identificadores sensíveis do texto/imagem compartilhados.
+
+### Fase 4 — Robustez
+- Migrar retorno do atalho para `ctx=base64url-json` (Fase 2+ do protocolo).
+- Validação forte do `sessionId` (match com o ID enviado no deep link).
+- Testes manuais iOS: PWA instalado, Safari, cancelamento, atalho ausente.
+- Considerar QR Code para instalação do atalho na tela `/shortcut-help`.
