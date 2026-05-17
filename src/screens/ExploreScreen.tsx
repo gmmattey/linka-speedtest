@@ -27,9 +27,6 @@ const ICON_BG_DANGER  = 'var(--error-tint)';
 const Ic       = ({ name }: { name: string }) => <Icon name={name} size={18} color="var(--accent)" />;
 const IcDanger = ({ name }: { name: string }) => <Icon name={name} size={18} color="var(--error)" />;
 
-const Badge = ({ label }: { label: string }) => (
-  <span className="lk-explore__badge">{label}</span>
-);
 
 const CHANGELOG = [
   {

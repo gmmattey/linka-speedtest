@@ -57,7 +57,7 @@ export function PulseScreen({
   onIniciar,
   onSelecionarChip,
   onResponderPergunta,
-  onVoltar,
+  onVoltar: _onVoltar,
 }: Props) {
   const symbolState = phaseToSymbolState(phase, session?.diagnosticSeverity);
   const active = isLoading(phase);

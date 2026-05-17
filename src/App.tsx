@@ -300,7 +300,7 @@ export default function App() {
 
   const handleOpenOrbit = useCallback(() => goTo('orbit'), [goTo]);
   const handleShowSinal = useCallback(() => goTo('sinal'), [goTo]);
-  const handleShowDispositivos = useCallback(() => goTo('dispositivos'), [goTo]);
+  // goTo('dispositivos') available via TAB_MAP navigation
   const handleOpenAjustes = useCallback(() => goTo('ajustes'), [goTo]);
   const handleShowFibra = useCallback(() => goTo('fibra'), [goTo]);
 
