@@ -29,6 +29,8 @@ interface Props {
   scrolled?: boolean;
   /** Habilita haptic ao tocar no back (delegado para `BackButton`). */
   useHaptics?: boolean;
+  /** Opacidade do header (0–1). Abaixo de 0.05 desativa pointer-events. */
+  opacity?: number;
 }
 
 /**
@@ -48,14 +50,20 @@ export function TopBar({
   showTitle = false,
   scrolled = false,
   useHaptics = false,
+  opacity,
 }: Props) {
   const hasLeft = !!leftSlot || !!onBack;
   const hasRight = !!rightSlot || (!!rightActions && rightActions.length > 0);
+
+  const style = opacity !== undefined && opacity < 1
+    ? { opacity, pointerEvents: opacity < 0.05 ? ('none' as const) : undefined }
+    : undefined;
 
   return (
     <header
       className={`lk-topbar${scrolled ? ' lk-topbar--scrolled' : ''}`}
       role="banner"
+      style={style}
     >
       <div className="lk-topbar__left">
         {leftSlot ?? (onBack ? (

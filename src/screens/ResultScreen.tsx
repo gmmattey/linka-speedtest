@@ -503,7 +503,7 @@ export function ResultScreen({
   // próprio <PageHeader> "Último teste" no topo do scroll content — mesmo
   // padrão de Explore/History/Diagnostic. Substitui o div invisível que
   // existia no slot anterior.
-  const { scrolled, scrollContainerRef, sentinelRef } = useScrollHeader();
+  const { scrolled, topBarOpacity, scrollContainerRef, sentinelRef } = useScrollHeader();
 
   // Bloco 6 — UX uniforme (2026-05): HamburgerMenu agora é controlled;
   // o trigger é um IconButton no rightActions do TopBar.
@@ -521,6 +521,7 @@ export function ResultScreen({
       <TopBar
         onBack={onBack}
         scrolled={scrolled}
+        opacity={topBarOpacity}
         title="Último teste"
         showTitle={scrolled}
         useHaptics={useHaptics ?? false}

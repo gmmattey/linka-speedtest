@@ -32,6 +32,8 @@ import { useCallback, useEffect, useState } from 'react';
  */
 export interface UseScrollHeaderResult {
   scrolled: boolean;
+  /** Opacidade do TopBar: 1 no topo, 0 após FADE_THRESHOLD_PX de scroll. */
+  topBarOpacity: number;
   /** Callback ref para o container que rola (qualquer HTMLElement: div, main, section). */
   scrollContainerRef: (el: HTMLElement | null) => void;
   /** Callback ref para o sentinel — tipicamente o `<PageHeader>`. */
@@ -39,9 +41,11 @@ export interface UseScrollHeaderResult {
 }
 
 const TOPBAR_HEIGHT_PX = 56;
+const FADE_THRESHOLD_PX = 80;
 
 export function useScrollHeader(): UseScrollHeaderResult {
   const [scrolled, setScrolled] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const [sentinel, setSentinel] = useState<HTMLElement | null>(null);
 
@@ -61,7 +65,6 @@ export function useScrollHeader(): UseScrollHeaderResult {
       (entries) => {
         const entry = entries[0];
         if (!entry) return;
-        // sentinel visível => header ainda não rolou; saiu => scrolled.
         setScrolled(!entry.isIntersecting);
       },
       {
@@ -75,7 +78,19 @@ export function useScrollHeader(): UseScrollHeaderResult {
     return () => observer.disconnect();
   }, [container, sentinel]);
 
-  return { scrolled, scrollContainerRef, sentinelRef };
+  useEffect(() => {
+    if (!container) return;
+    const onScroll = () => setScrollY(container.scrollTop);
+    container.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      container.removeEventListener('scroll', onScroll);
+      setScrollY(0);
+    };
+  }, [container]);
+
+  const topBarOpacity = Math.max(0, 1 - scrollY / FADE_THRESHOLD_PX);
+
+  return { scrolled, topBarOpacity, scrollContainerRef, sentinelRef };
 }
 
 /**

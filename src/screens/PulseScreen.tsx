@@ -4,6 +4,7 @@ import { ContextualQuestion } from '../components/ContextualQuestion';
 import { DiagnosisChips } from '../components/DiagnosisChips';
 import { LinkaPulseSymbol } from '../components/LinkaPulseSymbol';
 import { RotatingMessage } from '../components/RotatingMessage';
+import { TopBar } from '../components/TopBar';
 import type { OpcaoResposta } from '../features/pulse/types';
 import type { PulsePhase, PulseResultLevel, IntelligentSession, AiAnalysisEntry } from '../features/pulse/types';
 import './PulseScreen.css';
@@ -76,18 +77,12 @@ export function PulseScreen({
       <AppBorderGlow active={active} />
 
       {/* TopBar */}
-      <div className="orbit-screen__topbar">
-        <button className="orbit-screen__back" onClick={onVoltar} type="button" aria-label="Voltar">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-        </button>
-        <span className="orbit-screen__title">LINKA ORBIT</span>
-        <div className="orbit-screen__topbar-right">
-          <LinkaPulseSymbol state={symbolState} size={28} />
-        </div>
-      </div>
+      <TopBar
+        showTitle
+        title="Diagnóstico"
+        scrolled={false}
+        rightSlot={<LinkaPulseSymbol state={symbolState} size={28} />}
+      />
 
       {/* ── IDLE: Welcome state ─────────────────────────────────── */}
       {phase === 'idle' && (

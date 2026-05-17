@@ -134,3 +134,70 @@
   font-size: 12px;
   font-weight: 400;
 }
+
+/* Tab Row — MD3 style */
+.lk-local-wifi__tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin: 0 -16px var(--space-lg);
+  padding: 0 16px;
+}
+
+.lk-local-wifi__tab {
+  flex: 1;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-3);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.lk-local-wifi__tab--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* Browser fallback content */
+.lk-local-wifi__browser-fallback {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.lk-local-wifi__fallback-icon {
+  font-size: 40px;
+  color: var(--text-3);
+}
+
+.lk-local-wifi__list--browser {
+  width: 100%;
+  background: var(--surface);
+  border-radius: var(--radius-sm, 8px);
+  padding: var(--space-sm) var(--space-md);
+}
+
+/* Android CTA row */
+.lk-local-wifi__android-cta {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  border-radius: var(--radius-sm, 8px);
+  padding: var(--space-md);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lk-local-wifi__android-cta .material-symbols-rounded {
+  color: var(--accent);
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}

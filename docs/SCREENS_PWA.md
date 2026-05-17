@@ -1,10 +1,10 @@
 # Telas PWA — Linka SpeedTest
 
-**Versão:** v1.0.0 | **Arquivo de rotas:** `src/App.tsx` | **Componente shell:** `src/components/BottomNavBar.tsx`
+**Versão:** v1.4.0 | **Arquivo de rotas:** `src/App.tsx` | **Componente shell:** `src/components/BottomNavBar.tsx`
 
 ---
 
-## Telas (17)
+## Telas (19)
 
 | # | Tela | Arquivo | Rota | Propósito |
 | --- | --- | --- | --- | --- |
@@ -25,6 +25,8 @@
 | 15 | Recommend | `src/screens/RecommendScreen.tsx` | `/recommend` | Recomendações baseadas resultado |
 | 16 | Details | `src/screens/DetailsScreen.tsx` | `/details` | Detalhes técnicos teste |
 | 17 | Diagnostic | `src/screens/DiagnosticScreen.tsx` | `/diagnostic` | Diagnóstico guiado IA |
+| 18 | SpeedTest (dedicada) | `src/screens/SpeedTestScreen.tsx` | `/speedtest` | Tela dedicada speedtest com seletor modo |
+| 19 | Fibra | `src/screens/FibraScreen.tsx` | `/fibra` | Fibra/modem: IP, link painel, métricas ONU, GPON |
 
 ---
 
@@ -32,20 +34,43 @@
 
 **Arquivo principal:** `src/App.tsx`
 
-Define rotas usando `<Routes>` (React Router 6+).
+Define rotas via `useState<Screen>` (sem React Router). Type `Screen` inclui sub-telas como `'fibra'`, `'historico'`, `'sinal'`.
 
 **Shell:** `src/components/BottomNavBar.tsx`
 
-Gerencia navegação tabs principais: Home, History, Explore, Pulse.
+5 tabs principais (v1.4.0+):
+- Início (home)
+- Velocidade (speedtest)
+- Diagnóstico (diagnostic)
+- Dispositivos (local-network)
+- Ajustes (explore)
 
-**Deep linking:** Suportado via `useNavigate()`.
+**Sub-telas:** Acesso via navegação interna; BottomNavBar permanece visível, aba de origem destacada.
+
+- `historico` → aba Início
+- `sinal` → aba Início
+- `fibra` → aba Ajustes (via "Configurações do roteador")
+
+**Deep linking:** Suportado via `navigate(screen)`.
+
+---
+
+## TopBar Fade-on-Scroll (v1.4.0+)
+
+`TopBar` recebe novo prop `opacity` (número 0–1), usado para fade gradual ao rolar.
+
+Hook `useScrollHeader` (em hooks customizados) retorna:
+- `scrolled: boolean`
+- `topBarOpacity: number` (novo)
+
+Threshold: 80px de scroll dispara fade.
 
 ---
 
 ## Notas
 
 - Telas são componentes React com hooks (useState, useEffect, etc).
-- Roteamento usa React Router v6 (path-based, não hash-based).
+- Roteamento usa `useState<Screen>` em `App.tsx` (padrão PWA-specific).
 - Cada tela é responsável por seu estado local.
 - PWA standalone — não usa backend, dados salvos em localStorage.
 
@@ -55,10 +80,11 @@ Gerencia navegação tabs principais: Home, History, Explore, Pulse.
 
 Nota-se paridade de funcionalidade com Android:
 - Start ≈ Home Android
-- Running ≈ SpeedTest Screen
-- Result ≈ Resultado Velocidade
-- DNS Benchmark ≈ DNS Screen
-- Pulse ≈ LinkaPulse
-- Diagnostic ≈ Orbit (IA)
+- SpeedTest (dedicada) ≈ SpeedTest Screen Android
+- Result ≈ Resultado Velocidade Android
+- DNS Benchmark ≈ DNS Screen Android
+- Pulse ≈ LinkaPulse Android
+- Diagnostic ≈ Orbit (IA) Android
+- Fibra ≈ Fibra Screen Android
 
 Divergências são por limitações navegador (Explore usa geolocation API, Pulse requer background support).

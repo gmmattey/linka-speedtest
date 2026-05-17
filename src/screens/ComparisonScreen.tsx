@@ -39,13 +39,14 @@ export function ComparisonScreen({
   );
 
   // Bloco 5 — TopBar System (2026-05).
-  const { scrolled, scrollContainerRef, sentinelRef } = useScrollHeader();
+  const { scrolled, topBarOpacity, scrollContainerRef, sentinelRef } = useScrollHeader();
 
   return (
     <div className="lk-cmp">
       <TopBar
         onBack={onBack}
         scrolled={scrolled}
+        opacity={topBarOpacity}
         title="Comparar locais"
         showTitle={scrolled}
       />

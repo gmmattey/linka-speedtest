@@ -1,3 +1,5 @@
+/* ── Layout base ─────────────────────────────────────────────────── */
+
 .lk-history {
   position: relative;
   display: flex;
@@ -6,407 +8,179 @@
   background: transparent;
 }
 
-/* Bloco 5 — TopBar System (2026-05): header inline removido. O <PageHeader>
-   no início do scroll content carrega o título grande "Histórico"; o TopBar
-   absolute por cima ganha glass quando ele sai da viewport. */
+.lk-history__sentinel {
+  position: absolute;
+  top: calc(var(--safe-top, 0px) + 56px);
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
 
-.lk-history__main {
+.lk-history__scroll {
   flex: 1;
-  max-width: 480px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 0 16px calc(env(safe-area-inset-bottom, 0px) + 32px);
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding: calc(var(--safe-top, 0px) + 64px) 16px calc(env(safe-area-inset-bottom, 0px) + 80px);
+}
+
+.lk-history__content {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
-  overflow-y: auto;
+  gap: 12px;
 }
 
-.lk-history__main > .lk-page-header {
-  padding-left: 0;
-  padding-right: 0;
-}
+/* ── Empty state ─────────────────────────────────────────────────── */
 
 .lk-history__empty {
-  padding: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 24px;
   text-align: center;
-  color: var(--text-2);
-  font-size: 14px;
 }
 
-/* Trend card (2026-05) — comparação inteligente entre janelas.
-   Border-left grossa colorida pelo severity comunica a direção da
-   mudança imediatamente; o restante mantém o look-and-feel de
-   `--surface-deep` dos demais cards do histórico. Sem box-shadow. */
+.lk-history__empty-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.lk-history__empty-sub {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+/* ── Trend card ──────────────────────────────────────────────────── */
+
 .lk-history__trend {
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 16px 14px;
-  background: var(--surface-deep);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-left: 3px solid var(--text-3);
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
 }
 
-.lk-history__trend--good {
-  border-left-color: var(--success);
-}
-
-.lk-history__trend--bad {
-  border-left-color: var(--error);
-}
-
-.lk-history__trend--neutral {
-  border-left-color: var(--text-3);
-}
+.lk-history__trend--good    { border-left-color: var(--success); }
+.lk-history__trend--bad     { border-left-color: var(--error); }
+.lk-history__trend--neutral { border-left-color: var(--text-3); }
 
 .lk-history__trend-headline {
   margin: 0;
-  font-family: var(--font-display);
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
   color: var(--text);
 }
 
 .lk-history__trend-comparison {
   margin: 0;
-  font-size: 14px;
-  color: var(--text-2);
-}
-
-.lk-history__trend--good .lk-history__trend-comparison {
-  color: var(--success);
-}
-
-.lk-history__trend--bad .lk-history__trend-comparison {
-  color: var(--error);
-}
-
-/* Diagnosis */
-
-.lk-history__diagnosis {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: var(--space-md) 14px;
-  background: var(--surface-deep);
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-}
-
-.lk-history__diagnosis-label {
-  margin: 0;
-  font-size: 11px;
-  color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 600;
-}
-
-.lk-history__diagnosis-text {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--text);
-}
-
-/* Chart */
-
-.lk-history__chart-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.lk-history__chart-title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-weight: 600;
   font-size: 13px;
   color: var(--text-2);
 }
 
-.lk-history__chart {
-  height: 140px;
+.lk-history__trend--good .lk-history__trend-comparison { color: var(--success); }
+.lk-history__trend--bad  .lk-history__trend-comparison { color: var(--error); }
+
+/* ── HistoricoCard ───────────────────────────────────────────────── */
+
+.lk-hist-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   width: 100%;
-}
-
-.lk-history__chart-legend {
-  display: flex;
-  gap: var(--space-lg);
-  font-size: 11px;
-}
-
-.lk-history__legend-dl { color: var(--dl); }
-.lk-history__legend-ul { color: var(--ul); }
-
-/* Summary */
-
-.lk-history__summary {
-  padding: var(--space-md) 0;
-  border-top: 1px solid var(--hairline);
-  border-bottom: 1px solid var(--hairline);
-}
-
-.lk-history__summary-label {
-  margin: 0 0 6px;
-  font-size: 11px;
-  color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 600;
-}
-
-.lk-history__summary-metrics {
-  display: flex;
-  gap: var(--space-lg);
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 28px;
-  letter-spacing: -0.5px;
-  font-variant-numeric: tabular-nums;
-}
-
-.lk-history__summary-dl { color: var(--dl); }
-.lk-history__summary-ul { color: var(--ul); }
-
-.lk-history__summary-quality {
-  margin: 4px 0 0;
-  font-size: 13px;
-  color: var(--text-2);
-}
-
-/* List */
-
-.lk-history__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--surface-deep);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-/* A11y 2026-05: o item virou `<li><button>`. O <li> é só o slot de lista;
-   o `<button>` herda os estilos clicáveis. Reset de aparência pra evitar o
-   estilo nativo de button (background/border/font). */
-.lk-history__item-wrap {
-  list-style: none;
-}
-
-.lk-history__item {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  padding: 16px;
   cursor: pointer;
-  transition: background var(--t-fast);
-}
-
-.lk-history__item-btn {
-  appearance: none;
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid var(--border-subtle);
-  color: inherit;
-  font: inherit;
   text-align: left;
-  width: 100%;
+  font-family: var(--font-body);
+  -webkit-tap-highlight-color: transparent;
+  transition: background 150ms ease-out;
 }
 
-.lk-history__item-wrap:first-child .lk-history__item-btn {
-  border-radius: var(--radius) var(--radius) 0 0;
-}
-
-.lk-history__item-wrap:last-child .lk-history__item-btn {
-  border-bottom: none;
-  border-radius: 0 0 var(--radius) var(--radius);
-}
-
-.lk-history__item:active,
-.lk-history__item-btn:active {
+.lk-hist-card:active {
   background: var(--surface-2);
 }
 
-.lk-history__row1 {
+.lk-hist-card__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-md);
 }
 
-.lk-history__date {
-  font-family: var(--font-mono);
-  font-size: 11px;
+.lk-hist-card__date {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lk-hist-card__header-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-2);
+}
+
+.lk-hist-card__tipo {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.lk-hist-card__footer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
   color: var(--text-3);
 }
 
-.lk-history__row2 {
+/* ── SpeedBar ────────────────────────────────────────────────────── */
+
+.lk-hist-speedbar {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-md);
-  font-family: var(--font-mono);
+  align-items: center;
+  gap: 8px;
+}
+
+.lk-hist-speedbar__track {
+  flex: 1;
+  height: 8px;
+  background: var(--surface-2, rgba(255,255,255,0.08));
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.lk-hist-speedbar__fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 400ms ease-out;
+}
+
+.lk-hist-speedbar__label {
+  font-size: 12px;
   font-weight: 600;
-  font-size: 16px;
-  color: var(--text);
+  white-space: nowrap;
+  min-width: 90px;
+  text-align: right;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
-.lk-history__dl  { color: var(--dl); }
-.lk-history__ul  { color: var(--ul); }
-.lk-history__lat { color: var(--text-2); font-size: 13px; font-weight: 500; }
-
-.lk-history__row3 {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--text-3);
-}
-
-.lk-history__icons {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  color: var(--text-3);
-}
-
-.lk-history__location-tag {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 11px;
-  color: var(--accent);
-  font-weight: 500;
-}
-
-/* Anatel (2026-05) — card "entrega abaixo do contratado" no fim da lista
-   quando elegível. Border-left warn, ícone à esquerda, descrição + CTA. */
-.lk-history__anatel {
-  display: flex;
-  gap: 12px;
-  padding: 14px 16px;
-  background: var(--surface-deep);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--warn);
-  border-radius: var(--radius);
-}
-
-.lk-history__anatel-icon {
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--color-warn-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.lk-history__anatel-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.lk-history__anatel-title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--text);
-}
-
-.lk-history__anatel-desc {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.45;
-  color: var(--text-2);
-}
-
-.lk-history__anatel-cta {
-  align-self: flex-start;
-  margin-top: 4px;
-  height: 36px;
-  font-size: 13px;
-}
-
-.lk-history__anatel-tooltip {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--text-3);
-}
-
-/* Footer */
-
-.lk-history__footer {
-  display: flex;
-  justify-content: center;
-}
-
-.lk-history__clear {
-  color: var(--error);
-  font-size: 13px;
-}
-
-/* Insights */
-
-.lk-history__insights {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.lk-history__insight {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 11px 14px;
-  border-radius: var(--radius);
-  border-left: 3px solid var(--border);
-  background: var(--surface-deep);
-}
-
-.lk-history__insight--critical { border-left-color: var(--error); }
-.lk-history__insight--warning  { border-left-color: var(--warn); }
-.lk-history__insight--info     { border-left-color: var(--accent); }
-
-.lk-history__insight-title {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--text);
-}
-
-.lk-history__insight-desc {
-  font-size: 12px;
-  color: var(--text-2);
-  line-height: 1.5;
-}
-
-.lk-history__insights-hint {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-3);
-  text-align: center;
-}
-
-/* Bloco 5 — TopBar System (2026-05): FAB de PDF substituído por
-   IconButton no rightActions do TopBar. Estilos do FAB removidos. */
-
-/* ── MedicaoDetailSheet ───────────────────────────────────────── */
+/* ── Detail sheet overlay ────────────────────────────────────────── */
 
 .lk-medicao-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   z-index: 1000;
   display: flex;
   align-items: flex-end;
@@ -425,7 +199,6 @@
   border-top-right-radius: 20px;
   max-height: 85dvh;
   overflow-y: auto;
-  box-shadow: 0 -4px 24px rgba(0,0,0,0.2);
 }
 
 .lk-medicao-sheet__handle-row {
@@ -441,109 +214,136 @@
   border-radius: 999px;
 }
 
-.lk-medicao-sheet__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 20px 16px;
-  border-bottom: 1px solid var(--border);
+/* ── Detail sheet content ────────────────────────────────────────── */
+
+.lk-hist-detail__header {
+  padding: 8px 24px 16px;
 }
 
-.lk-medicao-sheet__header h3 {
+.lk-hist-detail__sheet-title {
   margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.lk-medicao-sheet__header-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.lk-medicao-sheet__action-btn {
-  background: var(--surface-2);
-  border: none;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-2);
-  cursor: pointer;
-}
-
-.lk-medicao-sheet__close {
-  background: var(--surface-2);
-  border: none;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-2);
-  cursor: pointer;
-}
-
-.lk-medicao-sheet__body {
-  padding: 20px 20px calc(32px + env(safe-area-inset-bottom, 0px));
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.lk-medicao-sheet__body .lk-hist-detail__hero,
-.lk-hist-detail__hero {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 18px 18px 16px;
-  margin-bottom: 4px;
-  background: var(--surface-deep);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-}
-
-.lk-hist-detail__title {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 32px;
-  letter-spacing: -0.01em;
-  line-height: 1.15;
-  margin-top: 0;
-  color: var(--text);
-}
-
-.lk-hist-detail__sub {
-  font-size: 14px;
-  line-height: 1.4;
-  color: var(--text-2);
-  margin: 0;
-}
-
-.lk-hist-detail__section-label {
-  margin: 16px 0 8px;
-  font-size: 11px;
-  color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 16px;
   font-weight: 600;
+  color: var(--text);
 }
 
-.lk-hist-detail__detail-val {
+.lk-hist-detail__sheet-date {
+  margin: 4px 0 0;
   font-size: 13px;
   color: var(--text-2);
-  text-align: right;
 }
 
-.lk-hist-detail__detail-val--truncate {
-  max-width: 150px;
+.lk-hist-detail__divider {
+  height: 1px;
+  background: var(--border);
+}
+
+.lk-hist-detail__primary-row {
+  display: flex;
+  align-items: stretch;
+  padding: 20px 24px;
+}
+
+.lk-hist-detail__primary {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.lk-hist-detail__arrow {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.lk-hist-detail__primary-nums {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.lk-hist-detail__big {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  line-height: 1;
+}
+
+.lk-hist-detail__unit {
+  font-size: 13px;
+  color: var(--text-2);
+  padding-bottom: 4px;
+}
+
+.lk-hist-detail__primary-label {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.lk-hist-detail__divider-v {
+  width: 1px;
+  background: var(--border);
+  margin: 0 8px;
+  align-self: stretch;
+}
+
+.lk-hist-detail__secondary-row {
+  display: flex;
+  padding: 16px 24px;
+}
+
+.lk-hist-detail__secondary {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.lk-hist-detail__sec-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.lk-hist-detail__sec-label {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.lk-hist-detail__rows {
+  padding-bottom: 8px;
+}
+
+.lk-hist-detail__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+}
+
+.lk-hist-detail__row-label {
+  font-size: 14px;
+  color: var(--text-2);
+}
+
+.lk-hist-detail__row-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  text-align: right;
+  max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  display: inline-block;
-  vertical-align: middle;
+}
+
+.lk-hist-detail__safe-bottom {
+  height: calc(env(safe-area-inset-bottom, 0px) + 24px);
 }

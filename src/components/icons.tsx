@@ -199,6 +199,13 @@ const ICON_PATHS: Record<string, React.ReactNode> = {
   sun:           <><circle cx="12" cy="12" r="5" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" /></>,
   globe:         <><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z" /></>,
   network:       <><circle cx="12" cy="5" r="2" /><circle cx="5" cy="19" r="2" /><circle cx="19" cy="19" r="2" /><path d="M12 7v4m0 0l-5.5 6M12 11l5.5 6" /></>,
+  notifications: <><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></>,
+  analytics:     <><path d="M3 20h18" /><path d="M5 20V12l5-5 4 4 5-7" /></>,
+  sensors:       <><path d="M5.5 5.5a9 9 0 0 1 13 0" /><path d="M8 8a5 5 0 0 1 8 0" /><circle cx="12" cy="12" r="2" /><path d="M12 14v7" /></>,
+  article:       <><path d="M4 4h16v16H4z" rx="2" /><path d="M8 9h8M8 13h6" /></>,
+  security:      <><path d="M12 2l7 3v7c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V5l7-3z" /><path d="M9 12l2 2 4-4" /></>,
+  lock:          <><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>,
+  laptop:        <><rect x="2" y="4" width="20" height="13" rx="2" /><path d="M0 21h24" /></>,
 };
 
 export function Icon({ name, size = 18, stroke = 1.6, color = 'currentColor' }: IconProps) {

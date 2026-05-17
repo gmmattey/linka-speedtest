@@ -125,7 +125,91 @@
   margin-bottom: 28px;
 }
 
-/* ── Último Teste ─────────────────────────────────────────────────── */
+/* ── Medições (card principal) ────────────────────────────────────── */
+
+.lk-home__medicoes {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 16px;
+}
+
+.lk-home__medicoes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.lk-home__medicoes-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.lk-home__medicoes-link {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--font-body);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lk-home__hero {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 12px;
+}
+
+.lk-home__hero-metric {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.lk-home__hero-value {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.lk-home__hero-label {
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.lk-home__chart-wrap {
+  margin: 0 -16px 16px;
+}
+
+.lk-home__medicoes-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 20px 0 16px;
+}
+
+.lk-home__central-btn {
+  width: 100%;
+  height: 52px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-top: 4px;
+}
+
+/* ── Último Teste (legado, mantido para compatibilidade) ──────────── */
 
 .lk-home__last-header {
   display: flex;
@@ -375,6 +459,387 @@
 .lk-home__bottom-pad {
   height: 8px;
   flex-shrink: 0;
+}
+
+/* ── Avatar (TopBar left slot) ───────────────────────────────────────── */
+
+.lk-home__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-blue, #60a5fa));
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+
+/* ── CGNAT banner ────────────────────────────────────────────────────── */
+
+.lk-home__cgnat {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-card);
+}
+
+.lk-home__cgnat-title {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lk-home__cgnat-body {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+/* ── Medições: timestamp subtitle ────────────────────────────────────── */
+
+.lk-home__medicoes-ts {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.lk-home__medicoes-header {
+  align-items: flex-start;
+}
+
+/* ── Hero: DL + UL com dividers (Android LastResultHero) ─────────────── */
+
+.lk-home__hero-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 -16px;
+}
+
+.lk-home__hero-inner {
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lk-home__hero-ts {
+  font-size: 12px;
+  color: var(--text-3);
+  text-align: right;
+}
+
+.lk-home__hero-speeds {
+  display: flex;
+  gap: 16px;
+}
+
+.lk-home__hero-speed {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lk-home__hero-nums {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.lk-home__hero-big {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.lk-home__hero-arrow {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.7;
+}
+
+.lk-home__hero-unit {
+  font-size: 13px;
+  font-weight: 500;
+  padding-bottom: 3px;
+}
+
+.lk-home__hero-label-sm {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+/* ── ExperienciaDeUso card wrapper ───────────────────────────────────── */
+
+.lk-home__exp-card {
+  padding: 16px;
+}
+
+/* ── SignalCard ──────────────────────────────────────────────────────── */
+
+.lk-home__signal-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  text-align: left;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  -webkit-tap-highlight-color: transparent;
+  transition: background 150ms ease-out;
+}
+
+div.lk-home__signal-card {
+  cursor: default;
+}
+
+.lk-home__signal-card:is(button):active {
+  background: var(--surface-2);
+}
+
+.lk-home__signal-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.lk-home__signal-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lk-home__signal-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lk-home__signal-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lk-home__signal-sub {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.lk-home__signal-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding-left: 8px;
+}
+
+.lk-home__signal-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.5px;
+}
+
+.lk-home__signal-bar {
+  width: 3px;
+  border-radius: 1px;
+  background: var(--border);
+}
+
+.lk-home__signal-pct {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* ── ShortcutRow: Diagnóstico Inteligente / Modo Gamer ───────────────── */
+
+.lk-home__shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  -webkit-tap-highlight-color: transparent;
+  transition: background 150ms ease-out;
+}
+
+.lk-home__shortcut-row:active {
+  background: var(--surface-2);
+}
+
+.lk-home__shortcut-row-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lk-home__shortcut-row-icon--game {
+  background: rgba(52, 211, 153, 0.12);
+}
+
+.lk-home__shortcut-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lk-home__shortcut-row-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lk-home__shortcut-row-sub {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+/* ── GamerSheet ──────────────────────────────────────────────────────── */
+
+.lk-home__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  animation: lkFadeIn 200ms ease;
+}
+
+.lk-home__gamer-sheet {
+  width: 100%;
+  background: var(--surface);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  max-height: 80dvh;
+  overflow-y: auto;
+}
+
+.lk-home__gamer-handle-row {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 6px;
+}
+
+.lk-home__gamer-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.lk-home__gamer-content {
+  padding: 8px 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lk-home__gamer-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lk-home__gamer-verdict {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.lk-home__gamer-no-data {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-2);
+  line-height: 1.5;
+  text-align: center;
+  padding: 12px 0;
+}
+
+.lk-home__gamer-metrics {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.lk-home__gamer-metric-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.lk-home__gamer-metric-row:last-child {
+  border-bottom: none;
+}
+
+.lk-home__gamer-metric-label {
+  font-size: 14px;
+  color: var(--text-2);
+}
+
+.lk-home__gamer-metric-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.lk-home__gamer-cta {
+  width: 100%;
+  height: 48px;
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 4px;
 }
 
 /* ── Bottom Sheets ───────────────────────────────────────────────── */

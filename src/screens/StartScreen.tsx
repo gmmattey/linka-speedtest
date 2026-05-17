@@ -73,7 +73,7 @@ export function StartScreen({
   // useScrollHeader. A StartScreen não tem `<PageHeader>`, então o
   // hook não tinha alvo. Hoje fica idêntico (sem rolagem, sem glass);
   // se a tela ganhar conteúdo no futuro, o glass passa a aparecer.
-  const { scrolled, scrollContainerRef, sentinelRef } = useScrollHeader();
+  const { scrolled, topBarOpacity, scrollContainerRef, sentinelRef } = useScrollHeader();
 
   // Pull-to-refresh universal (2026-05). `useScrollHeader` expõe um
   // callback ref; `usePullToRefresh` consome um RefObject. Mantemos uma
@@ -184,6 +184,7 @@ export function StartScreen({
           central já é o hero da tela. */}
       <TopBar
         scrolled={scrolled}
+        opacity={topBarOpacity}
         leftSlot={
           <span className="lk-start__logo">
             Linka

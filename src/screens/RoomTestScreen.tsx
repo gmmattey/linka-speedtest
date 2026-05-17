@@ -24,13 +24,14 @@ export function RoomTestScreen({ onStart, onBack }: Props) {
   };
 
   // Bloco 5 — TopBar System (2026-05).
-  const { scrolled, scrollContainerRef, sentinelRef } = useScrollHeader();
+  const { scrolled, topBarOpacity, scrollContainerRef, sentinelRef } = useScrollHeader();
 
   return (
     <div className="lk-room">
       <TopBar
         onBack={onBack}
         scrolled={scrolled}
+        opacity={topBarOpacity}
         title="Teste por local"
         showTitle={scrolled}
       />

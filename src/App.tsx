@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PulseScreen } from './screens/PulseScreen';
 import { HomeScreen } from './screens/HomeScreen';
+import { SpeedTestScreen } from './screens/SpeedTestScreen';
 import { usePulseDiagnosis } from './hooks/usePulseDiagnosis';
 import { RunningScreen } from './screens/RunningScreen';
 import { ResultScreen } from './screens/ResultScreen';
@@ -36,29 +37,39 @@ const LocalWifiScreen = lazy(() =>
 const LocalNetworkScreen = lazy(() =>
   import('./features/local-network/LocalNetworkScreen').then((m) => ({ default: m.LocalNetworkScreen })),
 );
+const FibraScreen = lazy(() =>
+  import('./screens/FibraScreen').then((m) => ({ default: m.FibraScreen })),
+);
 const OnboardingScreen = lazy(() =>
   import('./screens/OnboardingScreen').then((m) => ({ default: m.OnboardingScreen })),
 );
 
 // Telas com nome alinhado ao Kotlin. Rotas de abas principais:
-//   home | orbit | historico | ajustes
+//   home | velocidade | orbit | dispositivos | ajustes
 // Rotas de sub-telas (empilhadas):
-//   running | result | sinal | dispositivos
+//   running | result | historico | sinal
 type Screen =
   | 'home'
+  | 'velocidade'
   | 'running'
   | 'result'
   | 'historico'
   | 'orbit'
   | 'ajustes'
   | 'sinal'
-  | 'dispositivos';
+  | 'dispositivos'
+  | 'fibra';
 
-// Mapeamento de tela → aba ativa no BottomNavBar
+// Mapeamento de tela → aba ativa no BottomNavBar.
+// Sub-telas mantêm a aba da origem destacada (padrão MD3).
 const TAB_MAP: Partial<Record<Screen, NavTab>> = {
   home:         'home',
-  orbit:        'orbit',
-  historico:    'historico',
+  velocidade:   'velocidade',
+  historico:    'home',
+  orbit:        'diagnostico',
+  sinal:        'home',
+  dispositivos: 'dispositivos',
+  fibra:        'ajustes',
   ajustes:      'ajustes',
 };
 
@@ -192,8 +203,9 @@ export default function App() {
   // Navegação por abas do BottomNavBar
   const handleNavTab = useCallback((tab: NavTab) => {
     const target: Screen = tab === 'home' ? 'home'
-      : tab === 'orbit' ? 'orbit'
-      : tab === 'historico' ? 'historico'
+      : tab === 'velocidade' ? 'velocidade'
+      : tab === 'diagnostico' ? 'orbit'
+      : tab === 'dispositivos' ? 'dispositivos'
       : 'ajustes';
     backStackRef.current = [];
     forwardStackRef.current = [];
@@ -290,6 +302,7 @@ export default function App() {
   const handleShowSinal = useCallback(() => goTo('sinal'), [goTo]);
   const handleShowDispositivos = useCallback(() => goTo('dispositivos'), [goTo]);
   const handleOpenAjustes = useCallback(() => goTo('ajustes'), [goTo]);
+  const handleShowFibra = useCallback(() => goTo('fibra'), [goTo]);
 
   const goToReturnTarget = useCallback(() => {
     forwardStackRef.current = [];
@@ -350,6 +363,20 @@ export default function App() {
 
   const view = useMemo(() => {
     switch (screen) {
+      case 'velocidade':
+        return (
+          <SpeedTestScreen
+            theme={theme}
+            onToggleTheme={onToggleTheme}
+            onStart={handleStart}
+            onOpenDiagnostico={handleOpenOrbit}
+            lastRecord={lastRecord}
+            device={deviceInfo.device}
+            server={deviceInfo.server}
+            settings={settings}
+            onUpdateSettings={updateSettings}
+          />
+        );
       case 'running': {
         return (
           <RunningScreen
@@ -408,12 +435,15 @@ export default function App() {
             onBack={goBack}
             onShowHistory={handleShowHistory}
             onResetOnboarding={handleResetOnboarding}
+            onShowFibra={handleShowFibra}
           />
         );
       case 'sinal':
         return <LocalWifiScreen onBack={goBack} />;
       case 'dispositivos':
         return <LocalNetworkScreen onBack={goBack} />;
+      case 'fibra':
+        return <FibraScreen onBack={goBack} />;
       case 'orbit':
         return (
           <PulseScreen
@@ -431,7 +461,6 @@ export default function App() {
         return (
           <HistoryScreen
             theme={theme}
-            onToggleTheme={onToggleTheme}
             unit={settings.unit}
             initialSelectedId={historyInitialId}
             onBack={goToReturnTarget}
@@ -443,21 +472,19 @@ export default function App() {
         return (
           <HomeScreen
             theme={theme}
-            onToggleTheme={onToggleTheme}
             device={deviceInfo.device}
             server={deviceInfo.server}
             loading={deviceInfo.loading}
             error={deviceInfo.error}
             isOnline={isOnline}
             settings={settings}
-            onUpdateSettings={updateSettings}
-            onStart={handleStart}
             onRetry={deviceInfo.reload}
             lastRecord={lastRecord}
             onShowHistory={handleShowHistory}
+            onNavigateToSpeedTest={() => handleNavTab('velocidade')}
+            onNavigateToAjustes={() => handleNavTab('ajustes')}
             onOpenOrbit={handleOpenOrbit}
             onShowSinal={capabilities.localWifiDiagnostics ? handleShowSinal : undefined}
-            onShowDispositivos={capabilities.localNetworkDiscovery ? handleShowDispositivos : undefined}
             onRefresh={handleAppRefresh}
           />
         );
@@ -467,8 +494,8 @@ export default function App() {
     test.phase, test.instantMbps, test.result,
     deviceInfo,
     previous, lastRecord, historyInitialId,
-    handleStart, handleCancel, handleRetry, handleShowHistory,
-    handleOpenOrbit, handleShowSinal, handleShowDispositivos, handleOpenAjustes,
+    handleStart, handleCancel, handleRetry, handleShowHistory, handleNavTab,
+    handleOpenOrbit, handleShowSinal, handleOpenAjustes, handleShowFibra,
     handleOpenWifiShortcut,
     pulse,
     handleAppRefresh, handleResetOnboarding,

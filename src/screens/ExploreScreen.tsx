@@ -1,11 +1,13 @@
+import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { IOSList } from '../components/IOSList';
 import { Icon } from '../components/icons';
 import { TopBar } from '../components/TopBar';
 import { PageHeader } from '../components/PageHeader';
 import { useScrollHeader } from '../hooks/useScrollHeader';
 import type { Settings } from '../hooks/useSettings';
 import { resolveCopy } from '../core';
+import { loadHistory } from '../utils/history';
+import { isAnatelComplaintEligible, generateAnatelReport } from '../utils/anatelReport';
 import './ExploreScreen.css';
 
 interface Props {
@@ -16,17 +18,14 @@ interface Props {
   onBack: () => void;
   onShowHistory?: () => void;
   onResetOnboarding?: () => void;
+  onShowFibra?: () => void;
 }
 
-const ICON_BG_ACCENT = 'var(--accent-tint)';
-const ICON_BG_DANGER = 'var(--error-tint)';
+const ICON_BG_ACCENT  = 'var(--accent-tint)';
+const ICON_BG_DANGER  = 'var(--error-tint)';
 
-const Ic = ({ name }: { name: string }) => (
-  <Icon name={name} size={16} color="var(--accent)" />
-);
-const IcDanger = ({ name }: { name: string }) => (
-  <Icon name={name} size={16} color="var(--error)" />
-);
+const Ic       = ({ name }: { name: string }) => <Icon name={name} size={18} color="var(--accent)" />;
+const IcDanger = ({ name }: { name: string }) => <Icon name={name} size={18} color="var(--error)" />;
 
 const Badge = ({ label }: { label: string }) => (
   <span className="lk-explore__badge">{label}</span>
@@ -38,10 +37,11 @@ const CHANGELOG = [
     date: 'maio/2026',
     items: [
       'Diagnóstico inteligente Orbit IA com análise por atividade',
-      'Tela inicial remodelada com caminho da rede',
-      'Histórico detalhado de medições',
+      'Tela inicial remodelada com visão completa da conexão',
+      'Histórico detalhado de medições com tendências',
       'Chips de sintoma e perguntas contextuais no diagnóstico',
-      'Bottom navigation bar com 4 abas',
+      'Navegação com 5 abas — SpeedTest, Diagnóstico, Dispositivos, Ajustes',
+      'Tela Sinal com abas Wi-Fi e Células',
     ],
   },
   {
@@ -56,6 +56,10 @@ const CHANGELOG = [
   },
 ];
 
+function notifSupported(): boolean {
+  return typeof Notification !== 'undefined';
+}
+
 export function ExploreScreen({
   theme,
   onToggleTheme,
@@ -64,18 +68,34 @@ export function ExploreScreen({
   onBack: _onBack,
   onShowHistory,
   onResetOnboarding,
+  onShowFibra,
 }: Props) {
-  const { scrolled, scrollContainerRef, sentinelRef } = useScrollHeader();
+  const { scrolled, topBarOpacity, scrollContainerRef, sentinelRef } = useScrollHeader();
 
-  const [showPerfil, setShowPerfil] = useState(false);
-  const [showProvedor, setShowProvedor] = useState(false);
-  const [showAlertas, setShowAlertas] = useState(false);
-  const [showDados, setShowDados] = useState(false);
-  const [showDadosLocais, setShowDadosLocais] = useState(false);
-  const [showSobre, setShowSobre] = useState(false);
-  const [showChangelog, setShowChangelog] = useState(false);
+  // Sheet visibility
+  const [showProvedor,       setShowProvedor]       = useState(false);
+  const [showRoteador,       setShowRoteador]       = useState(false);
+  const [showNotificacoes,   setShowNotificacoes]   = useState(false);
+  const [showAlertas,        setShowAlertas]        = useState(false);
+  const [showAnaliseAv,      setShowAnaliseAv]      = useState(false);
+  const [showMonitoramento,  setShowMonitoramento]  = useState(false);
+  const [showAnatelInfo,     setShowAnatelInfo]     = useState(false);
+  const [showDados,          setShowDados]          = useState(false);
+  const [showDadosLocais,    setShowDadosLocais]    = useState(false);
+  const [showChangelog,      setShowChangelog]      = useState(false);
   const [showDiagnosticoApp, setShowDiagnosticoApp] = useState(false);
-  const [showConfirmReset, setShowConfirmReset] = useState(false);
+  const [showPermissoes,     setShowPermissoes]     = useState(false);
+  const [showPrivacidade,    setShowPrivacidade]    = useState(false);
+  const [showSobre,          setShowSobre]          = useState(false);
+  const [showConfirmReset,   setShowConfirmReset]   = useState(false);
+
+  // Notification permission state
+  const [notifPerm, setNotifPerm] = useState<NotificationPermission>(
+    notifSupported() ? Notification.permission : 'denied',
+  );
+
+  // Anatel PDF state
+  const [generatingAnatel, setGeneratingAnatel] = useState(false);
 
   const handleClearHistory = () => {
     localStorage.removeItem('linka.speedtest.history.v1');
@@ -88,215 +108,224 @@ export function ExploreScreen({
     window.location.reload();
   };
 
+  const handleRequestNotif = async () => {
+    if (!notifSupported()) return;
+    const result = await Notification.requestPermission();
+    setNotifPerm(result);
+  };
+
+  const handleAnatelReport = async () => {
+    if (generatingAnatel) return;
+    const cd = settings.contractedDown;
+    if (!cd || cd <= 0) {
+      setShowProvedor(true);
+      return;
+    }
+    const history = loadHistory();
+    const data = isAnatelComplaintEligible(history, cd, settings.contractedUp ?? 0);
+    if (!data) {
+      setShowAnatelInfo(true);
+      return;
+    }
+    setGeneratingAnatel(true);
+    try {
+      await generateAnatelReport(data, settings.providerName || null);
+    } finally {
+      setGeneratingAnatel(false);
+    }
+  };
+
+  const notifLabel = !notifSupported()
+    ? 'Não suportado neste navegador'
+    : notifPerm === 'granted'
+      ? 'Ativadas'
+      : notifPerm === 'denied'
+        ? 'Bloqueadas pelo navegador'
+        : 'Toque para ativar';
+
+  const anatelLabel = generatingAnatel
+    ? 'Gerando PDF…'
+    : settings.contractedDown
+      ? 'Gerar comprovante de medições'
+      : 'Configure seu plano antes';
+
   return (
     <div className="lk-explore lk-settings fade-in" data-theme={theme}>
-      <TopBar
-        scrolled={scrolled}
-        title="Ajustes"
-        showTitle={scrolled}
-      />
+      <TopBar scrolled={scrolled} opacity={topBarOpacity} title="Ajustes" showTitle={true} />
 
       <div className="lk-explore__scroll" ref={scrollContainerRef}>
         <PageHeader ref={sentinelRef} size="md" title="Ajustes" />
 
-        {/* ── PERFIL E CONTA ──────────────────────────────────────────── */}
+        {/* ── REDE E CONEXÃO ──────────────────────────────────────────── */}
         <div className="lk-explore__section">
-          <p className="lk-explore__section-label">Perfil e conta</p>
-          <IOSList items={[
-            {
-              icon: <Ic name="person" />,
-              iconBg: ICON_BG_ACCENT,
-              title: 'Meu perfil',
-              subtitle: settings.userName || 'Dispositivo',
-              showChevron: true,
-              onClick: () => setShowPerfil(true),
-            },
-            {
-              icon: <Ic name="business" />,
-              iconBg: ICON_BG_ACCENT,
-              title: 'Provedor de internet',
-              subtitle: [settings.providerName, settings.region].filter(Boolean).join(' · ') || 'Operadora e região',
-              showChevron: true,
-              onClick: () => setShowProvedor(true),
-            },
-          ]} />
+          <p className="lk-explore__section-label">Rede e conexão</p>
+          <Md3List>
+            <Md3Row
+              icon={<Ic name="business" />} iconBg={ICON_BG_ACCENT}
+              title="Provedor de internet"
+              subtitle={[settings.providerName, settings.region].filter(Boolean).join(' · ') || 'Operadora, plano e região'}
+              showChevron onClick={() => setShowProvedor(true)}
+            />
+            <Md3Row
+              icon={<Ic name="router" />} iconBg={ICON_BG_ACCENT}
+              title="Configurações do roteador"
+              subtitle="Acesso ao painel administrativo"
+              showChevron onClick={onShowFibra ?? (() => setShowRoteador(true))}
+            />
+          </Md3List>
         </div>
 
         {/* ── EXPERIÊNCIA DO APP ──────────────────────────────────────── */}
         <div className="lk-explore__section">
           <p className="lk-explore__section-label">Experiência do app</p>
-          <IOSList items={[
-            {
-              icon: <Ic name={theme === 'dark' ? 'moon' : 'sun'} />,
-              iconBg: ICON_BG_ACCENT,
-              title: 'Tema',
-              subtitle: theme === 'dark' ? 'Escuro' : 'Claro',
-              showChevron: true,
-              onClick: onToggleTheme,
-            },
-            {
-              icon: <Ic name="vibration" />,
-              iconBg: ICON_BG_ACCENT,
-              title: 'Vibração tátil',
-              subtitle: settings.useHaptics ? 'Ativada' : 'Desativada',
-              trailing: (
-                <Toggle
-                  active={settings.useHaptics}
-                  onToggle={() => onUpdateSettings({ useHaptics: !settings.useHaptics })}
-                />
-              ),
-            },
-          ]} />
+          <Md3List>
+            <Md3Row
+              icon={<Ic name={theme === 'dark' ? 'moon' : 'sun'} />} iconBg={ICON_BG_ACCENT}
+              title="Tema"
+              subtitle={theme === 'dark' ? 'Escuro' : 'Claro'}
+              showChevron onClick={onToggleTheme}
+            />
+            <Md3Row
+              icon={<Ic name="notifications" />} iconBg={ICON_BG_ACCENT}
+              title="Notificações"
+              subtitle={notifLabel}
+              showChevron onClick={() => {
+                if (notifSupported() && notifPerm === 'default') {
+                  void handleRequestNotif();
+                } else {
+                  setShowNotificacoes(true);
+                }
+              }}
+            />
+          </Md3List>
         </div>
 
         {/* ── MEDIÇÃO E ALERTAS ───────────────────────────────────────── */}
         <div className="lk-explore__section">
           <p className="lk-explore__section-label">Medição e alertas</p>
-          <IOSList items={[
-            {
-              icon: <Ic name="trending-down" />,
-              iconBg: ICON_BG_ACCENT,
-              title: 'Alertas de qualidade',
-              subtitle: settings.qualityAlertsActive
+          <Md3List>
+            <Md3Row
+              icon={<Ic name="trending-down" />} iconBg={ICON_BG_ACCENT}
+              title="Alertas de qualidade"
+              subtitle={settings.qualityAlertsActive
                 ? `Alertar abaixo de ${settings.alertThresholdMbps} Mbps`
-                : 'Sem limite configurado',
-              showChevron: true,
-              onClick: () => setShowAlertas(true),
-            },
-            {
-              icon: <Ic name="bolt" />,
-              iconBg: ICON_BG_ACCENT,
-              title: 'Modo padrão',
-              subtitle: settings.defaultMode === 'complete' ? 'Completo (recomendado)' : 'Rápido',
-              showChevron: true,
-              onClick: () => onUpdateSettings({ defaultMode: settings.defaultMode === 'complete' ? 'fast' : 'complete' }),
-            },
-          ]} />
+                : 'Sem limite configurado'}
+              showChevron onClick={() => setShowAlertas(true)}
+            />
+            <Md3Row
+              icon={<Ic name="analytics" />} iconBg={ICON_BG_ACCENT}
+              title="Análise avançada da conexão"
+              subtitle="Ativada — jitter, perda de pacotes, bufferbloat"
+              showChevron onClick={() => setShowAnaliseAv(true)}
+            />
+            <Md3Row
+              icon={<Ic name="sensors" />} iconBg={ICON_BG_ACCENT}
+              title="Monitoramento passivo"
+              subtitle="Disponível no app Android"
+              showChevron onClick={() => setShowMonitoramento(true)}
+            />
+          </Md3List>
+          <div className="lk-explore__info-card">
+            <span className="material-symbols-rounded lk-explore__info-card-icon">info</span>
+            <p className="lk-explore__info-card-text">
+              O monitoramento contínuo em segundo plano requer o app Android instalado.
+              No navegador, os testes são iniciados manualmente.
+            </p>
+          </div>
         </div>
 
         {/* ── HISTÓRICO E DADOS ───────────────────────────────────────── */}
         <div className="lk-explore__section">
           <p className="lk-explore__section-label">Histórico e dados</p>
-          <IOSList items={[
-            ...(onShowHistory ? [{
-              icon: <Ic name="history" />,
-              iconBg: ICON_BG_ACCENT,
-              title: 'Histórico de testes',
-              subtitle: 'Suas medições recentes',
-              showChevron: true,
-              onClick: onShowHistory,
-            }] : []),
-            {
-              icon: <Ic name="upload" />,
-              iconBg: ICON_BG_ACCENT,
-              title: 'Exportar dados',
-              subtitle: 'CSV, JSON ou PDF',
-              trailing: <Badge label="Em breve" />,
-              onClick: undefined,
-            },
-            {
-              icon: <Ic name="info" />,
-              iconBg: ICON_BG_ACCENT,
-              title: 'Dados usados pelo Linka',
-              subtitle: 'O que coletamos e como usamos',
-              showChevron: true,
-              onClick: () => setShowDados(true),
-            },
-            {
-              icon: <Ic name="delete" />,
-              iconBg: ICON_BG_ACCENT,
-              title: 'Gerenciar dados locais',
-              subtitle: 'Limpar histórico e preferências',
-              showChevron: true,
-              onClick: () => setShowDadosLocais(true),
-            },
-          ]} />
+          <Md3List>
+            {onShowHistory && (
+              <Md3Row
+                icon={<Ic name="history" />} iconBg={ICON_BG_ACCENT}
+                title="Histórico de testes"
+                subtitle="Suas medições recentes"
+                showChevron onClick={onShowHistory}
+              />
+            )}
+            <Md3Row
+              icon={<Ic name="article" />} iconBg={ICON_BG_ACCENT}
+              title="Comprovante para a Anatel"
+              subtitle={anatelLabel}
+              showChevron onClick={() => void handleAnatelReport()}
+            />
+            <Md3Row
+              icon={<Ic name="info" />} iconBg={ICON_BG_ACCENT}
+              title="Dados usados pelo Linka"
+              subtitle="Velocidade, DNS, sinal — o que medimos"
+              showChevron onClick={() => setShowDados(true)}
+            />
+            <Md3Row
+              icon={<Ic name="delete" />} iconBg={ICON_BG_ACCENT}
+              title="Gerenciar dados locais"
+              subtitle="Limpar histórico e preferências"
+              showChevron onClick={() => setShowDadosLocais(true)}
+            />
+          </Md3List>
         </div>
 
         {/* ── AJUDA E SOBRE ───────────────────────────────────────────── */}
         <div className="lk-explore__section">
           <p className="lk-explore__section-label">Ajuda e sobre</p>
-          <IOSList items={[
-            {
-              icon: <Ic name="bolt" />,
-              iconBg: ICON_BG_ACCENT,
-              title: 'Novidades',
-              subtitle: 'Confira o que mudou nas últimas versões',
-              showChevron: true,
-              onClick: () => setShowChangelog(true),
-            },
-            ...(onResetOnboarding ? [{
-              icon: <Ic name="bulb" />,
-              iconBg: ICON_BG_ACCENT,
-              title: 'Ver tutorial novamente',
-              subtitle: 'Rever o guia de boas-vindas',
-              showChevron: true,
-              onClick: onResetOnboarding,
-            }] : []),
-            {
-              icon: <Ic name="shield" />,
-              iconBg: ICON_BG_ACCENT,
-              title: 'Diagnóstico do app',
-              subtitle: 'Informações técnicas e integridade',
-              showChevron: true,
-              onClick: () => setShowDiagnosticoApp(true),
-            },
-            {
-              icon: <IcDanger name="delete" />,
-              iconBg: ICON_BG_DANGER,
-              title: 'Redefinir o app',
-              subtitle: 'Apaga todos os dados e restaura configurações iniciais',
-              showChevron: true,
-              onClick: () => setShowConfirmReset(true),
-            },
-            {
-              icon: <Ic name="info" />,
-              iconBg: ICON_BG_ACCENT,
-              title: 'Sobre o Linka',
-              subtitle: 'v1.1.0 · Web PWA',
-              showChevron: true,
-              onClick: () => setShowSobre(true),
-            },
-          ]} />
+          <Md3List>
+            <Md3Row
+              icon={<Ic name="bolt" />} iconBg={ICON_BG_ACCENT}
+              title="Novidades"
+              subtitle="Confira o que mudou nas últimas versões"
+              showChevron onClick={() => setShowChangelog(true)}
+            />
+            <Md3Row
+              icon={<Ic name="shield" />} iconBg={ICON_BG_ACCENT}
+              title="Diagnóstico do app"
+              subtitle="Integridade, motor e versão"
+              showChevron onClick={() => setShowDiagnosticoApp(true)}
+            />
+            <Md3Row
+              icon={<Ic name="security" />} iconBg={ICON_BG_ACCENT}
+              title="Permissões do sistema"
+              subtitle="Localização, notificações e rede"
+              showChevron onClick={() => setShowPermissoes(true)}
+            />
+            {onResetOnboarding && (
+              <Md3Row
+                icon={<Ic name="bulb" />} iconBg={ICON_BG_ACCENT}
+                title="Ver tutorial novamente"
+                subtitle="Rever o guia de boas-vindas"
+                showChevron onClick={onResetOnboarding}
+              />
+            )}
+            <Md3Row
+              icon={<IcDanger name="delete" />} iconBg={ICON_BG_DANGER}
+              title="Redefinir o app"
+              subtitle="Apaga todos os dados e restaura configurações iniciais"
+              showChevron onClick={() => setShowConfirmReset(true)}
+            />
+            <Md3Row
+              icon={<Ic name="lock" />} iconBg={ICON_BG_ACCENT}
+              title="Privacidade"
+              subtitle="Como seus dados são protegidos"
+              showChevron onClick={() => setShowPrivacidade(true)}
+            />
+            <Md3Row
+              icon={<Ic name="info" />} iconBg={ICON_BG_ACCENT}
+              title="Sobre o Linka"
+              subtitle="v1.1.0 · Web PWA"
+              showChevron onClick={() => setShowSobre(true)}
+            />
+          </Md3List>
         </div>
 
         <div className="lk-explore__bottom-pad" />
       </div>
 
-      {/* ── Perfil Sheet ──────────────────────────────────────────────── */}
-      {showPerfil && (
-        <SettingsSheet title="Meu perfil" onClose={() => setShowPerfil(false)}>
-          <div className="lk-settings-form">
-            <label className="lk-settings-field">
-              <span>Seu nome ou apelido</span>
-              <input
-                type="text"
-                value={settings.userName}
-                onChange={(e) => onUpdateSettings({ userName: e.target.value })}
-                placeholder="Ex: João"
-                autoFocus
-              />
-            </label>
-            <div className="lk-settings-info-rows">
-              <div className="lk-settings-info-row">
-                <span>Plataforma</span>
-                <span>Web PWA</span>
-              </div>
-              <div className="lk-settings-info-row">
-                <span>Versão</span>
-                <span>v1.1.0</span>
-              </div>
-            </div>
-            <button className="lk-settings-save" onClick={() => setShowPerfil(false)}>Salvar perfil</button>
-          </div>
-        </SettingsSheet>
-      )}
-
       {/* ── Provedor Sheet ────────────────────────────────────────────── */}
       {showProvedor && (
-        <SettingsSheet title="Dados do provedor" onClose={() => setShowProvedor(false)}>
+        <SettingsSheet title="Provedor de internet" onClose={() => setShowProvedor(false)}>
           <div className="lk-settings-form">
-            <p className="lk-settings-desc">Informe sua operadora e plano para análises personalizadas.</p>
+            <p className="lk-settings-desc">Informe sua operadora e plano para análises personalizadas e comprovante Anatel.</p>
             <label className="lk-settings-field">
               <span>Operadora / ISP</span>
               <input
@@ -308,18 +337,6 @@ export function ExploreScreen({
               />
             </label>
             <label className="lk-settings-field">
-              <span>Plano contratado</span>
-              <input
-                type="text"
-                value={settings.contractedDown ? `${settings.contractedDown} Mbps` : ''}
-                onChange={(e) => {
-                  const n = parseInt(e.target.value.replace(/\D/g, ''), 10);
-                  onUpdateSettings({ contractedDown: Number.isNaN(n) ? null : n });
-                }}
-                placeholder="Ex: 500 Mbps fibra"
-              />
-            </label>
-            <label className="lk-settings-field">
               <span>Cidade / Região</span>
               <input
                 type="text"
@@ -328,7 +345,108 @@ export function ExploreScreen({
                 placeholder="Ex: São Paulo – SP"
               />
             </label>
+            <div className="lk-settings-plan-row">
+              <label className="lk-settings-field lk-settings-field--half">
+                <span>Download contratado</span>
+                <div className="lk-settings-plan-input-wrap">
+                  <input
+                    type="number"
+                    value={settings.contractedDown ?? ''}
+                    onChange={(e) => {
+                      const n = parseInt(e.target.value, 10);
+                      onUpdateSettings({ contractedDown: Number.isNaN(n) || n <= 0 ? null : n });
+                    }}
+                    placeholder="—"
+                    min="1"
+                    max="10000"
+                  />
+                  <span className="lk-settings-plan-unit">Mbps ↓</span>
+                </div>
+              </label>
+              <label className="lk-settings-field lk-settings-field--half">
+                <span>Upload contratado</span>
+                <div className="lk-settings-plan-input-wrap">
+                  <input
+                    type="number"
+                    value={settings.contractedUp ?? ''}
+                    onChange={(e) => {
+                      const n = parseInt(e.target.value, 10);
+                      onUpdateSettings({ contractedUp: Number.isNaN(n) || n <= 0 ? null : n });
+                    }}
+                    placeholder="—"
+                    min="1"
+                    max="10000"
+                  />
+                  <span className="lk-settings-plan-unit">Mbps ↑</span>
+                </div>
+              </label>
+            </div>
             <button className="lk-settings-save" onClick={() => setShowProvedor(false)}>Salvar</button>
+          </div>
+        </SettingsSheet>
+      )}
+
+      {/* ── Roteador Sheet (fallback) ─────────────────────────────────── */}
+      {showRoteador && (
+        <SettingsSheet title="Configurações do roteador" onClose={() => setShowRoteador(false)}>
+          <div className="lk-settings-fallback">
+            <span className="material-symbols-rounded lk-settings-fallback__icon">router</span>
+            <p className="lk-settings-fallback__title">Acesse o painel do roteador</p>
+            <p className="lk-settings-fallback__desc">
+              O navegador não consegue modificar configurações do roteador diretamente.
+              Você pode acessar o painel de administração pelo endereço do gateway.
+            </p>
+            <a
+              className="lk-settings-save"
+              href="http://192.168.1.1"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setShowRoteador(false)}
+            >
+              Abrir painel (192.168.1.1)
+            </a>
+            <div className="lk-settings-android-cta">
+              <span className="material-symbols-rounded">android</span>
+              <p>Use o <strong>app linka para Android</strong> para configuração avançada do roteador, diagnóstico de fibra e análise GPON.</p>
+            </div>
+          </div>
+        </SettingsSheet>
+      )}
+
+      {/* ── Notificações Sheet ────────────────────────────────────────── */}
+      {showNotificacoes && (
+        <SettingsSheet title="Notificações" onClose={() => setShowNotificacoes(false)}>
+          <div className="lk-settings-form">
+            {!notifSupported() ? (
+              <div className="lk-settings-fallback lk-settings-fallback--inline">
+                <p className="lk-settings-fallback__desc">
+                  Notificações não são suportadas neste navegador.
+                </p>
+                <div className="lk-settings-android-cta">
+                  <span className="material-symbols-rounded">android</span>
+                  <p>O app Android envia alertas nativos quando sua velocidade cai abaixo do limite configurado.</p>
+                </div>
+              </div>
+            ) : notifPerm === 'denied' ? (
+              <div className="lk-settings-fallback lk-settings-fallback--inline">
+                <p className="lk-settings-fallback__desc">
+                  Notificações estão <strong>bloqueadas</strong> pelo navegador. Para reativar, vá em Configurações do navegador → Privacidade → Notificações → linka.
+                </p>
+              </div>
+            ) : notifPerm === 'granted' ? (
+              <div className="lk-settings-fallback lk-settings-fallback--inline">
+                <p className="lk-settings-fallback__desc">
+                  Notificações estão <strong>ativadas</strong>. O Linka pode enviar alertas quando sua conexão estiver abaixo do limite configurado.
+                </p>
+              </div>
+            ) : (
+              <>
+                <p className="lk-settings-desc">Receba alertas quando sua conexão cair abaixo do limite configurado.</p>
+                <button className="lk-settings-save" onClick={() => void handleRequestNotif()}>
+                  Ativar notificações
+                </button>
+              </>
+            )}
           </div>
         </SettingsSheet>
       )}
@@ -365,10 +483,98 @@ export function ExploreScreen({
         </SettingsSheet>
       )}
 
-      {/* ── Dados usados Sheet (W1-09 — Privacidade) ─────────────────── */}
+      {/* ── Análise avançada Sheet ────────────────────────────────────── */}
+      {showAnaliseAv && (
+        <SettingsSheet title="Análise avançada da conexão" onClose={() => setShowAnaliseAv(false)}>
+          <div className="lk-settings-form">
+            <div className="lk-settings-about">
+              <div className="lk-settings-about-row">
+                <span>Status</span>
+                <span className="lk-settings-status-ok">✓ Sempre ativa</span>
+              </div>
+              <div className="lk-settings-about-row">
+                <span>Jitter</span>
+                <span>Variação de latência</span>
+              </div>
+              <div className="lk-settings-about-row">
+                <span>Perda de pacotes</span>
+                <span>WebRTC probe</span>
+              </div>
+              <div className="lk-settings-about-row">
+                <span>Bufferbloat</span>
+                <span>Latência sob carga</span>
+              </div>
+            </div>
+            <p className="lk-settings-desc">
+              A análise avançada está sempre ativa no Linka web. Todos os testes medem jitter, perda de pacotes e bufferbloat automaticamente.
+            </p>
+          </div>
+        </SettingsSheet>
+      )}
+
+      {/* ── Monitoramento passivo Sheet (fallback) ───────────────────── */}
+      {showMonitoramento && (
+        <SettingsSheet title="Monitoramento passivo" onClose={() => setShowMonitoramento(false)}>
+          <div className="lk-settings-fallback">
+            <span className="material-symbols-rounded lk-settings-fallback__icon">sensors</span>
+            <p className="lk-settings-fallback__title">Disponível no app Android</p>
+            <p className="lk-settings-fallback__desc">
+              O monitoramento contínuo em segundo plano requer um serviço do sistema operacional.
+              Navegadores suspendem abas inativas e não conseguem manter monitoramento confiável.
+            </p>
+            <div className="lk-settings-android-cta">
+              <span className="material-symbols-rounded">android</span>
+              <p>O <strong>app linka para Android</strong> monitora sua rede em segundo plano 24/7 e envia alertas nativos sem abrir o app.</p>
+            </div>
+          </div>
+        </SettingsSheet>
+      )}
+
+      {/* ── Anatel Info Sheet ─────────────────────────────────────────── */}
+      {showAnatelInfo && (
+        <SettingsSheet title="Comprovante para a Anatel" onClose={() => setShowAnatelInfo(false)}>
+          <div className="lk-settings-form">
+            <p className="lk-settings-desc">
+              O comprovante é gerado automaticamente quando sua operadora estiver entregando abaixo de 80% da velocidade contratada em pelo menos 5 testes dos últimos 30 dias.
+            </p>
+            <div className="lk-settings-about">
+              {!settings.contractedDown ? (
+                <div className="lk-settings-about-row">
+                  <span>Plano contratado</span>
+                  <span style={{ color: 'var(--warn)' }}>Não configurado</span>
+                </div>
+              ) : (
+                <div className="lk-settings-about-row">
+                  <span>Plano configurado</span>
+                  <span>{settings.contractedDown} Mbps ↓</span>
+                </div>
+              )}
+            </div>
+            {!settings.contractedDown && (
+              <button className="lk-settings-save" onClick={() => { setShowAnatelInfo(false); setShowProvedor(true); }}>
+                Configurar plano
+              </button>
+            )}
+            {settings.contractedDown && (
+              <p className="lk-settings-hint">
+                Continue fazendo testes. O comprovante ficará disponível assim que houver evidência suficiente de descumprimento do plano.
+              </p>
+            )}
+          </div>
+        </SettingsSheet>
+      )}
+
+      {/* ── Dados usados Sheet ────────────────────────────────────────── */}
       {showDados && (
         <SettingsSheet title="Dados usados pelo Linka" onClose={() => setShowDados(false)}>
           <PrivacyContent onClose={() => setShowDados(false)} />
+        </SettingsSheet>
+      )}
+
+      {/* ── Privacidade Sheet ─────────────────────────────────────────── */}
+      {showPrivacidade && (
+        <SettingsSheet title="Privacidade" onClose={() => setShowPrivacidade(false)}>
+          <PrivacyContent onClose={() => setShowPrivacidade(false)} />
         </SettingsSheet>
       )}
 
@@ -390,10 +596,7 @@ export function ExploreScreen({
             </button>
             <button
               className="lk-settings-btn lk-settings-btn--danger"
-              onClick={() => {
-                setShowDadosLocais(false);
-                setShowConfirmReset(true);
-              }}
+              onClick={() => { setShowDadosLocais(false); setShowConfirmReset(true); }}
             >
               <Icon name="delete" size={16} color="var(--error)" />
               Apagar dados locais
@@ -431,22 +634,10 @@ export function ExploreScreen({
       {showDiagnosticoApp && (
         <SettingsSheet title="Diagnóstico do app" onClose={() => setShowDiagnosticoApp(false)}>
           <div className="lk-settings-about">
-            <div className="lk-settings-about-row">
-              <span>Versão</span>
-              <span>v1.1.0</span>
-            </div>
-            <div className="lk-settings-about-row">
-              <span>Plataforma</span>
-              <span>Web PWA</span>
-            </div>
-            <div className="lk-settings-about-row">
-              <span>Motor</span>
-              <span>Cloudflare Speedtest</span>
-            </div>
-            <div className="lk-settings-about-row">
-              <span>Integridade</span>
-              <span className="lk-settings-status-ok">✓ OK</span>
-            </div>
+            <div className="lk-settings-about-row"><span>Versão</span><span>v1.1.0</span></div>
+            <div className="lk-settings-about-row"><span>Plataforma</span><span>Web PWA</span></div>
+            <div className="lk-settings-about-row"><span>Motor</span><span>Cloudflare Speedtest</span></div>
+            <div className="lk-settings-about-row"><span>Integridade</span><span className="lk-settings-status-ok">✓ OK</span></div>
           </div>
           <div className="lk-settings-diag-note">
             <Icon name="shield" size={14} color="var(--success)" />
@@ -455,30 +646,40 @@ export function ExploreScreen({
         </SettingsSheet>
       )}
 
+      {/* ── Permissões Sheet ──────────────────────────────────────────── */}
+      {showPermissoes && (
+        <SettingsSheet title="Permissões do sistema" onClose={() => setShowPermissoes(false)}>
+          <div className="lk-settings-about">
+            <div className="lk-settings-about-row">
+              <span>Notificações</span>
+              <span style={{ color: notifPerm === 'granted' ? 'var(--success)' : notifPerm === 'denied' ? 'var(--error)' : 'var(--text-3)' }}>
+                {notifPerm === 'granted' ? 'Permitidas' : notifPerm === 'denied' ? 'Bloqueadas' : 'Não solicitadas'}
+              </span>
+            </div>
+            <div className="lk-settings-about-row">
+              <span>Localização</span>
+              <span style={{ color: 'var(--text-3)' }}>Solicitada ao usar diagnóstico Wi-Fi</span>
+            </div>
+            <div className="lk-settings-about-row">
+              <span>Câmera / Microfone</span>
+              <span style={{ color: 'var(--success)' }}>Não solicitadas</span>
+            </div>
+          </div>
+          <p className="lk-settings-desc" style={{ marginTop: 12 }}>
+            Para alterar permissões, acesse as configurações do seu navegador → Privacidade → Permissões.
+          </p>
+        </SettingsSheet>
+      )}
+
       {/* ── Sobre Sheet ───────────────────────────────────────────────── */}
       {showSobre && (
         <SettingsSheet title="Sobre o Linka" onClose={() => setShowSobre(false)}>
           <div className="lk-settings-about">
-            <div className="lk-settings-about-row">
-              <span>Versão</span>
-              <span>v1.1.0</span>
-            </div>
-            <div className="lk-settings-about-row">
-              <span>Plataforma</span>
-              <span>Web PWA</span>
-            </div>
-            <div className="lk-settings-about-row">
-              <span>Central de medição</span>
-              <span>Cloudflare</span>
-            </div>
-            <div className="lk-settings-about-row">
-              <span>Desenvolvido por</span>
-              <span>Equipe LINKA</span>
-            </div>
-            <div className="lk-settings-about-row">
-              <span>Suporte</span>
-              <span>suporte@linka.app</span>
-            </div>
+            <div className="lk-settings-about-row"><span>Versão</span><span>v1.1.0</span></div>
+            <div className="lk-settings-about-row"><span>Plataforma</span><span>Web PWA · Kotlin Android</span></div>
+            <div className="lk-settings-about-row"><span>Central de medição</span><span>Cloudflare</span></div>
+            <div className="lk-settings-about-row"><span>Desenvolvido por</span><span>Equipe LINKA</span></div>
+            <div className="lk-settings-about-row"><span>Suporte</span><span>suporte@linka.app</span></div>
             <p className="lk-settings-about-desc">
               O Linka é uma ferramenta de diagnóstico de rede focada em simplicidade e precisão.
             </p>
@@ -499,49 +700,72 @@ export function ExploreScreen({
   );
 }
 
+/* ── MD3 List Components ─────────────────────────────────────────────────── */
+
+function Md3List({ children }: { children: ReactNode }) {
+  return <div className="lk-explore__md3-list">{children}</div>;
+}
+
+function Md3Row({
+  icon, iconBg, title, subtitle, trailing, showChevron, onClick,
+}: {
+  icon?: ReactNode;
+  iconBg?: string;
+  title: string;
+  subtitle?: string;
+  trailing?: ReactNode;
+  showChevron?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <div
+      className={`lk-explore__md3-row${onClick ? ' lk-explore__md3-row--clickable' : ''}`}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); }
+      } : undefined}
+    >
+      {icon != null && (
+        <div className="lk-explore__md3-icon" style={iconBg ? { background: iconBg } : undefined}>
+          {icon}
+        </div>
+      )}
+      <div className="lk-explore__md3-text">
+        <div className="lk-explore__md3-title">{title}</div>
+        {subtitle && <div className="lk-explore__md3-sub">{subtitle}</div>}
+      </div>
+      {trailing && <div className="lk-explore__md3-trailing">{trailing}</div>}
+      {showChevron && (
+        <span className="lk-explore__md3-chevron">
+          <Icon name="chevron" size={14} color="var(--text-3)" />
+        </span>
+      )}
+    </div>
+  );
+}
+
 /* ── Sub-components ──────────────────────────────────────────────────────── */
 
-/** W1-09: Conteúdo do sheet de privacidade. Usa o copyDictionary como
- *  fonte da verdade — não duplica texto aqui. */
 function PrivacyContent({ onClose }: { onClose: () => void }) {
-  const collects = [
-    'privacy.collects.1',
-    'privacy.collects.2',
-    'privacy.collects.3',
-    'privacy.collects.4',
-  ];
-  const nots = [
-    'privacy.not.1',
-    'privacy.not.2',
-    'privacy.not.3',
-    'privacy.not.4',
-  ];
-  const rights = [
-    'privacy.rights.1',
-    'privacy.rights.2',
-    'privacy.rights.3',
-  ];
+  const collects = ['privacy.collects.1', 'privacy.collects.2', 'privacy.collects.3', 'privacy.collects.4'];
+  const nots     = ['privacy.not.1', 'privacy.not.2', 'privacy.not.3', 'privacy.not.4'];
+  const rights   = ['privacy.rights.1', 'privacy.rights.2', 'privacy.rights.3'];
   return (
     <div className="lk-settings-privacy">
       <p className="lk-settings-privacy-section-title">{resolveCopy('privacy.collects.header')}</p>
       <ul className="lk-settings-data-list lk-settings-privacy-list">
         {collects.map((k) => <li key={k}>{resolveCopy(k)}</li>)}
       </ul>
-
       <p className="lk-settings-privacy-section-title lk-settings-privacy-section-title--nok">{resolveCopy('privacy.not.header')}</p>
       <ul className="lk-settings-data-list lk-settings-privacy-list">
-        {nots.map((k) => (
-          <li key={k} className="lk-settings-privacy-list-item--nok">
-            {resolveCopy(k)}
-          </li>
-        ))}
+        {nots.map((k) => <li key={k} className="lk-settings-privacy-list-item--nok">{resolveCopy(k)}</li>)}
       </ul>
-
       <p className="lk-settings-privacy-section-title">{resolveCopy('privacy.rights.header')}</p>
       <ul className="lk-settings-data-list lk-settings-privacy-list">
         {rights.map((k) => <li key={k}>{resolveCopy(k)}</li>)}
       </ul>
-
       <div className="lk-settings-privacy-delete">
         <p className="lk-settings-privacy-delete-sub">{resolveCopy('privacy.delete.subtitle')}</p>
         <a
@@ -569,7 +793,7 @@ function Toggle({ active, onToggle }: { active: boolean; onToggle: () => void })
   );
 }
 
-function SettingsSheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function SettingsSheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return (
     <div className="lk-settings-sheet-overlay" onClick={onClose}>
       <div className="lk-settings-sheet fade-up" onClick={(e) => e.stopPropagation()}>
@@ -582,24 +806,14 @@ function SettingsSheet({ title, onClose, children }: { title: string; onClose: (
             <Icon name="close" size={18} />
           </button>
         </div>
-        <div className="lk-settings-sheet__body">
-          {children}
-        </div>
+        <div className="lk-settings-sheet__body">{children}</div>
       </div>
     </div>
   );
 }
 
-function ConfirmDialog({
-  title,
-  message,
-  onConfirm,
-  onCancel,
-}: {
-  title: string;
-  message: string;
-  onConfirm: () => void;
-  onCancel: () => void;
+function ConfirmDialog({ title, message, onConfirm, onCancel }: {
+  title: string; message: string; onConfirm: () => void; onCancel: () => void;
 }) {
   return (
     <div className="lk-settings-dialog-overlay" onClick={onCancel}>
@@ -607,12 +821,8 @@ function ConfirmDialog({
         <h3 className="lk-settings-dialog__title">{title}</h3>
         <p className="lk-settings-dialog__message">{message}</p>
         <div className="lk-settings-dialog__actions">
-          <button className="lk-settings-dialog__btn lk-settings-dialog__btn--cancel" onClick={onCancel}>
-            Cancelar
-          </button>
-          <button className="lk-settings-dialog__btn lk-settings-dialog__btn--confirm" onClick={onConfirm}>
-            Confirmar
-          </button>
+          <button className="lk-settings-dialog__btn lk-settings-dialog__btn--cancel" onClick={onCancel}>Cancelar</button>
+          <button className="lk-settings-dialog__btn lk-settings-dialog__btn--confirm" onClick={onConfirm}>Confirmar</button>
         </div>
       </div>
     </div>

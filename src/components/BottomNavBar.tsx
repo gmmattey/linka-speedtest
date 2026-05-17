@@ -1,6 +1,6 @@
 import './BottomNavBar.css';
 
-export type NavTab = 'home' | 'orbit' | 'historico' | 'ajustes';
+export type NavTab = 'home' | 'velocidade' | 'diagnostico' | 'dispositivos' | 'ajustes';
 
 interface Props {
   active: NavTab;
@@ -13,22 +13,29 @@ export function BottomNavBar({ active, onNavigate }: Props) {
       <NavItem
         tab="home"
         active={active === 'home'}
-        label="Home"
+        label="Início"
         icon={<HomeIcon />}
         onNavigate={onNavigate}
       />
       <NavItem
-        tab="orbit"
-        active={active === 'orbit'}
-        label="Orbit"
-        icon={<OrbitIcon />}
+        tab="velocidade"
+        active={active === 'velocidade'}
+        label="Velocidade"
+        icon={<VelocidadeIcon />}
         onNavigate={onNavigate}
       />
       <NavItem
-        tab="historico"
-        active={active === 'historico'}
-        label="Histórico"
-        icon={<HistoricoIcon />}
+        tab="diagnostico"
+        active={active === 'diagnostico'}
+        label="Diagnóstico"
+        icon={<DiagnosticoIcon />}
+        onNavigate={onNavigate}
+      />
+      <NavItem
+        tab="dispositivos"
+        active={active === 'dispositivos'}
+        label="Dispositivos"
+        icon={<DispositivosIcon />}
         onNavigate={onNavigate}
       />
       <NavItem
@@ -81,7 +88,33 @@ function HomeIcon() {
   );
 }
 
-function OrbitIcon() {
+function VelocidadeIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      {/* Arco do velocímetro */}
+      <path
+        d="M5 16A8 8 0 0 1 12 4a8 8 0 0 1 7 12"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+      {/* Ponteiro */}
+      <line
+        x1="12"
+        y1="16"
+        x2="16"
+        y2="11"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+      {/* Centro */}
+      <circle cx="12" cy="16" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+function DiagnosticoIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
       <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7" />
@@ -94,30 +127,15 @@ function OrbitIcon() {
   );
 }
 
-function HistoricoIcon() {
+function DispositivosIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-      <path
-        d="M12 8V12L15 15"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M3.05 11A9 9 0 1 0 4 7"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M3 3V7H7"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      {/* Monitor */}
+      <rect x="2" y="3" width="13" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M8 12v2M5 14h6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      {/* Celular */}
+      <rect x="17" y="6" width="5" height="8" rx="1" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="19.5" cy="13" r="0.5" fill="currentColor" />
     </svg>
   );
 }

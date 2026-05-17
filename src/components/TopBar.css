@@ -17,6 +17,7 @@
   background: transparent;
   border-bottom: 1px solid transparent;
   transition:
+    opacity 120ms linear,
     background 200ms ease,
     backdrop-filter 200ms ease,
     -webkit-backdrop-filter 200ms ease,

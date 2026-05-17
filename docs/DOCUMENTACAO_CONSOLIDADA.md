@@ -57,8 +57,8 @@ Documentos em `linkaSpeedtestPwa/docs/` exclusivos desta implementação.
 
 | Documento | Propósito | Atualizado |
 |---|---|---|
-| [**SCREENS_PWA.md**](SCREENS_PWA.md) | Tabela de 17 telas PWA com arquivo, rota e propósito | 2026-05-15 |
-| [**COMPONENTS_PWA.md**](COMPONENTS_PWA.md) | Tabela de 27 componentes agrupados por domínio | 2026-05-15 |
+| [**SCREENS_PWA.md**](SCREENS_PWA.md) | Tabela de 19 telas PWA com arquivo, rota e propósito (inclui FibraScreen e SpeedTestScreen dedicada — v1.4.0) | 2026-05-17 |
+| [**COMPONENTS_PWA.md**](COMPONENTS_PWA.md) | Tabela de 29 componentes agrupados por domínio (inclui TopBar com opacity, useScrollHeader — v1.4.0) | 2026-05-17 |
 
 ### Avaliação de Paridade Android/PWA
 
@@ -82,7 +82,7 @@ Documentos em `linkaSpeedtestPwa/docs/` exclusivos desta implementação.
 | [**PoliticaBranchUnico.md**](PoliticaBranchUnico.md) | Política: trabalhar sempre em `main` |
 | [**DiagnosticoWifiNativo.md**](DiagnosticoWifiNativo.md) | Diagnóstico Wi-Fi nativo |
 | [**Feature App - Scanner de Dispositivos.md**](Feature%20App%20-%20Scanner%20de%20Dispositivos.md) | Feature específica |
-| [**Feature iOS - Obter Dados WiFi via Atalho.md**](Feature%20iOS%20-%20Obter%20Dados%20WiFi%20via%20Atalho.md) | Feature específica |
+| [**Feature iOS - Obter Dados WiFi via Atalho.md**](Feature%20iOS%20-%20Obter%20Dados%20WiFi%20via%20Atalho.md) | Feature iOS WiFi Context — **implementada em v1.3.0** (`WifiContextCard`, `wifiShortcut.ts`) |
 
 ---
 
@@ -119,6 +119,40 @@ Documentos em `linkaSpeedtestPwa/docs/` exclusivos desta implementação.
 ---
 
 ## Consolidação — Histórico de Decisões
+
+### 2026-05-17 (Nina) — Atualização pós-release v1.4.0 (Telas novas + TopBar fade)
+
+**Mudanças registradas no PWA v1.4.0:**
+
+- **Novas telas:**
+  - `FibraScreen.tsx` — Tela fibra/modem com campo IP, link painel, métricas ONU (locked), seção GPON. Acessível via Ajustes → "Configurações do roteador". BottomNavBar com aba Ajustes destacada.
+  - `SpeedTestScreen.tsx` — Tela dedicada speedtest com seletor de modo. Tab Velocidade na BottomNavBar.
+
+- **BottomNavBar reescrita:** 4 tabs → 5 tabs:
+  - Início (home)
+  - Velocidade (speedtest) — novo
+  - Diagnóstico (diagnostic)
+  - Dispositivos (local-network)
+  - Ajustes (explore)
+
+- **TopBar fade-on-scroll (v1.4.0+):**
+  - `TopBar` agora recebe prop `opacity: number` (0–1).
+  - Hook `useScrollHeader` retorna `topBarOpacity` (além de `scrolled`).
+  - Threshold: 80px. Todas as 12+ telas que usam `TopBar` passam `opacity={topBarOpacity}`.
+
+- **Navegação sub-telas:** Telas `historico`, `sinal`, `fibra` mostram BottomNavBar com aba de origem destacada:
+  - `historico` → aba Início
+  - `sinal` → aba Início
+  - `fibra` → aba Ajustes
+
+- **App.tsx:** Type `Screen` expandido com `'fibra'`, `'speedtest'`. TAB_MAP com sub-telas.
+
+- **Ícones PWA:** Atualizados para serem idênticos ao Android (branco + wordmark "linka" roxo). Todos os tamanhos: icon-192, icon-512, maskable, apple-touch-icon, favicon, iOS touch icons, android/res.
+
+- **SCREENS_PWA.md:** Atualizado de 17 → 19 telas. Versão v1.3.0 → v1.4.0.
+- **COMPONENTS_PWA.md:** Atualizado TopBar e BottomNavBar, incluindo `useScrollHeader` hook. Total 28 → 29 componentes.
+
+---
 
 ### 2026-05-16 (Taisa) — PendenciasTecnicas.md arquivado
 
@@ -163,5 +197,19 @@ implementação que dependa do mecanismo de roteamento.
 
 ---
 
-**Última atualização:** 2026-05-16
-**Status:** Monólitos funcionais e técnicos confirmados como documentação primária. Docs de inventário (SCREENS/COMPONENTS) mantidos como complemento.
+### 2026-05-16 (Taisa) — Atualização pós-release v1.3.0 (Waves 7A–7D)
+
+**Mudanças registradas no PWA v1.3.0:**
+
+- **Feature iOS WiFi Context** (merge de `origin/main`): `WifiContextCard.tsx` e `wifiShortcut.ts` integrados em `App.tsx`, `ResultScreen.tsx` e `StartScreen.tsx`. Status da spec `Feature iOS - Obter Dados WiFi via Atalho.md` atualizado de "não implementado" para **implementado**.
+- **LocalWifiScreen** (`features/local-wifi/`): estado indisponível reescrito, função `rssiLabel()` adicionada (Ótimo/Bom/Regular/Fraco), labels simplificados para o usuário.
+- **LocalNetworkScreen** (`features/local-network/`): estado indisponível reescrito.
+- **CSS**: classes `__unavailable`, `__text--primary`, `__tech` adicionadas em `LocalWifiScreen.css` e `LocalNetworkScreen.css`.
+- **package.json**: versão bumped de 1.0.0 → 1.3.0.
+- **Deploy**: push para `origin/main` → Cloudflare Pages CI → https://linka-speedtest.pages.dev
+- **COMPONENTS_PWA.md**: `WifiContextCard` adicionado (total: 27 → 28 componentes).
+
+---
+
+**Última atualização:** 2026-05-17
+**Status:** v1.4.0 com telas novas (Fibra, SpeedTest dedicada), BottomNavBar 5 tabs, TopBar fade-on-scroll. Documentação de inventário (SCREENS/COMPONENTS) atualizada. Monólitos funcionais e técnicos confirmados como documentação primária.

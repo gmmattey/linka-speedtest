@@ -1,17 +1,17 @@
 # Componentes PWA — Linka SpeedTest
 
-**Versão:** v1.0.0 | **Localização:** `src/components/`
+**Versão:** v1.4.0 | **Localização:** `src/components/`
 
-27 componentes agrupados por domínio.
+29 componentes agrupados por domínio.
 
 ---
 
-## Navegação (5)
+## Navegação (6)
 
 | Componente | Arquivo | Propósito |
 | --- | --- | --- |
-| `BottomNavBar` | `BottomNavBar.tsx` | Barra navegação inferior (Home, History, Explore, Pulse) |
-| `TopBar` | `TopBar.tsx` | Header superior com título + ações |
+| `BottomNavBar` | `BottomNavBar.tsx` | Barra navegação inferior (5 tabs: Início, Velocidade, Diagnóstico, Dispositivos, Ajustes) — v1.4.0 |
+| `TopBar` | `TopBar.tsx` | Header superior com título + ações; suporta prop `opacity` para fade-on-scroll |
 | `BackButton` | `BackButton.tsx` | Botão voltar padrão |
 | `PageHeader` | `PageHeader.tsx` | Header páginas com breadcrumb/título |
 | `HamburgerMenu` | `HamburgerMenu.tsx` | Menu lateral mobile |
@@ -71,6 +71,14 @@
 
 ---
 
+## Integrações de Plataforma (1)
+
+| Componente | Arquivo | Propósito |
+| --- | --- | --- |
+| `WifiContextCard` | `WifiContextCard.tsx` | Exibe contexto Wi-Fi capturado via Atalho iOS antes do teste; integrado em `App.tsx`, `ResultScreen.tsx` e `StartScreen.tsx` (v1.3.0) |
+
+---
+
 ## Listas & Ícones (3)
 
 | Componente | Arquivo | Propósito |
@@ -81,7 +89,15 @@
 
 ---
 
-## Total: 27 componentes
+## Hooks Customizados (Relacionados)
+
+| Hook | Localização | Propósito |
+| --- | --- | --- |
+| `useScrollHeader` | `src/hooks/` | Monitora scroll para retornar `scrolled: boolean` e `topBarOpacity: number`; usado por TopBar para fade-on-scroll |
+
+---
+
+## Total: 29 componentes
 
 - **Componentizados:** Cada um é um módulo React funcional.
 - **Customizável:** Props tipadas (TypeScript), slots via children.
@@ -101,7 +117,9 @@
 ## Relacionamentos
 
 ```
-BottomNavBar usa: (routing)
+BottomNavBar (5 tabs) usa: routing, TopBar opacity control
+
+TopBar usa: opacity prop via useScrollHeader
 
 ResultScreen usa: Gauge, DiagnosisChips, AppBorderGlow
 
@@ -110,6 +128,10 @@ PulseScreen usa: PulseResultCard, LinkaPulseSymbol, Accordion
 HistoryScreen usa: IOSList, Skeleton, DraggableSheet
 
 DiagnosticScreen usa: ContextualQuestion, PageHeader
+
+FibraScreen usa: IOSList, Chip (para GPON status)
+
+SpeedTestScreen usa: Gauge, modos de speedtest
 ```
 
 ---
@@ -119,3 +141,4 @@ DiagnosticScreen usa: ContextualQuestion, PageHeader
 - Nenhum componente acessa localStorage ou API diretamente — delegado a hooks customizados.
 - Todos suportam tema claro/escuro via CSS variables (`--bg`, `--accent`, etc).
 - Testes unitários em `src/components/__tests__/` (Vitest).
+- `TopBar` com fade-on-scroll via `opacity={topBarOpacity}` em todas as 12+ telas que o usam.

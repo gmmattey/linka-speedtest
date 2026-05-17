@@ -53,13 +53,14 @@ export function BeforeAfterScreen({
   );
 
   // Bloco 5 — TopBar System (2026-05).
-  const { scrolled, scrollContainerRef, sentinelRef } = useScrollHeader();
+  const { scrolled, topBarOpacity, scrollContainerRef, sentinelRef } = useScrollHeader();
 
   return (
     <div className="lk-ba">
       <TopBar
         onBack={onBack}
         scrolled={scrolled}
+        opacity={topBarOpacity}
         title="Antes e Depois"
         showTitle={scrolled}
       />

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { IOSList } from '../../components/IOSList';
 import { PageHeader } from '../../components/PageHeader';
 import { TopBar } from '../../components/TopBar';
 import { Icon } from '../../components/icons';
@@ -7,7 +6,7 @@ import { useScrollHeader } from '../../hooks/useScrollHeader';
 import { getCapabilities } from '../../platform/capabilities';
 import { confidenceLabel, kindLabel, nameSourceLabel } from './LocalNetworkService';
 import { useLocalNetworkDiscovery } from './useLocalNetworkDiscovery';
-import type { IdentifiedDevice as LocalDevice } from './types';
+import type { DeviceKind, IdentifiedDevice as LocalDevice } from './types';
 import './LocalNetworkScreen.css';
 
 const NICKNAMES_KEY = 'linka.network.nicknames';
@@ -20,18 +19,37 @@ function loadNicknames(): Record<string, string> {
   }
 }
 
-function saveNickname(deviceId: string, nickname: string | null) {
+function saveNickname(id: string, nickname: string | null) {
   const existing = loadNicknames();
-  if (nickname === null || nickname.trim() === '') {
-    delete existing[deviceId];
+  if (!nickname || nickname.trim() === '') {
+    delete existing[id];
   } else {
-    existing[deviceId] = nickname.trim();
+    existing[id] = nickname.trim();
   }
   localStorage.setItem(NICKNAMES_KEY, JSON.stringify(existing));
 }
 
 function deviceId(device: LocalDevice): string {
   return device.mac || device.ip;
+}
+
+function kindIconName(kind: DeviceKind): string {
+  switch (kind) {
+    case 'router':   return 'router';
+    case 'phone':    return 'cellular';
+    case 'tv':       return 'stream';
+    case 'printer':  return 'document';
+    case 'computer': return 'laptop';
+    default:         return 'network';
+  }
+}
+
+function kindIconColor(kind: DeviceKind): string {
+  switch (kind) {
+    case 'router': return 'var(--accent)';
+    case 'phone':  return 'var(--accent)';
+    default:       return 'var(--text-2)';
+  }
 }
 
 interface Props {
@@ -41,7 +59,7 @@ interface Props {
 export function LocalNetworkScreen({ onBack }: Props) {
   const { localNetworkDiscovery } = getCapabilities();
   const { loading, result, error, run } = useLocalNetworkDiscovery();
-  const { scrolled, scrollContainerRef, sentinelRef } = useScrollHeader();
+  const { scrolled, topBarOpacity, scrollContainerRef, sentinelRef } = useScrollHeader();
 
   const [nicknames, setNicknames] = useState<Record<string, string>>(loadNicknames);
   const [editingDevice, setEditingDevice] = useState<LocalDevice | null>(null);
@@ -66,91 +84,149 @@ export function LocalNetworkScreen({ onBack }: Props) {
     setEditingDevice(null);
   };
 
-  const displayName = (device: LocalDevice): string => {
-    return nicknames[deviceId(device)] || device.displayName;
-  };
+  const displayName = (device: LocalDevice): string =>
+    nicknames[deviceId(device)] || device.displayName;
+
+  const gateways = result?.devices.filter((d) => d.kind === 'router') ?? [];
+  const clients  = result?.devices.filter((d) => d.kind !== 'router') ?? [];
+  const hasResults = result != null;
+  const onlyGateway = hasResults && gateways.length > 0 && clients.length === 0;
 
   return (
     <div className="lk-local-network">
       <TopBar
         onBack={onBack}
         scrolled={scrolled}
+        opacity={topBarOpacity}
         title="Dispositivos"
-        showTitle={scrolled}
+        showTitle={true}
       />
+
+      {/* Linear progress bar during scan */}
+      {loading && <div className="lk-local-network__progress" />}
 
       <div className="lk-local-network__scroll" ref={scrollContainerRef}>
         <PageHeader ref={sentinelRef} size="md" title="Dispositivos" />
 
-        <div className="lk-local-network__card">
-          {!localNetworkDiscovery ? (
-            <div className="lk-local-network__unavailable">
-              <p className="lk-local-network__text lk-local-network__text--primary">
-                Ver dispositivos conectados requer acesso à rede local.
-              </p>
-              <p className="lk-local-network__text">
-                Navegadores não permitem esse nível de acesso por segurança. Use o app Android para ver quem está na sua rede.
-              </p>
+        {/* ── Browser fallback ───────────────────────────────────────── */}
+        {!localNetworkDiscovery && (
+          <div className="lk-local-network__empty">
+            <span className="material-symbols-rounded lk-local-network__empty-icon">devices_other</span>
+            <p className="lk-local-network__empty-title">Ver dispositivos da rede</p>
+            <p className="lk-local-network__empty-desc">
+              O navegador não permite varrer a rede local por segurança. O app Android acessa ARP, mDNS e SSDP diretamente para identificar roteador, smart TVs, celulares e outros dispositivos.
+            </p>
+            <div className="lk-local-network__android-cta">
+              <span className="material-symbols-rounded">android</span>
+              <p>Use o <strong>app linka para Android</strong> para ver todos os dispositivos conectados na sua rede Wi-Fi em tempo real.</p>
             </div>
-          ) : (
-            <>
-              <p className="lk-local-network__text">
-                A linka cruza sinais da rede local para identificar dispositivos. Toque em um dispositivo para adicionar um apelido.
-              </p>
+          </div>
+        )}
 
-              <button className="btn-primary" onClick={() => void run()} disabled={loading}>
-                {loading ? 'Verificando...' : 'Verificar dispositivos'}
-              </button>
-
-              {error && <p className="lk-local-network__error">{error}</p>}
-
-              {result && (
-                <div className="lk-local-network__result">
-                  <div className="lk-local-network__summary">
-                    <span>{result.devices.length} dispositivos</span>
-                    <span>{result.observationCount} evidências</span>
-                  </div>
-
-                  {result.devices.length === 0 ? (
-                    <p className="lk-local-network__text">
-                      Nenhum dispositivo foi identificado agora. Alguns aparelhos bloqueiam resposta local ou dormem fora de uso.
+        {/* ── Native state ────────────────────────────────────────────── */}
+        {localNetworkDiscovery && (
+          <>
+            {/* Empty / initial state */}
+            {!hasResults && !loading && (
+              <div className="lk-local-network__empty">
+                {error ? (
+                  <>
+                    <span className="material-symbols-rounded lk-local-network__empty-icon lk-local-network__empty-icon--warn">warning_amber</span>
+                    <p className="lk-local-network__empty-title">Erro ao escanear</p>
+                    <p className="lk-local-network__empty-desc">{error}</p>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-rounded lk-local-network__empty-icon">devices_other</span>
+                    <p className="lk-local-network__empty-title">Nenhum dispositivo encontrado</p>
+                    <p className="lk-local-network__empty-desc">
+                      Tente novamente ou verifique a conexão Wi-Fi.
                     </p>
-                  ) : (
-                    <IOSList
-                      items={result.devices.map((device) => {
-                        const nick = nicknames[deviceId(device)];
-                        return {
-                          icon: <Icon name="network" size={14} color="var(--accent)" />,
-                          iconBg: 'var(--accent-tint)',
-                          title: displayName(device),
-                          subtitle: [
-                            device.ip,
-                            device.mac ? device.mac : undefined,
-                            kindLabel(device.kind),
-                          ].filter(Boolean).join(' · '),
-                          trailing: (
-                            <span className={`lk-local-network__confidence lk-local-network__confidence--${device.confidence}`}>
-                              {confidenceLabel(device.confidence)}
-                            </span>
-                          ),
-                          titleAfter: nick ? (
-                            <span className="lk-local-network__nickname-tag">apelido</span>
-                          ) : (
-                            <span className="lk-local-network__source">
-                              {nameSourceLabel(device.nameSource)}
-                            </span>
-                          ),
-                          showChevron: true,
-                          onClick: () => openNicknameSheet(device),
-                        };
-                      })}
-                    />
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+                  </>
+                )}
+                <button className="lk-local-network__scan-btn" onClick={() => void run()} disabled={loading}>
+                  Escanear Rede
+                </button>
+              </div>
+            )}
+
+            {/* Loading state with no prior results */}
+            {!hasResults && loading && (
+              <div className="lk-local-network__empty">
+                <span className="material-symbols-rounded lk-local-network__empty-icon lk-local-network__empty-icon--spin">radar</span>
+                <p className="lk-local-network__empty-title">Procurando dispositivos…</p>
+                <p className="lk-local-network__empty-desc">Varrendo a rede local.</p>
+              </div>
+            )}
+
+            {/* Results */}
+            {hasResults && (
+              <div className="lk-local-network__results">
+
+                {/* INFRAESTRUTURA */}
+                {gateways.length > 0 && (
+                  <div className="lk-local-network__section">
+                    <p className="lk-local-network__section-header">
+                      INFRAESTRUTURA ({gateways.length})
+                    </p>
+                    <div className="lk-local-network__device-list">
+                      {gateways.map((device) => (
+                        <DeviceRow
+                          key={deviceId(device)}
+                          device={device}
+                          displayName={displayName(device)}
+                          hasNickname={!!nicknames[deviceId(device)]}
+                          badge="Roteador"
+                          badgeVariant="router"
+                          onClick={() => openNicknameSheet(device)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Only gateway message */}
+                {onlyGateway && (
+                  <p className="lk-local-network__only-gateway">
+                    Apenas o gateway foi encontrado. Outros dispositivos podem estar dormindo ou bloqueando respostas.
+                  </p>
+                )}
+
+                {/* DISPOSITIVOS */}
+                {clients.length > 0 && (
+                  <div className="lk-local-network__section">
+                    <p className="lk-local-network__section-header">
+                      DISPOSITIVOS ({clients.length})
+                    </p>
+                    <div className="lk-local-network__device-list">
+                      {clients.map((device) => (
+                        <DeviceRow
+                          key={deviceId(device)}
+                          device={device}
+                          displayName={displayName(device)}
+                          hasNickname={!!nicknames[deviceId(device)]}
+                          onClick={() => openNicknameSheet(device)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Rescan button */}
+                <button
+                  className="lk-local-network__rescan-btn"
+                  onClick={() => void run()}
+                  disabled={loading}
+                >
+                  <Icon name="refresh" size={16} color="var(--accent)" />
+                  {loading ? 'Escaneando…' : 'Escanear novamente'}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        <div className="lk-local-network__bottom-pad" />
       </div>
 
       {/* ── NicknameSheet ────────────────────────────────────────────── */}
@@ -175,6 +251,9 @@ export function LocalNetworkScreen({ onBack }: Props) {
                 {editingDevice.mac && (
                   <span className="lk-nickname-sheet__device-mac">{editingDevice.mac}</span>
                 )}
+                {editingDevice.vendor && (
+                  <span className="lk-nickname-sheet__device-mac">{editingDevice.vendor}</span>
+                )}
               </div>
               <label className="lk-nickname-sheet__field">
                 <span>Apelido</span>
@@ -182,12 +261,19 @@ export function LocalNetworkScreen({ onBack }: Props) {
                   type="text"
                   value={nicknameInput}
                   onChange={(e) => setNicknameInput(e.target.value)}
-                  placeholder={`Ex: TV da Sala, Notebook do João`}
+                  placeholder="Ex: TV da Sala, Notebook do João"
                   autoFocus
                   maxLength={40}
                   onKeyDown={(e) => { if (e.key === 'Enter') saveAndClose(); }}
                 />
               </label>
+              <div className="lk-nickname-sheet__meta">
+                <span>{kindLabel(editingDevice.kind)}</span>
+                <span className={`lk-local-network__confidence lk-local-network__confidence--${editingDevice.confidence}`}>
+                  {confidenceLabel(editingDevice.confidence)}
+                </span>
+                <span>{nameSourceLabel(editingDevice.nameSource)}</span>
+              </div>
               <div className="lk-nickname-sheet__actions">
                 {nicknames[deviceId(editingDevice)] && (
                   <button className="lk-nickname-sheet__btn-clear" onClick={clearAndClose}>
@@ -202,6 +288,51 @@ export function LocalNetworkScreen({ onBack }: Props) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ── Device Row ──────────────────────────────────────────────────────────── */
+
+function DeviceRow({
+  device, displayName, hasNickname, badge, badgeVariant, onClick,
+}: {
+  device: LocalDevice;
+  displayName: string;
+  hasNickname: boolean;
+  badge?: string;
+  badgeVariant?: 'router' | 'ap';
+  onClick: () => void;
+}) {
+  const iconName = kindIconName(device.kind);
+  const iconColor = kindIconColor(device.kind);
+  const iconBg = device.kind === 'router' ? 'var(--accent-tint)' : 'var(--surface-2)';
+
+  return (
+    <div className="lk-local-network__device-row" onClick={onClick} role="button" tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
+    >
+      <div className="lk-local-network__device-icon" style={{ background: iconBg }}>
+        <Icon name={iconName} size={18} color={iconColor} />
+      </div>
+      <div className="lk-local-network__device-text">
+        <div className="lk-local-network__device-name">
+          {displayName}
+          {hasNickname && <span className="lk-local-network__nickname-tag">apelido</span>}
+          {badge && (
+            <span className={`lk-local-network__badge lk-local-network__badge--${badgeVariant ?? 'device'}`}>
+              {badge}
+            </span>
+          )}
+        </div>
+        <div className="lk-local-network__device-sub">
+          {device.vendor || kindLabel(device.kind)}
+        </div>
+      </div>
+      <div className="lk-local-network__device-trailing">
+        <span className="lk-local-network__device-ip">{device.ip}</span>
+        <Icon name="chevron" size={14} color="var(--text-3)" />
+      </div>
     </div>
   );
 }
